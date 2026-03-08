@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: b4rrhh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: b4rrhh
+      POSTGRES_USER: b4rrhh
+      POSTGRES_PASSWORD: b4rrhh
+    ports:
+      - "5432:5432"
+    volumes:
+      - b4rrhh_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  b4rrhh_postgres_data:
