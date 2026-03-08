@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: B4RRHH Personnel Administration API
+  version: 0.1.0
+
+paths:
+  /employees:
+    post:
+      operationId: createEmployee
+      summary: Create employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeRequest'
+      responses:
+        '201':
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+
+components:
+  schemas:
+    CreateEmployeeRequest:
+      type: object
+      required:
+        - employeeNumber
+      properties:
+        employeeNumber:
+          type: string
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeNumber:
+          type: string

@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: b4rrhh-backend
+  datasource:
+    url: ${B4RRHH_DB_URL:jdbc:postgresql://localhost:5432/b4rrhh}
+    username: ${B4RRHH_DB_USERNAME:b4rrhh}
+    password: ${B4RRHH_DB_PASSWORD:b4rrhh}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
