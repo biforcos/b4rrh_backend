@@ -22,6 +22,498 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
 
+  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}:
+    get:
+      operationId: getEmployeeByBusinessKey
+      summary: Get employee by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Employee found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences:
+    post:
+      operationId: createPresenceByBusinessKey
+      summary: Create employee presence by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresenceRequest'
+      responses:
+        '201':
+          description: Presence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or catalog not found
+        '409':
+          description: Presence business conflict
+    get:
+      operationId: listEmployeePresencesByBusinessKey
+      summary: List employee presences by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Presence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PresenceResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}:
+    get:
+      operationId: getPresenceByIdByBusinessKey
+      summary: Get employee presence by id and business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: presenceId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Presence found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '404':
+          description: Rule system, employee, or presence not found
+
+  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}/close:
+    post:
+      operationId: closePresenceByBusinessKey
+      summary: Close employee presence by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: presenceId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClosePresenceRequest'
+      responses:
+        '200':
+          description: Presence closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or presence not found
+        '409':
+          description: Presence already closed
+
+  /employees/{employeeId}/presences:
+    post:
+      operationId: createPresence
+      summary: Create employee presence
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresenceRequest'
+      responses:
+        '201':
+          description: Presence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or catalog not found
+        '409':
+          description: Presence business conflict
+    get:
+      operationId: listEmployeePresences
+      summary: List employee presences
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Presence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PresenceResponse'
+        '404':
+          description: Employee not found
+
+  /employees/{employeeId}/presences/{presenceId}:
+    get:
+      operationId: getPresenceById
+      summary: Get employee presence by id
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          name: presenceId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Presence found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '404':
+          description: Presence not found
+
+  /employees/{employeeId}/presences/{presenceId}/close:
+    post:
+      operationId: closePresence
+      summary: Close employee presence
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          name: presenceId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClosePresenceRequest'
+      responses:
+        '200':
+          description: Presence closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Presence not found
+        '409':
+          description: Presence already closed
+  /rule-systems:
+    post:
+      operationId: createRuleSystem
+      summary: Create rule system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleSystemRequest'
+      responses:
+        '201':
+          description: Rule system created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleSystemResponse'
+    get:
+      operationId: listRuleSystems
+      summary: List rule systems
+      responses:
+        '200':
+          description: Rule systems list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleSystemResponse'
+
+  /rule-entity-types:
+    post:
+      operationId: createRuleEntityType
+      summary: Create rule entity type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleEntityTypeRequest'
+      responses:
+        '201':
+          description: Rule entity type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityTypeResponse'
+    get:
+      operationId: listRuleEntityTypes
+      summary: List rule entity types
+      responses:
+        '200':
+          description: Rule entity types list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleEntityTypeResponse'
+
+  /rule-entity-types/{code}:
+    get:
+      operationId: getRuleEntityTypeByCode
+      summary: Get rule entity type by code
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '200':
+          description: Rule entity type found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityTypeResponse'
+        '404':
+          description: Rule entity type not found
+
+  /rule-entities:
+    post:
+      operationId: createRuleEntity
+      summary: Create rule entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleEntityRequest'
+      responses:
+        '201':
+          description: Rule entity created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+    get:
+      operationId: listRuleEntities
+      summary: List rule entities
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: false
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: ruleEntityTypeCode
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: code
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Rule entities list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleEntityResponse'
+
+  /rule-entities/{id}:
+    get:
+      operationId: getRuleEntityById
+      summary: Get rule entity by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Rule entity found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+        '404':
+          description: Rule entity not found
+
+  /rule-entities/search:
+    get:
+      operationId: searchRuleEntityByBusinessKey
+      summary: Search rule entity by business key
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: entityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '200':
+          description: Rule entity found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+        '404':
+          description: Rule entity not found
+
+  /rule-systems/{code}:
+    get:
+      operationId: getRuleSystemByCode
+      summary: Get rule system by code
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+      responses:
+        '200':
+          description: Rule system found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleSystemResponse'
+        '404':
+          description: Rule system not found
+
 components:
   schemas:
     CreateEmployeeRequest:
@@ -82,3 +574,204 @@ components:
           nullable: true
         status:
           type: string
+    CreatePresenceRequest:
+      type: object
+      required:
+        - companyCode
+        - entryReasonCode
+        - startDate
+      properties:
+        companyCode:
+          type: string
+          maxLength: 4
+        entryReasonCode:
+          type: string
+          maxLength: 30
+        exitReasonCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    ClosePresenceRequest:
+      type: object
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+        exitReasonCode:
+          type: string
+          maxLength: 30
+          nullable: true
+    PresenceResponse:
+      type: object
+      required:
+        - id
+        - employeeId
+        - presenceNumber
+        - companyCode
+        - entryReasonCode
+        - startDate
+      properties:
+        id:
+          type: integer
+          format: int64
+        employeeId:
+          type: integer
+          format: int64
+        presenceNumber:
+          type: integer
+          format: int32
+        companyCode:
+          type: string
+        entryReasonCode:
+          type: string
+        exitReasonCode:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateRuleSystemRequest:
+      type: object
+      required:
+        - code
+        - name
+        - countryCode
+      properties:
+        code:
+          type: string
+          maxLength: 5
+        name:
+          type: string
+          maxLength: 100
+        countryCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+    RuleSystemResponse:
+      type: object
+      required:
+        - id
+        - code
+        - name
+        - countryCode
+        - active
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+        countryCode:
+          type: string
+        active:
+          type: boolean
+    CreateRuleEntityTypeRequest:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+    RuleEntityTypeResponse:
+      type: object
+      required:
+        - id
+        - code
+        - name
+        - active
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+        active:
+          type: boolean
+    CreateRuleEntityRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - ruleEntityTypeCode
+        - code
+        - name
+        - startDate
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        ruleEntityTypeCode:
+          type: string
+          maxLength: 30
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    RuleEntityResponse:
+      type: object
+      required:
+        - id
+        - ruleSystemCode
+        - ruleEntityTypeCode
+        - code
+        - name
+        - active
+        - startDate
+      properties:
+        id:
+          type: integer
+          format: int64
+        ruleSystemCode:
+          type: string
+        ruleEntityTypeCode:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true

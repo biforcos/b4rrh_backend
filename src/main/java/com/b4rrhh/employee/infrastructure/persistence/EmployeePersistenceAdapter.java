@@ -16,6 +16,12 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
     }
 
     @Override
+    public Optional<Employee> findById(Long id) {
+        return springDataEmployeeRepository.findById(id)
+                .map(this::mapToDomain);
+    }
+
+    @Override
     public Optional<Employee> findByRuleSystemCodeAndEmployeeNumber(String ruleSystemCode, String employeeNumber) {
         return springDataEmployeeRepository.findByRuleSystemCodeAndEmployeeNumber(ruleSystemCode, employeeNumber)
                 .map(this::mapToDomain);

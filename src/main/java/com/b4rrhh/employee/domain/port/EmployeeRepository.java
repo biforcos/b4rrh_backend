@@ -5,6 +5,8 @@ import java.util.Optional;
 
 public interface EmployeeRepository {
 
+    Optional<Employee> findById(Long id);
+
     Optional<Employee> findByRuleSystemCodeAndEmployeeNumber(String ruleSystemCode, String employeeNumber);
 
     Employee save(Employee employee);

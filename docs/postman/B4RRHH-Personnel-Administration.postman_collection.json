@@ -1,0 +1,173 @@
+{
+  "info": {
+    "_postman_id": "f6e944f1-5d08-4e1f-a58a-9a8d3c6f9f65",
+    "name": "B4RRHH Personnel Administration API",
+    "description": "Collection generated from openapi/personnel-administration-api.yaml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Create Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleSystemCode\": \"{{ruleSystemCode}}\",\n  \"employeeNumber\": \"EMP001\",\n  \"firstName\": \"Juan\",\n  \"lastName1\": \"Perez\",\n  \"lastName2\": \"Garcia\",\n  \"preferredName\": \"Juan Perez\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "POST /employees"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rule Systems",
+      "item": [
+        {
+          "name": "Create Rule System",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{ruleSystemCode}}\",\n  \"name\": \"Spain\",\n  \"countryCode\": \"ESP\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems"
+              ]
+            },
+            "description": "POST /rule-systems"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Systems",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems"
+              ]
+            },
+            "description": "GET /rule-systems"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule System By Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}"
+              ]
+            },
+            "description": "GET /rule-systems/{code}"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ruleSystemCode",
+      "value": "ESP"
+    }
+  ]
+}
