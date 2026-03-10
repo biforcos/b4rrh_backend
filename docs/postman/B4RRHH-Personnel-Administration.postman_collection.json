@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "f6e944f1-5d08-4e1f-a58a-9a8d3c6f9f65",
     "name": "B4RRHH Personnel Administration API",
-    "description": "Collection generated from openapi/personnel-administration-api.yaml",
+    "description": "Collection aligned with openapi/personnel-administration-api.yaml",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -34,7 +34,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleSystemCode\": \"{{ruleSystemCode}}\",\n  \"employeeNumber\": \"EMP001\",\n  \"firstName\": \"Juan\",\n  \"lastName1\": \"Perez\",\n  \"lastName2\": \"Garcia\",\n  \"preferredName\": \"Juan Perez\"\n}"
+              "raw": "{\n  \"ruleSystemCode\": \"{{ruleSystemCode}}\",\n  \"employeeNumber\": \"{{employeeNumber}}\",\n  \"firstName\": \"Juan\",\n  \"lastName1\": \"Perez\",\n  \"lastName2\": \"Garcia\",\n  \"preferredName\": \"Juan Perez\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/employees",
@@ -46,6 +46,364 @@
               ]
             },
             "description": "POST /employees"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employee By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}/employees/{{employeeNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}",
+                "employees",
+                "{{employeeNumber}}"
+              ]
+            },
+            "description": "GET /rule-systems/{ruleSystemCode}/employees/{employeeNumber}"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Presences (Business Key API)",
+      "item": [
+        {
+          "name": "Create Presence By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyCode\": \"ES01\",\n  \"entryReasonCode\": \"HIRING\",\n  \"exitReasonCode\": null,\n  \"startDate\": \"2026-01-10\",\n  \"endDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}/employees/{{employeeNumber}}/presences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}",
+                "employees",
+                "{{employeeNumber}}",
+                "presences"
+              ]
+            },
+            "description": "POST /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences"
+          },
+          "response": []
+        },
+        {
+          "name": "List Presences By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}/employees/{{employeeNumber}}/presences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}",
+                "employees",
+                "{{employeeNumber}}",
+                "presences"
+              ]
+            },
+            "description": "GET /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Presence By Id By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}/employees/{{employeeNumber}}/presences/{{presenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}",
+                "employees",
+                "{{employeeNumber}}",
+                "presences",
+                "{{presenceId}}"
+              ]
+            },
+            "description": "GET /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Presence By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 404 or 409', function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-02-01\",\n  \"exitReasonCode\": \"TERMINATION\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}/employees/{{employeeNumber}}/presences/{{presenceId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}",
+                "employees",
+                "{{employeeNumber}}",
+                "presences",
+                "{{presenceId}}",
+                "close"
+              ]
+            },
+            "description": "POST /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}/close"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Presences (Technical API)",
+      "item": [
+        {
+          "name": "Create Presence By Employee Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyCode\": \"ES01\",\n  \"entryReasonCode\": \"HIRING\",\n  \"exitReasonCode\": null,\n  \"startDate\": \"2026-01-10\",\n  \"endDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/presences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "presences"
+              ]
+            },
+            "description": "POST /employees/{employeeId}/presences"
+          },
+          "response": []
+        },
+        {
+          "name": "List Presences By Employee Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/presences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "presences"
+              ]
+            },
+            "description": "GET /employees/{employeeId}/presences"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Presence By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/presences/{{presenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "presences",
+                "{{presenceId}}"
+              ]
+            },
+            "description": "GET /employees/{employeeId}/presences/{presenceId}"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Presence By Employee Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 404 or 409', function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-02-01\",\n  \"exitReasonCode\": \"TERMINATION\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/presences/{{presenceId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "presences",
+                "{{presenceId}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{employeeId}/presences/{presenceId}/close"
           },
           "response": []
         }
@@ -158,6 +516,395 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Rule Entity Types",
+      "item": [
+        {
+          "name": "Create Rule Entity Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{ruleEntityTypeCode}}\",\n  \"name\": \"Employee Presence Company\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-entity-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entity-types"
+              ]
+            },
+            "description": "POST /rule-entity-types"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Entity Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entity-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entity-types"
+              ]
+            },
+            "description": "GET /rule-entity-types"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule Entity Type By Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entity-types/{{ruleEntityTypeCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entity-types",
+                "{{ruleEntityTypeCode}}"
+              ]
+            },
+            "description": "GET /rule-entity-types/{code}"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rule Entities",
+      "item": [
+        {
+          "name": "Create Rule Entity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleSystemCode\": \"{{ruleSystemCode}}\",\n  \"ruleEntityTypeCode\": \"{{ruleEntityTypeCode}}\",\n  \"code\": \"{{ruleEntityCode}}\",\n  \"name\": \"Catalog Value\",\n  \"description\": \"Catalog value description\",\n  \"startDate\": \"1900-01-01\",\n  \"endDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities"
+              ]
+            },
+            "description": "POST /rule-entities"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Entities (No Filters)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities"
+              ]
+            },
+            "description": "GET /rule-entities"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Entities By Rule System",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities?ruleSystemCode={{ruleSystemCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities"
+              ],
+              "query": [
+                {
+                  "key": "ruleSystemCode",
+                  "value": "{{ruleSystemCode}}"
+                }
+              ]
+            },
+            "description": "GET /rule-entities?ruleSystemCode=ESP"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Entities By Rule System + Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities?ruleSystemCode={{ruleSystemCode}}&ruleEntityTypeCode={{ruleEntityTypeCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities"
+              ],
+              "query": [
+                {
+                  "key": "ruleSystemCode",
+                  "value": "{{ruleSystemCode}}"
+                },
+                {
+                  "key": "ruleEntityTypeCode",
+                  "value": "{{ruleEntityTypeCode}}"
+                }
+              ]
+            },
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY"
+          },
+          "response": []
+        },
+        {
+          "name": "List Rule Entities By Full Filters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities?ruleSystemCode={{ruleSystemCode}}&ruleEntityTypeCode={{ruleEntityTypeCode}}&code={{ruleEntityCode}}&active={{active}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities"
+              ],
+              "query": [
+                {
+                  "key": "ruleSystemCode",
+                  "value": "{{ruleSystemCode}}"
+                },
+                {
+                  "key": "ruleEntityTypeCode",
+                  "value": "{{ruleEntityTypeCode}}"
+                },
+                {
+                  "key": "code",
+                  "value": "{{ruleEntityCode}}"
+                },
+                {
+                  "key": "active",
+                  "value": "{{active}}"
+                }
+              ]
+            },
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01&active=true"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule Entity By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/{{ruleEntityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "{{ruleEntityId}}"
+              ]
+            },
+            "description": "GET /rule-entities/{id}"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Rule Entity By Business Key (Exact)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/search?ruleSystemCode={{ruleSystemCode}}&entityTypeCode={{ruleEntityTypeCode}}&code={{ruleEntityCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "ruleSystemCode",
+                  "value": "{{ruleSystemCode}}"
+                },
+                {
+                  "key": "entityTypeCode",
+                  "value": "{{ruleEntityTypeCode}}"
+                },
+                {
+                  "key": "code",
+                  "value": "{{ruleEntityCode}}"
+                }
+              ]
+            },
+            "description": "GET /rule-entities/search?ruleSystemCode=ESP&entityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -168,6 +915,34 @@
     {
       "key": "ruleSystemCode",
       "value": "ESP"
+    },
+    {
+      "key": "employeeNumber",
+      "value": "EMP001"
+    },
+    {
+      "key": "employeeId",
+      "value": "1"
+    },
+    {
+      "key": "presenceId",
+      "value": "1"
+    },
+    {
+      "key": "ruleEntityTypeCode",
+      "value": "EMPLOYEE_PRESENCE_COMPANY"
+    },
+    {
+      "key": "ruleEntityCode",
+      "value": "ES01"
+    },
+    {
+      "key": "ruleEntityId",
+      "value": "1"
+    },
+    {
+      "key": "active",
+      "value": "true"
     }
   ]
 }
