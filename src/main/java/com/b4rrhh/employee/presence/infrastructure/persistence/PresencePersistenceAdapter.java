@@ -81,6 +81,8 @@ public class PresencePersistenceAdapter implements PresenceRepository {
         entity.setExitReasonCode(presence.getExitReasonCode());
         entity.setStartDate(presence.getStartDate());
         entity.setEndDate(presence.getEndDate());
+        entity.setCreatedAt(presence.getCreatedAt());
+        entity.setUpdatedAt(presence.getUpdatedAt());
         return entity;
     }
 }
