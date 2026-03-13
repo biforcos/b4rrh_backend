@@ -56,7 +56,8 @@ class ListRuleEntitiesServiceTest {
     @Test
     void listsByRuleSystemCodeRuleEntityTypeCodeAndCode() {
         List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", null)).thenReturn(expected);
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"))
+            .thenReturn(expected.stream().findFirst());
 
         List<RuleEntity> result = service.list(
                 new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "es01", null)
@@ -64,13 +65,13 @@ class ListRuleEntitiesServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("ES01", result.get(0).getCode());
-        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", null);
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01");
     }
 
     @Test
     void returnsEmptyListWhenNoResults() {
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99", null))
-                .thenReturn(List.of());
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99"))
+            .thenReturn(java.util.Optional.empty());
 
         List<RuleEntity> result = service.list(
                 new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99", null)

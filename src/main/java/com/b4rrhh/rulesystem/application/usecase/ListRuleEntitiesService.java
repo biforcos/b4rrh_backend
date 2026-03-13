@@ -17,12 +17,29 @@ public class ListRuleEntitiesService implements ListRuleEntitiesUseCase {
 
     @Override
     public List<RuleEntity> list(ListRuleEntitiesQuery query) {
+        String normalizedRuleSystemCode = normalizeOptionalCode(query.ruleSystemCode());
+        String normalizedRuleEntityTypeCode = normalizeOptionalCode(query.ruleEntityTypeCode());
+        String normalizedCode = normalizeOptionalCode(query.code());
+
+        if (hasCompleteBusinessKey(normalizedRuleSystemCode, normalizedRuleEntityTypeCode, normalizedCode)
+                && query.active() == null) {
+            return ruleEntityRepository.findByBusinessKey(
+                    normalizedRuleSystemCode,
+                    normalizedRuleEntityTypeCode,
+                    normalizedCode
+            ).stream().toList();
+        }
+
         return ruleEntityRepository.findByFilters(
-                normalizeOptionalCode(query.ruleSystemCode()),
-                normalizeOptionalCode(query.ruleEntityTypeCode()),
-                normalizeOptionalCode(query.code()),
+                normalizedRuleSystemCode,
+                normalizedRuleEntityTypeCode,
+                normalizedCode,
                 query.active()
         );
+    }
+
+    private boolean hasCompleteBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code) {
+        return ruleSystemCode != null && ruleEntityTypeCode != null && code != null;
     }
 
     private String normalizeOptionalCode(String value) {

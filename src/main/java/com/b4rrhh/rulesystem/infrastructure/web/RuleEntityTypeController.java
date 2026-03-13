@@ -48,9 +48,9 @@ public class RuleEntityTypeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
-    @GetMapping("/{code}")
-    public ResponseEntity<RuleEntityTypeResponse> getByCode(@PathVariable String code) {
-        return getRuleEntityTypeByCodeUseCase.getByCode(code)
+    @GetMapping("/{ruleEntityTypeCode}")
+    public ResponseEntity<RuleEntityTypeResponse> getByCode(@PathVariable String ruleEntityTypeCode) {
+        return getRuleEntityTypeByCodeUseCase.getByCode(ruleEntityTypeCode)
                 .map(ruleEntityType -> ResponseEntity.ok(toResponse(ruleEntityType)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -67,7 +67,6 @@ public class RuleEntityTypeController {
 
     private RuleEntityTypeResponse toResponse(RuleEntityType ruleEntityType) {
         return new RuleEntityTypeResponse(
-                ruleEntityType.getId(),
                 ruleEntityType.getCode(),
                 ruleEntityType.getName(),
                 ruleEntityType.isActive()

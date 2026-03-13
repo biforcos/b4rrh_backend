@@ -17,11 +17,6 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
     }
 
     @Override
-    public Optional<RuleEntity> findById(Long id) {
-        return springDataRuleEntityRepository.findById(id).map(this::toDomain);
-    }
-
-    @Override
     public List<RuleEntity> findAll() {
         return springDataRuleEntityRepository.findAll().stream().map(this::toDomain).toList();
     }

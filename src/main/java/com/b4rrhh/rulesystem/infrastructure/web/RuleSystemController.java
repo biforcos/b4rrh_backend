@@ -44,9 +44,9 @@ public class RuleSystemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
-    @GetMapping("/{code}")
-    public ResponseEntity<RuleSystemResponse> getByCode(@PathVariable String code) {
-        return getRuleSystemByCodeUseCase.getByCode(code)
+    @GetMapping("/{ruleSystemCode}")
+    public ResponseEntity<RuleSystemResponse> getByCode(@PathVariable String ruleSystemCode) {
+        return getRuleSystemByCodeUseCase.getByCode(ruleSystemCode)
                 .map(ruleSystem -> ResponseEntity.ok(toResponse(ruleSystem)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -63,7 +63,6 @@ public class RuleSystemController {
 
     private RuleSystemResponse toResponse(RuleSystem ruleSystem) {
         return new RuleSystemResponse(
-                ruleSystem.getId(),
                 ruleSystem.getCode(),
                 ruleSystem.getName(),
                 ruleSystem.getCountryCode(),

@@ -554,7 +554,7 @@
                 "{{ruleSystemCode}}"
               ]
             },
-            "description": "GET /rule-systems/{code}"
+            "description": "GET /rule-systems/{ruleSystemCode}"
           },
           "response": []
         }
@@ -662,7 +662,7 @@
                 "{{ruleEntityTypeCode}}"
               ]
             },
-            "description": "GET /rule-entity-types/{code}"
+            "description": "GET /rule-entity-types/{ruleEntityTypeCode}"
           },
           "response": []
         }
@@ -870,15 +870,15 @@
           "response": []
         },
         {
-          "name": "Get Rule Entity By Id",
+          "name": "List Rule Entities By Full Business Key",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200 or 404', function () {",
-                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ]
               }
@@ -888,45 +888,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/rule-entities/{{ruleEntityId}}",
+              "raw": "{{baseUrl}}/rule-entities?ruleSystemCode={{ruleSystemCode}}&ruleEntityTypeCode={{ruleEntityTypeCode}}&code={{ruleEntityCode}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "rule-entities",
-                "{{ruleEntityId}}"
-              ]
-            },
-            "description": "GET /rule-entities/{id}"
-          },
-          "response": []
-        },
-        {
-          "name": "Search Rule Entity By Business Key (Exact)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200 or 404', function () {",
-                  "    pm.expect([200, 404]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/rule-entities/search?ruleSystemCode={{ruleSystemCode}}&entityTypeCode={{ruleEntityTypeCode}}&code={{ruleEntityCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rule-entities",
-                "search"
+                "rule-entities"
               ],
               "query": [
                 {
@@ -934,7 +901,7 @@
                   "value": "{{ruleSystemCode}}"
                 },
                 {
-                  "key": "entityTypeCode",
+                  "key": "ruleEntityTypeCode",
                   "value": "{{ruleEntityTypeCode}}"
                 },
                 {
@@ -943,7 +910,7 @@
                 }
               ]
             },
-            "description": "GET /rule-entities/search?ruleSystemCode=ESP&entityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01"
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01"
           },
           "response": []
         }
@@ -982,10 +949,6 @@
     {
       "key": "ruleEntityCode",
       "value": "ES01"
-    },
-    {
-      "key": "ruleEntityId",
-      "value": "1"
     },
     {
       "key": "active",
