@@ -1,19 +1,17 @@
 # B4RRHH – Employee Domain Model
-Version: 1.0
-Generated: 2026-03-13T20:34:29.047213 UTC
 
 This document defines the conceptual **HR Core Domain Model** for the B4RRHH project.
 
 Purpose:
-- Provide a stable reference for Copilot and developers.
-- Ensure every new vertical follows the same architectural pattern.
-- Prevent ad‑hoc domain modelling.
+- provide a stable reference for Copilot and developers
+- ensure every new vertical follows the same architectural pattern
+- prevent ad-hoc domain modelling
 
 Architecture assumptions:
 - Java 21
 - Spring Boot
 - Hexagonal Architecture
-- Contract‑first APIs (OpenAPI)
+- Contract-first APIs (OpenAPI)
 - Flyway migrations
 - PostgreSQL
 
@@ -27,7 +25,6 @@ Employee identity business key:
 Example:
 
     ESP + EMP + 0001
-
 
 ------------------------------------------------------------
 BOUNDED CONTEXT: employee
@@ -47,7 +44,6 @@ Verticals inside this context:
     work_schedule
     document
     absence
-
 
 ------------------------------------------------------------
 1. employee.employee
@@ -77,8 +73,7 @@ Typical attributes:
 Notes:
 
 - employeeTypeCode comes from catalog: EMPLOYEE_TYPE
-- Technical ID may exist internally but MUST NOT appear in APIs
-
+- technical ID may exist internally but MUST NOT appear in canonical APIs
 
 ------------------------------------------------------------
 2. employee.presence
@@ -91,14 +86,15 @@ Characteristics:
 
     historized
     prevents overlapping intervals
+    lifecycle action = close
 
 Identity:
 
     employee + presenceNumber
 
-Example:
+Expanded API identity:
 
-    presenceNumber = 0001
+    ruleSystemCode + employeeTypeCode + employeeNumber + presenceNumber
 
 Attributes:
 
@@ -106,12 +102,25 @@ Attributes:
     endDate
     entryReasonCode
     exitReasonCode
+    companyCode
 
 Catalog dependencies:
 
-    PRESENCE_ENTRY_REASON
-    PRESENCE_EXIT_REASON
+    EMPLOYEE_ENTRY_REASON
+    EMPLOYEE_EXIT_REASON
 
+Public API shape:
+
+    POST   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences
+    GET    /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences
+    GET    /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}
+    POST   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}/close
+
+Notes:
+
+- `presenceNumber` is the public identity of the presence resource
+- technical `presenceId` must not appear in canonical APIs
+- `close` is a domain action, not generic CRUD semantics
 
 ------------------------------------------------------------
 3. employee.contact
@@ -129,7 +138,11 @@ Identity:
 
     employee + contactTypeCode
 
-Example:
+Expanded API identity:
+
+    ruleSystemCode + employeeTypeCode + employeeNumber + contactTypeCode
+
+Examples:
 
     EMAIL
     MOBILE
@@ -141,7 +154,6 @@ Attributes:
 Catalog dependency:
 
     EMPLOYEE_CONTACT_TYPE
-
 
 ------------------------------------------------------------
 4. employee.address
@@ -173,7 +185,6 @@ Catalog dependency:
 
     EMPLOYEE_ADDRESS_TYPE
 
-
 ------------------------------------------------------------
 5. employee.contract
 ------------------------------------------------------------
@@ -202,7 +213,6 @@ Catalog dependencies:
     CONTRACT_TYPE
     WORKING_TIME_TYPE
 
-
 ------------------------------------------------------------
 6. employee.assignment
 ------------------------------------------------------------
@@ -226,7 +236,6 @@ Attributes:
     costCenterCode
     locationCode
 
-
 ------------------------------------------------------------
 7. employee.compensation
 ------------------------------------------------------------
@@ -249,7 +258,6 @@ Attributes:
     currencyCode
     bonusEligibility
 
-
 ------------------------------------------------------------
 8. employee.work_schedule
 ------------------------------------------------------------
@@ -270,7 +278,6 @@ Attributes:
     scheduleTypeCode
     hoursPerWeek
     shiftCode
-
 
 ------------------------------------------------------------
 9. employee.document
@@ -298,7 +305,6 @@ Catalog dependency:
 
     EMPLOYEE_DOCUMENT_TYPE
 
-
 ------------------------------------------------------------
 10. employee.absence
 ------------------------------------------------------------
@@ -320,7 +326,6 @@ Attributes:
     startDate
     endDate
     approvalStatus
-
 
 ------------------------------------------------------------
 Design Principles
@@ -356,17 +361,16 @@ Examples:
     end_date
     overlap validation
 
-
 ------------------------------------------------------------
 Goal of this document
 ------------------------------------------------------------
 
 This document acts as:
 
-    - Domain map
-    - Architectural guardrail
+    - domain map
+    - architectural guardrail
     - Copilot design reference
 
 When implementing a new vertical:
 
-    "Follow the structure and principles defined in this document."
+    Follow the structure and principles defined in this document.
