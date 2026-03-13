@@ -219,6 +219,170 @@ paths:
         '409':
           description: Presence already closed
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses:
+    post:
+      operationId: createAddressByBusinessKey
+      summary: Create employee address by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAddressRequest'
+      responses:
+        '201':
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or catalog not found
+        '409':
+          description: Address period overlaps for the same employee and address type
+    get:
+      operationId: listEmployeeAddressesByBusinessKey
+      summary: List employee addresses by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Address list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AddressResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}:
+    get:
+      operationId: getAddressByBusinessKey
+      summary: Get employee address by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: addressNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Address found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '404':
+          description: Rule system, employee, or address not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
+    post:
+      operationId: closeAddressByBusinessKey
+      summary: Close employee address by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: addressNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseAddressRequest'
+      responses:
+        '200':
+          description: Address closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or address not found
+        '409':
+          description: Address already closed
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts:
     post:
       operationId: createContactByBusinessKey
@@ -693,6 +857,86 @@ components:
         entryReasonCode:
           type: string
         exitReasonCode:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateAddressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - addressTypeCode
+        - street
+        - city
+        - countryCode
+        - startDate
+      properties:
+        addressTypeCode:
+          type: string
+          maxLength: 30
+        street:
+          type: string
+          maxLength: 300
+        city:
+          type: string
+          maxLength: 120
+        countryCode:
+          type: string
+          maxLength: 3
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        regionCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CloseAddressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+    AddressResponse:
+      type: object
+      required:
+        - addressNumber
+        - addressTypeCode
+        - street
+        - city
+        - countryCode
+        - startDate
+      properties:
+        addressNumber:
+          type: integer
+          format: int32
+        addressTypeCode:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+        postalCode:
+          type: string
+          nullable: true
+        regionCode:
           type: string
           nullable: true
         startDate:
