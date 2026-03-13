@@ -16,16 +16,18 @@ public class CreateEmployeeService implements CreateEmployeeUseCase {
 
     @Override
     public Employee create(CreateEmployeeCommand command) {
-        employeeRepository.findByRuleSystemCodeAndEmployeeNumber(
+        employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
                 command.ruleSystemCode(),
+                command.employeeTypeCode(),
                 command.employeeNumber()
         ).ifPresent(existing -> {
-            throw new IllegalArgumentException("Employee already exists with ruleSystemCode and employeeNumber");
+            throw new IllegalArgumentException("Employee already exists with ruleSystemCode, employeeTypeCode and employeeNumber");
         });
 
         Employee newEmployee = new Employee(
                 null, // id
                 command.ruleSystemCode(),
+                command.employeeTypeCode(),
                 command.employeeNumber(),
                 command.firstName(),
                 command.lastName1(),

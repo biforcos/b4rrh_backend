@@ -33,22 +33,73 @@ public class ClosePresenceService implements ClosePresenceUseCase {
 
     @Override
     public Presence close(ClosePresenceCommand command) {
-        EmployeePresenceContext employee = employeePresenceLookupPort.findById(command.employeeId())
-                .orElseThrow(() -> new PresenceEmployeeNotFoundException(command.employeeId()));
+        String normalizedRuleSystemCode = normalizeRuleSystemCode(command.ruleSystemCode());
+        String normalizedEmployeeTypeCode = normalizeEmployeeTypeCode(command.employeeTypeCode());
+        String normalizedEmployeeNumber = normalizeEmployeeNumber(command.employeeNumber());
+        Integer normalizedPresenceNumber = normalizePresenceNumber(command.presenceNumber());
 
-        Presence existing = presenceRepository.findByIdAndEmployeeId(command.presenceId(), command.employeeId())
-                .orElseThrow(() -> new PresenceNotFoundException(command.employeeId(), command.presenceId()));
+        ruleSystemRepository.findByCode(normalizedRuleSystemCode)
+                .orElseThrow(() -> new PresenceRuleSystemNotFoundException(normalizedRuleSystemCode));
 
-        String ruleSystemCode = employee.ruleSystemCode().trim().toUpperCase();
-        ruleSystemRepository.findByCode(ruleSystemCode)
-                .orElseThrow(() -> new PresenceRuleSystemNotFoundException(ruleSystemCode));
+        EmployeePresenceContext employee = employeePresenceLookupPort
+                .findByBusinessKeyForUpdate(
+                        normalizedRuleSystemCode,
+                        normalizedEmployeeTypeCode,
+                        normalizedEmployeeNumber
+                )
+                .orElseThrow(() -> new PresenceEmployeeNotFoundException(
+                        normalizedRuleSystemCode,
+                        normalizedEmployeeTypeCode,
+                        normalizedEmployeeNumber
+                ));
+
+        Presence existing = presenceRepository
+                .findByEmployeeIdAndPresenceNumber(employee.employeeId(), normalizedPresenceNumber)
+                .orElseThrow(() -> new PresenceNotFoundException(
+                        normalizedRuleSystemCode,
+                        normalizedEmployeeTypeCode,
+                        normalizedEmployeeNumber,
+                        normalizedPresenceNumber
+                ));
 
         String normalizedExitReasonCode = presenceCatalogValidator.normalizeOptionalCode(command.exitReasonCode());
         if (normalizedExitReasonCode != null) {
-            presenceCatalogValidator.validateExitReasonCode(ruleSystemCode, normalizedExitReasonCode, command.endDate());
+            presenceCatalogValidator.validateExitReasonCode(normalizedRuleSystemCode, normalizedExitReasonCode, command.endDate());
         }
 
         Presence closed = existing.close(command.endDate(), normalizedExitReasonCode);
         return presenceRepository.save(closed);
+    }
+
+    private String normalizeRuleSystemCode(String ruleSystemCode) {
+        if (ruleSystemCode == null || ruleSystemCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("ruleSystemCode is required");
+        }
+
+        return ruleSystemCode.trim().toUpperCase();
+    }
+
+    private String normalizeEmployeeTypeCode(String employeeTypeCode) {
+        if (employeeTypeCode == null || employeeTypeCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("employeeTypeCode is required");
+        }
+
+        return employeeTypeCode.trim().toUpperCase();
+    }
+
+    private String normalizeEmployeeNumber(String employeeNumber) {
+        if (employeeNumber == null || employeeNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("employeeNumber is required");
+        }
+
+        return employeeNumber.trim();
+    }
+
+    private Integer normalizePresenceNumber(Integer presenceNumber) {
+        if (presenceNumber == null || presenceNumber <= 0) {
+            throw new IllegalArgumentException("presenceNumber must be a positive integer");
+        }
+
+        return presenceNumber;
     }
 }

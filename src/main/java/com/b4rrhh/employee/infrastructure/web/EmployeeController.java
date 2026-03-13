@@ -26,6 +26,7 @@ public class EmployeeController {
         Employee createdEmployee = createEmployeeUseCase.create(
                 new CreateEmployeeCommand(
                         request.ruleSystemCode(),
+                        request.employeeTypeCode(),
                         request.employeeNumber(),
                         request.firstName(),
                         request.lastName1(),
@@ -41,6 +42,7 @@ public class EmployeeController {
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getRuleSystemCode(),
+                employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
                 employee.getFirstName(),
                 employee.getLastName1(),

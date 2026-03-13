@@ -4,7 +4,6 @@ import com.b4rrhh.employee.presence.domain.exception.ActivePresenceAlreadyExists
 import com.b4rrhh.employee.presence.domain.exception.InvalidPresenceDateRangeException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceAlreadyClosedException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
-import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeBusinessKeyMismatchException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceOverlapException;
@@ -15,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = {PresenceController.class, PresenceBusinessKeyController.class})
+@RestControllerAdvice(assignableTypes = PresenceBusinessKeyController.class)
 public class PresenceExceptionHandler {
 
     @ExceptionHandler({
@@ -41,8 +40,7 @@ public class PresenceExceptionHandler {
     @ExceptionHandler({
             PresenceOverlapException.class,
             ActivePresenceAlreadyExistsException.class,
-            PresenceAlreadyClosedException.class,
-            PresenceEmployeeBusinessKeyMismatchException.class
+            PresenceAlreadyClosedException.class
     })
     public ResponseEntity<PresenceErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

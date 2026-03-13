@@ -23,6 +23,10 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ListEmployeePresencesServiceTest {
 
+    private static final String RULE_SYSTEM_CODE = "ESP";
+    private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
+    private static final String EMPLOYEE_NUMBER = "EMP001";
+
     @Mock
     private PresenceRepository presenceRepository;
     @Mock
@@ -36,8 +40,9 @@ class ListEmployeePresencesServiceTest {
     }
 
     @Test
-    void listsEmployeePresenceHistory() {
-        when(employeePresenceLookupPort.findById(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
+    void listsEmployeePresenceHistoryByBusinessKey() {
+        when(employeePresenceLookupPort.findByBusinessKey(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
 
         List<Presence> expected = List.of(
                 presence(1L, 10L, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
@@ -45,7 +50,7 @@ class ListEmployeePresencesServiceTest {
         );
         when(presenceRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(expected);
 
-        List<Presence> result = service.listByEmployeeId(10L);
+        List<Presence> result = service.listByEmployeeBusinessKey(" esp ", " internal ", " EMP001 ");
 
         assertEquals(2, result.size());
         assertEquals(1, result.get(0).getPresenceNumber());
@@ -56,9 +61,17 @@ class ListEmployeePresencesServiceTest {
 
     @Test
     void rejectsListWhenEmployeeDoesNotExist() {
-        when(employeePresenceLookupPort.findById(10L)).thenReturn(Optional.empty());
+        when(employeePresenceLookupPort.findByBusinessKey(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.empty());
 
-        assertThrows(PresenceEmployeeNotFoundException.class, () -> service.listByEmployeeId(10L));
+        assertThrows(
+                PresenceEmployeeNotFoundException.class,
+                () -> service.listByEmployeeBusinessKey(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER)
+        );
+    }
+
+    private EmployeePresenceContext employeeContext(Long employeeId) {
+        return new EmployeePresenceContext(employeeId, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
     }
 
     private Presence presence(Long id, Long employeeId, Integer number, LocalDate startDate, LocalDate endDate) {

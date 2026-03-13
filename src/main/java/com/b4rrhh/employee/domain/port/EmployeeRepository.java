@@ -7,7 +7,11 @@ public interface EmployeeRepository {
 
     Optional<Employee> findById(Long id);
 
-    Optional<Employee> findByRuleSystemCodeAndEmployeeNumber(String ruleSystemCode, String employeeNumber);
+    Optional<Employee> findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    );
 
     Employee save(Employee employee);
 }

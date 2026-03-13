@@ -27,6 +27,10 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ClosePresenceServiceTest {
 
+    private static final String RULE_SYSTEM_CODE = "ESP";
+    private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
+    private static final String EMPLOYEE_NUMBER = "EMP001";
+
     @Mock
     private PresenceRepository presenceRepository;
     @Mock
@@ -51,15 +55,18 @@ class ClosePresenceServiceTest {
     @Test
     void closesActivePresence() {
         ClosePresenceCommand command = new ClosePresenceCommand(
-                10L,
-                20L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
                 LocalDate.of(2026, 2, 1),
                 "ext01"
         );
 
-        when(employeePresenceLookupPort.findById(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
-        when(presenceRepository.findByIdAndEmployeeId(20L, 10L)).thenReturn(Optional.of(activePresence()));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(presenceRepository.findByEmployeeIdAndPresenceNumber(10L, 1)).thenReturn(Optional.of(activePresence()));
         when(presenceRepository.save(any(Presence.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Presence closed = service.close(command);
@@ -71,15 +78,18 @@ class ClosePresenceServiceTest {
     @Test
     void rejectsCloseAlreadyClosedPresence() {
         ClosePresenceCommand command = new ClosePresenceCommand(
-                10L,
-                20L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
                 LocalDate.of(2026, 2, 1),
                 null
         );
 
-        when(employeePresenceLookupPort.findById(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(presenceRepository.findByIdAndEmployeeId(20L, 10L)).thenReturn(Optional.of(closedPresence()));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(presenceRepository.findByEmployeeIdAndPresenceNumber(10L, 1)).thenReturn(Optional.of(closedPresence()));
 
         assertThrows(PresenceAlreadyClosedException.class, () -> service.close(command));
     }
@@ -87,16 +97,24 @@ class ClosePresenceServiceTest {
     @Test
     void rejectsCloseWhenPresenceDoesNotExist() {
         ClosePresenceCommand command = new ClosePresenceCommand(
-                10L,
-                99L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                9,
                 LocalDate.of(2026, 2, 1),
                 null
         );
 
-        when(employeePresenceLookupPort.findById(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(presenceRepository.findByIdAndEmployeeId(99L, 10L)).thenReturn(Optional.empty());
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(presenceRepository.findByEmployeeIdAndPresenceNumber(10L, 9)).thenReturn(Optional.empty());
 
         assertThrows(PresenceNotFoundException.class, () -> service.close(command));
+    }
+
+    private EmployeePresenceContext employeeContext(Long employeeId) {
+        return new EmployeePresenceContext(employeeId, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
     }
 
     private static final class TestPresenceCatalogValidator extends PresenceCatalogValidator {

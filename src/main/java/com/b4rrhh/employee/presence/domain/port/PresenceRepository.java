@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PresenceRepository {
-    Optional<Presence> findByIdAndEmployeeId(Long presenceId, Long employeeId);
+    Optional<Presence> findByEmployeeIdAndPresenceNumber(Long employeeId, Integer presenceNumber);
 
     List<Presence> findByEmployeeIdOrderByStartDate(Long employeeId);
 

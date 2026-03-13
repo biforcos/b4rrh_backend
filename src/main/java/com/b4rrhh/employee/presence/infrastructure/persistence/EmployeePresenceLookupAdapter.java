@@ -18,43 +18,44 @@ public class EmployeePresenceLookupAdapter implements EmployeePresenceLookupPort
     }
 
     @Override
-    public Optional<EmployeePresenceContext> findById(Long employeeId) {
+        public Optional<EmployeePresenceContext> findByBusinessKey(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+        ) {
         List<?> rows = entityManager.createNativeQuery("""
-                select id, rule_system_code
-                from employee.employee
-                where id = :employeeId
-                """)
-                .setParameter("employeeId", employeeId)
-                .getResultList();
-
-        return mapResult(rows);
-    }
-
-    @Override
-    public Optional<EmployeePresenceContext> findByIdForUpdate(Long employeeId) {
-        List<?> rows = entityManager.createNativeQuery("""
-                select id, rule_system_code
-                from employee.employee
-                where id = :employeeId
-                for update
-                """)
-                .setParameter("employeeId", employeeId)
-                .getResultList();
-
-        return mapResult(rows);
-    }
-
-    @Override
-    public Optional<EmployeePresenceContext> findByBusinessKey(String ruleSystemCode, String employeeNumber) {
-        List<?> rows = entityManager.createNativeQuery("""
-                select id, rule_system_code
+            select id, rule_system_code, employee_type_code, employee_number
                 from employee.employee
                 where upper(trim(rule_system_code)) = :ruleSystemCode
+              and upper(trim(employee_type_code)) = :employeeTypeCode
                   and trim(employee_number) = :employeeNumber
                 """)
                 .setParameter("ruleSystemCode", ruleSystemCode)
+            .setParameter("employeeTypeCode", employeeTypeCode)
                 .setParameter("employeeNumber", employeeNumber)
                 .getResultList();
+
+        return mapResult(rows);
+        }
+
+        @Override
+        public Optional<EmployeePresenceContext> findByBusinessKeyForUpdate(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+        ) {
+        List<?> rows = entityManager.createNativeQuery("""
+            select id, rule_system_code, employee_type_code, employee_number
+            from employee.employee
+            where upper(trim(rule_system_code)) = :ruleSystemCode
+              and upper(trim(employee_type_code)) = :employeeTypeCode
+              and trim(employee_number) = :employeeNumber
+            for update
+            """)
+            .setParameter("ruleSystemCode", ruleSystemCode)
+            .setParameter("employeeTypeCode", employeeTypeCode)
+            .setParameter("employeeNumber", employeeNumber)
+            .getResultList();
 
         return mapResult(rows);
     }
@@ -65,13 +66,15 @@ public class EmployeePresenceLookupAdapter implements EmployeePresenceLookupPort
         }
 
         Object row = rows.get(0);
-        if (!(row instanceof Object[] columns) || columns.length < 2) {
+        if (!(row instanceof Object[] columns) || columns.length < 4) {
             throw new IllegalStateException("Unexpected row shape for employee presence lookup query");
         }
 
         Long id = ((Number) columns[0]).longValue();
         String ruleSystemCode = (String) columns[1];
+        String employeeTypeCode = (String) columns[2];
+        String employeeNumber = (String) columns[3];
 
-        return Optional.of(new EmployeePresenceContext(id, ruleSystemCode));
+        return Optional.of(new EmployeePresenceContext(id, ruleSystemCode, employeeTypeCode, employeeNumber));
     }
 }

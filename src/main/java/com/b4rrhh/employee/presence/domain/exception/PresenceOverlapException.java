@@ -2,7 +2,16 @@ package com.b4rrhh.employee.presence.domain.exception;
 
 public class PresenceOverlapException extends RuntimeException {
 
-    public PresenceOverlapException(Long employeeId) {
-        super("Presence period overlaps existing period for employee: " + employeeId);
+    public PresenceOverlapException(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    ) {
+        super("Presence period overlaps an existing period for ruleSystemCode="
+                + ruleSystemCode
+                + ", employeeTypeCode="
+                + employeeTypeCode
+                + ", employeeNumber="
+                + employeeNumber);
     }
 }

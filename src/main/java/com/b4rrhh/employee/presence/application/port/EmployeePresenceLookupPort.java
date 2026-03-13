@@ -4,9 +4,15 @@ import java.util.Optional;
 
 public interface EmployeePresenceLookupPort {
 
-    Optional<EmployeePresenceContext> findById(Long employeeId);
+    Optional<EmployeePresenceContext> findByBusinessKey(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    );
 
-    Optional<EmployeePresenceContext> findByIdForUpdate(Long employeeId);
-
-    Optional<EmployeePresenceContext> findByBusinessKey(String ruleSystemCode, String employeeNumber);
+    Optional<EmployeePresenceContext> findByBusinessKeyForUpdate(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    );
 }

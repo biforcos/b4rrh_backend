@@ -20,8 +20,8 @@ public class PresencePersistenceAdapter implements PresenceRepository {
     }
 
     @Override
-    public Optional<Presence> findByIdAndEmployeeId(Long presenceId, Long employeeId) {
-        return springDataPresenceRepository.findByIdAndEmployeeId(presenceId, employeeId)
+    public Optional<Presence> findByEmployeeIdAndPresenceNumber(Long employeeId, Integer presenceNumber) {
+        return springDataPresenceRepository.findByEmployeeIdAndPresenceNumber(employeeId, presenceNumber)
                 .map(this::toDomain);
     }
 

@@ -23,15 +23,17 @@ public class GetEmployeeByBusinessKeyService implements GetEmployeeByBusinessKey
     }
 
     @Override
-    public Optional<Employee> getByBusinessKey(String ruleSystemCode, String employeeNumber) {
+    public Optional<Employee> getByBusinessKey(String ruleSystemCode, String employeeTypeCode, String employeeNumber) {
         String normalizedRuleSystemCode = normalizeRuleSystemCode(ruleSystemCode);
+        String normalizedEmployeeTypeCode = normalizeEmployeeTypeCode(employeeTypeCode);
         String normalizedEmployeeNumber = normalizeEmployeeNumber(employeeNumber);
 
         ruleSystemRepository.findByCode(normalizedRuleSystemCode)
                 .orElseThrow(() -> new EmployeeRuleSystemNotFoundException(normalizedRuleSystemCode));
 
-        return employeeRepository.findByRuleSystemCodeAndEmployeeNumber(
+        return employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
                 normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
         );
     }
@@ -42,6 +44,14 @@ public class GetEmployeeByBusinessKeyService implements GetEmployeeByBusinessKey
         }
 
         return ruleSystemCode.trim().toUpperCase();
+    }
+
+    private String normalizeEmployeeTypeCode(String employeeTypeCode) {
+        if (employeeTypeCode == null || employeeTypeCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("employeeTypeCode is required");
+        }
+
+        return employeeTypeCode.trim().toUpperCase();
     }
 
     private String normalizeEmployeeNumber(String employeeNumber) {

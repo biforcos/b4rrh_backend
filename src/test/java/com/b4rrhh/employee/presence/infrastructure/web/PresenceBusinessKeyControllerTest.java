@@ -1,13 +1,13 @@
 package com.b4rrhh.employee.presence.infrastructure.web;
 
-import com.b4rrhh.employee.presence.application.port.EmployeePresenceContext;
+import com.b4rrhh.employee.presence.application.usecase.ClosePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.ClosePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
-import com.b4rrhh.employee.presence.application.usecase.GetPresenceByIdUseCase;
+import com.b4rrhh.employee.presence.application.usecase.GetPresenceByBusinessKeyUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
-import com.b4rrhh.employee.presence.application.usecase.ResolveEmployeePresenceByBusinessKeyUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.presence.infrastructure.web.dto.ClosePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.CreatePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.PresenceResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,13 +34,11 @@ import static org.mockito.Mockito.when;
 class PresenceBusinessKeyControllerTest {
 
     @Mock
-    private ResolveEmployeePresenceByBusinessKeyUseCase resolveEmployeePresenceByBusinessKeyUseCase;
-    @Mock
     private CreatePresenceUseCase createPresenceUseCase;
     @Mock
     private ClosePresenceUseCase closePresenceUseCase;
     @Mock
-    private GetPresenceByIdUseCase getPresenceByIdUseCase;
+    private GetPresenceByBusinessKeyUseCase getPresenceByBusinessKeyUseCase;
     @Mock
     private ListEmployeePresencesUseCase listEmployeePresencesUseCase;
 
@@ -48,10 +47,9 @@ class PresenceBusinessKeyControllerTest {
     @BeforeEach
     void setUp() {
         controller = new PresenceBusinessKeyController(
-                resolveEmployeePresenceByBusinessKeyUseCase,
                 createPresenceUseCase,
                 closePresenceUseCase,
-                getPresenceByIdUseCase,
+                getPresenceByBusinessKeyUseCase,
                 listEmployeePresencesUseCase
         );
     }
@@ -66,30 +64,28 @@ class PresenceBusinessKeyControllerTest {
                 null
         );
 
-        when(resolveEmployeePresenceByBusinessKeyUseCase.resolve("ESP", "EMP001"))
-                .thenReturn(new EmployeePresenceContext(10L, "ESP"));
-        when(createPresenceUseCase.create(org.mockito.ArgumentMatchers.any(CreatePresenceCommand.class)))
-                .thenReturn(activePresence());
+        when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(activePresence());
 
-        ResponseEntity<PresenceResponse> response = controller.create("ESP", "EMP001", request);
+        ResponseEntity<PresenceResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(10L, response.getBody().employeeId());
+        assertEquals(1, response.getBody().presenceNumber());
 
         ArgumentCaptor<CreatePresenceCommand> captor = ArgumentCaptor.forClass(CreatePresenceCommand.class);
         verify(createPresenceUseCase).create(captor.capture());
-        assertEquals(10L, captor.getValue().employeeId());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals("AC01", captor.getValue().companyCode());
     }
 
     @Test
     void listsPresencesUsingEmployeeBusinessKey() {
-        when(resolveEmployeePresenceByBusinessKeyUseCase.resolve("ESP", "EMP001"))
-                .thenReturn(new EmployeePresenceContext(10L, "ESP"));
-        when(listEmployeePresencesUseCase.listByEmployeeId(10L)).thenReturn(List.of(activePresence()));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence()));
 
-        ResponseEntity<List<PresenceResponse>> response = controller.list("ESP", "EMP001");
+        ResponseEntity<List<PresenceResponse>> response = controller.list("ESP", "INTERNAL", "EMP001");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -98,16 +94,35 @@ class PresenceBusinessKeyControllerTest {
     }
 
     @Test
-    void getsPresenceByIdUsingEmployeeBusinessKey() {
-        when(resolveEmployeePresenceByBusinessKeyUseCase.resolve("ESP", "EMP001"))
-                .thenReturn(new EmployeePresenceContext(10L, "ESP"));
-        when(getPresenceByIdUseCase.getById(10L, 20L)).thenReturn(Optional.of(activePresence()));
+    void getsPresenceByBusinessKeyAndPresenceNumber() {
+        when(getPresenceByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1))
+                .thenReturn(Optional.of(activePresence()));
 
-        ResponseEntity<PresenceResponse> response = controller.getById("ESP", "EMP001", 20L);
+        ResponseEntity<PresenceResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(20L, response.getBody().id());
+        assertEquals(1, response.getBody().presenceNumber());
+    }
+
+    @Test
+    void closesPresenceUsingBusinessKeyAndPresenceNumber() {
+        ClosePresenceRequest request = new ClosePresenceRequest(LocalDate.of(2026, 2, 1), "EXT01");
+        when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence());
+
+        ResponseEntity<PresenceResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(LocalDate.of(2026, 2, 1), response.getBody().endDate());
+
+        ArgumentCaptor<ClosePresenceCommand> captor = ArgumentCaptor.forClass(ClosePresenceCommand.class);
+        verify(closePresenceUseCase).close(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(1, captor.getValue().presenceNumber());
+        assertEquals("EXT01", captor.getValue().exitReasonCode());
     }
 
     private Presence activePresence() {
@@ -120,6 +135,21 @@ class PresenceBusinessKeyControllerTest {
                 null,
                 LocalDate.of(2026, 1, 10),
                 null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    private Presence closedPresence() {
+        return new Presence(
+                20L,
+                10L,
+                1,
+                "AC01",
+                "ENT01",
+                "EXT01",
+                LocalDate.of(2026, 1, 10),
+                LocalDate.of(2026, 2, 1),
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );

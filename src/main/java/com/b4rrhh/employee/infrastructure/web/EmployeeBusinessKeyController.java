@@ -17,12 +17,13 @@ public class EmployeeBusinessKeyController {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
     }
 
-    @GetMapping("/rule-systems/{ruleSystemCode}/employees/{employeeNumber}")
+    @GetMapping("/employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}")
     public ResponseEntity<EmployeeResponse> getByBusinessKey(
             @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber
     ) {
-        return getEmployeeByBusinessKeyUseCase.getByBusinessKey(ruleSystemCode, employeeNumber)
+        return getEmployeeByBusinessKeyUseCase.getByBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .map(employee -> ResponseEntity.ok(toResponse(employee)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -31,6 +32,7 @@ public class EmployeeBusinessKeyController {
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getRuleSystemCode(),
+                employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
                 employee.getFirstName(),
                 employee.getLastName1(),

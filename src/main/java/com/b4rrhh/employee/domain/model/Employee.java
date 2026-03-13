@@ -6,6 +6,7 @@ public class Employee {
 
     private final Long id;
     private final String ruleSystemCode;
+    private final String employeeTypeCode;
     private final String employeeNumber;
     private final String firstName;
     private final String lastName1;
@@ -18,6 +19,7 @@ public class Employee {
     public Employee(
             Long id,
             String ruleSystemCode,
+            String employeeTypeCode,
             String employeeNumber,
             String firstName,
             String lastName1,
@@ -29,6 +31,7 @@ public class Employee {
     ) {
         this.id = id;
         this.ruleSystemCode = ruleSystemCode;
+        this.employeeTypeCode = employeeTypeCode;
         this.employeeNumber = employeeNumber;
         this.firstName = firstName;
         this.lastName1 = lastName1;
@@ -41,6 +44,7 @@ public class Employee {
 
     public Long getId() { return id; }
     public String getRuleSystemCode() { return ruleSystemCode; }
+    public String getEmployeeTypeCode() { return employeeTypeCode; }
     public String getEmployeeNumber() { return employeeNumber; }
     public String getFirstName() { return firstName; }
     public String getLastName1() { return lastName1; }

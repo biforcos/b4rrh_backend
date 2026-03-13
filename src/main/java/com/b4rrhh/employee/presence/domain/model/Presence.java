@@ -47,7 +47,7 @@ public class Presence {
 
     public Presence close(LocalDate closeDate, String closeExitReasonCode) {
         if (!isActive()) {
-            throw new PresenceAlreadyClosedException(id);
+            throw new PresenceAlreadyClosedException(presenceNumber);
         }
         if (closeDate == null || !closeDate.isAfter(startDate)) {
             throw new InvalidPresenceDateRangeException("endDate must be greater than startDate");

@@ -22,8 +22,17 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
     }
 
     @Override
-    public Optional<Employee> findByRuleSystemCodeAndEmployeeNumber(String ruleSystemCode, String employeeNumber) {
-        return springDataEmployeeRepository.findByRuleSystemCodeAndEmployeeNumber(ruleSystemCode, employeeNumber)
+    public Optional<Employee> findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    ) {
+        return springDataEmployeeRepository
+                .findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber
+                )
                 .map(this::mapToDomain);
     }
 
@@ -34,25 +43,27 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
         return mapToDomain(savedEntity);
     }
 
-private Employee mapToDomain(EmployeeEntity entity) {
-    return new Employee(
-            entity.getId(),
-            entity.getRuleSystemCode(),
-            entity.getEmployeeNumber(),
-            entity.getFirstName(),
-            entity.getLastName1(),
-            entity.getLastName2(),
-            entity.getPreferredName(),
-            entity.getStatus(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-    );
-}
+    private Employee mapToDomain(EmployeeEntity entity) {
+        return new Employee(
+                entity.getId(),
+                entity.getRuleSystemCode(),
+                entity.getEmployeeTypeCode(),
+                entity.getEmployeeNumber(),
+                entity.getFirstName(),
+                entity.getLastName1(),
+                entity.getLastName2(),
+                entity.getPreferredName(),
+                entity.getStatus(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
 
     private EmployeeEntity mapToEntity(Employee employee) {
         EmployeeEntity entity = new EmployeeEntity();
         entity.setId(employee.getId());
         entity.setRuleSystemCode(employee.getRuleSystemCode());
+        entity.setEmployeeTypeCode(employee.getEmployeeTypeCode());
         entity.setEmployeeNumber(employee.getEmployeeNumber());
         entity.setFirstName(employee.getFirstName());
         entity.setLastName1(employee.getLastName1());

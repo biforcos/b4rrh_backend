@@ -22,7 +22,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
 
-  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}:
     get:
       operationId: getEmployeeByBusinessKey
       summary: Get employee by business key
@@ -33,6 +33,12 @@ paths:
           schema:
             type: string
             maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
         - in: path
           name: employeeNumber
           required: true
@@ -49,7 +55,7 @@ paths:
         '404':
           description: Rule system or employee not found
 
-  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences:
     post:
       operationId: createPresenceByBusinessKey
       summary: Create employee presence by business key
@@ -60,6 +66,12 @@ paths:
           schema:
             type: string
             maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
         - in: path
           name: employeeNumber
           required: true
@@ -96,6 +108,12 @@ paths:
             type: string
             maxLength: 5
         - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
           name: employeeNumber
           required: true
           schema:
@@ -113,10 +131,10 @@ paths:
         '404':
           description: Rule system or employee not found
 
-  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}:
     get:
-      operationId: getPresenceByIdByBusinessKey
-      summary: Get employee presence by id and business key
+      operationId: getPresenceByBusinessKey
+      summary: Get employee presence by business key
       parameters:
         - in: path
           name: ruleSystemCode
@@ -125,17 +143,23 @@ paths:
             type: string
             maxLength: 5
         - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
           name: employeeNumber
           required: true
           schema:
             type: string
             maxLength: 15
         - in: path
-          name: presenceId
+          name: presenceNumber
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
       responses:
         '200':
           description: Presence found
@@ -146,7 +170,7 @@ paths:
         '404':
           description: Rule system, employee, or presence not found
 
-  /rule-systems/{ruleSystemCode}/employees/{employeeNumber}/presences/{presenceId}/close:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}/close:
     post:
       operationId: closePresenceByBusinessKey
       summary: Close employee presence by business key
@@ -158,17 +182,23 @@ paths:
             type: string
             maxLength: 5
         - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
           name: employeeNumber
           required: true
           schema:
             type: string
             maxLength: 15
         - in: path
-          name: presenceId
+          name: presenceNumber
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
       requestBody:
         required: true
         content:
@@ -189,121 +219,199 @@ paths:
         '409':
           description: Presence already closed
 
-  /employees/{employeeId}/presences:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts:
     post:
-      operationId: createPresence
-      summary: Create employee presence
+      operationId: createContactByBusinessKey
+      summary: Create employee contact
       parameters:
         - in: path
-          name: employeeId
+          name: ruleSystemCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreatePresenceRequest'
+              $ref: '#/components/schemas/CreateContactRequest'
       responses:
         '201':
-          description: Presence created
+          description: Contact created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
+                $ref: '#/components/schemas/ContactResponse'
         '400':
           description: Invalid request
         '404':
-          description: Employee or catalog not found
+          description: Rule system, employee, or catalog not found
         '409':
-          description: Presence business conflict
+          description: Contact already exists for employee and contact type
     get:
-      operationId: listEmployeePresences
-      summary: List employee presences
+      operationId: listEmployeeContactsByBusinessKey
+      summary: List employee contacts
       parameters:
         - in: path
-          name: employeeId
+          name: ruleSystemCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
       responses:
         '200':
-          description: Presence list
+          description: Contact list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PresenceResponse'
+                  $ref: '#/components/schemas/ContactResponse'
         '404':
-          description: Employee not found
+          description: Rule system or employee not found
 
-  /employees/{employeeId}/presences/{presenceId}:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts/{contactTypeCode}:
     get:
-      operationId: getPresenceById
-      summary: Get employee presence by id
+      operationId: getContactByBusinessKey
+      summary: Get employee contact by business key
       parameters:
         - in: path
-          name: employeeId
+          name: ruleSystemCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 5
         - in: path
-          name: presenceId
+          name: employeeTypeCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: contactTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
       responses:
         '200':
-          description: Presence found
+          description: Contact found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
+                $ref: '#/components/schemas/ContactResponse'
         '404':
-          description: Presence not found
-
-  /employees/{employeeId}/presences/{presenceId}/close:
-    post:
-      operationId: closePresence
-      summary: Close employee presence
+          description: Rule system, employee, or contact not found
+    put:
+      operationId: updateContactByBusinessKey
+      summary: Update employee contact
       parameters:
         - in: path
-          name: employeeId
+          name: ruleSystemCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 5
         - in: path
-          name: presenceId
+          name: employeeTypeCode
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: contactTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClosePresenceRequest'
+              $ref: '#/components/schemas/UpdateContactRequest'
       responses:
         '200':
-          description: Presence closed
+          description: Contact updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
+                $ref: '#/components/schemas/ContactResponse'
         '400':
           description: Invalid request
         '404':
-          description: Presence not found
-        '409':
-          description: Presence already closed
+          description: Rule system, employee, catalog, or contact not found
+    delete:
+      operationId: deleteContactByBusinessKey
+      summary: Delete employee contact
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: contactTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '204':
+          description: Contact deleted
+        '404':
+          description: Rule system, employee, or contact not found
+
   /rule-systems:
     post:
       operationId: createRuleSystem
@@ -520,6 +628,7 @@ components:
       type: object
       required:
         - ruleSystemCode
+        - employeeTypeCode
         - employeeNumber
         - firstName
         - lastName1
@@ -527,6 +636,9 @@ components:
         ruleSystemCode:
           type: string
           maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
         employeeNumber:
           type: string
           maxLength: 15
@@ -550,6 +662,7 @@ components:
       required:
         - id
         - ruleSystemCode
+        - employeeTypeCode
         - employeeNumber
         - firstName
         - lastName1
@@ -559,6 +672,8 @@ components:
           type: integer
           format: int64
         ruleSystemCode:
+          type: string
+        employeeTypeCode:
           type: string
         employeeNumber:
           type: string
@@ -613,19 +728,11 @@ components:
     PresenceResponse:
       type: object
       required:
-        - id
-        - employeeId
         - presenceNumber
         - companyCode
         - entryReasonCode
         - startDate
       properties:
-        id:
-          type: integer
-          format: int64
-        employeeId:
-          type: integer
-          format: int64
         presenceNumber:
           type: integer
           format: int32
@@ -643,6 +750,38 @@ components:
           type: string
           format: date
           nullable: true
+    CreateContactRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contactTypeCode
+        - contactValue
+      properties:
+        contactTypeCode:
+          type: string
+          maxLength: 30
+        contactValue:
+          type: string
+          maxLength: 300
+    UpdateContactRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contactValue
+      properties:
+        contactValue:
+          type: string
+          maxLength: 300
+    ContactResponse:
+      type: object
+      required:
+        - contactTypeCode
+        - contactValue
+      properties:
+        contactTypeCode:
+          type: string
+        contactValue:
+          type: string
     CreateRuleSystemRequest:
       type: object
       required:

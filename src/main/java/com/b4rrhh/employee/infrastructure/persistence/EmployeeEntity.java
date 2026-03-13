@@ -14,6 +14,9 @@ public class EmployeeEntity {
     @Column(name = "rule_system_code", nullable = false)
     private String ruleSystemCode;
 
+    @Column(name = "employee_type_code", nullable = false)
+    private String employeeTypeCode;
+
     @Column(name = "employee_number", nullable = false)
     private String employeeNumber;
 
@@ -68,6 +71,14 @@ public class EmployeeEntity {
 
     public void setRuleSystemCode(String ruleSystemCode) {
         this.ruleSystemCode = ruleSystemCode;
+    }
+
+    public String getEmployeeTypeCode() {
+        return employeeTypeCode;
+    }
+
+    public void setEmployeeTypeCode(String employeeTypeCode) {
+        this.employeeTypeCode = employeeTypeCode;
     }
 
     public String getEmployeeNumber() {

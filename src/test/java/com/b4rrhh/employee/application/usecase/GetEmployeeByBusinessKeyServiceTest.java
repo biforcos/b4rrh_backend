@@ -39,6 +39,7 @@ class GetEmployeeByBusinessKeyServiceTest {
         Employee employee = new Employee(
                 10L,
                 "ESP",
+                "INTERNAL",
                 "EMP001",
                 "Juan",
                 "Perez",
@@ -50,13 +51,14 @@ class GetEmployeeByBusinessKeyServiceTest {
         );
 
         when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeNumber("ESP", "EMP001"))
+        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee));
 
-        Optional<Employee> result = service.getByBusinessKey(" esp ", " EMP001 ");
+        Optional<Employee> result = service.getByBusinessKey(" esp ", " internal ", " EMP001 ");
 
         assertTrue(result.isPresent());
         assertEquals(10L, result.get().getId());
+        assertEquals("INTERNAL", result.get().getEmployeeTypeCode());
         assertEquals("EMP001", result.get().getEmployeeNumber());
     }
 
@@ -66,7 +68,7 @@ class GetEmployeeByBusinessKeyServiceTest {
 
         assertThrows(
                 EmployeeRuleSystemNotFoundException.class,
-                () -> service.getByBusinessKey("ESP", "EMP001")
+                () -> service.getByBusinessKey("ESP", "INTERNAL", "EMP001")
         );
     }
 

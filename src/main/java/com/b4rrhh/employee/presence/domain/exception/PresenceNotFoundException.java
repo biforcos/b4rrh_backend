@@ -2,7 +2,19 @@ package com.b4rrhh.employee.presence.domain.exception;
 
 public class PresenceNotFoundException extends RuntimeException {
 
-    public PresenceNotFoundException(Long employeeId, Long presenceId) {
-        super("Presence not found for employeeId=" + employeeId + " and presenceId=" + presenceId);
+    public PresenceNotFoundException(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            Integer presenceNumber
+    ) {
+        super("Presence not found for ruleSystemCode="
+                + ruleSystemCode
+                + ", employeeTypeCode="
+                + employeeTypeCode
+                + ", employeeNumber="
+                + employeeNumber
+                + ", presenceNumber="
+                + presenceNumber);
     }
 }

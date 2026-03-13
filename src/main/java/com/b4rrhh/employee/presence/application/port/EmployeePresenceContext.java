@@ -2,6 +2,8 @@ package com.b4rrhh.employee.presence.application.port;
 
 public record EmployeePresenceContext(
         Long employeeId,
-        String ruleSystemCode
+        String ruleSystemCode,
+        String employeeTypeCode,
+        String employeeNumber
 ) {
 }

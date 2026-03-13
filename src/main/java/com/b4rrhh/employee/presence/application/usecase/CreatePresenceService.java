@@ -36,39 +36,59 @@ public class CreatePresenceService implements CreatePresenceUseCase {
     @Override
     @Transactional
     public Presence create(CreatePresenceCommand command) {
-        // Serializes create flow per employee to avoid races in overlap/active/max+1 checks.
-        EmployeePresenceContext employee = employeePresenceLookupPort.findByIdForUpdate(command.employeeId())
-                .orElseThrow(() -> new PresenceEmployeeNotFoundException(command.employeeId()));
+        String normalizedRuleSystemCode = normalizeRuleSystemCode(command.ruleSystemCode());
+        String normalizedEmployeeTypeCode = normalizeEmployeeTypeCode(command.employeeTypeCode());
+        String normalizedEmployeeNumber = normalizeEmployeeNumber(command.employeeNumber());
 
-        String ruleSystemCode = employee.ruleSystemCode().trim().toUpperCase();
-        ruleSystemRepository.findByCode(ruleSystemCode)
-                .orElseThrow(() -> new PresenceRuleSystemNotFoundException(ruleSystemCode));
+        ruleSystemRepository.findByCode(normalizedRuleSystemCode)
+            .orElseThrow(() -> new PresenceRuleSystemNotFoundException(normalizedRuleSystemCode));
+
+        // Serializes create flow per employee business key to avoid races in overlap/active/max+1 checks.
+        EmployeePresenceContext employee = employeePresenceLookupPort
+            .findByBusinessKeyForUpdate(
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+            )
+            .orElseThrow(() -> new PresenceEmployeeNotFoundException(
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+            ));
 
         String companyCode = presenceCatalogValidator.normalizeRequiredCode("companyCode", command.companyCode());
         String entryReasonCode = presenceCatalogValidator.normalizeRequiredCode("entryReasonCode", command.entryReasonCode());
         String exitReasonCode = presenceCatalogValidator.normalizeOptionalCode(command.exitReasonCode());
 
-        presenceCatalogValidator.validateCompanyCode(ruleSystemCode, companyCode, command.startDate());
-        presenceCatalogValidator.validateEntryReasonCode(ruleSystemCode, entryReasonCode, command.startDate());
+        presenceCatalogValidator.validateCompanyCode(normalizedRuleSystemCode, companyCode, command.startDate());
+        presenceCatalogValidator.validateEntryReasonCode(normalizedRuleSystemCode, entryReasonCode, command.startDate());
         if (exitReasonCode != null) {
-            presenceCatalogValidator.validateExitReasonCode(ruleSystemCode, exitReasonCode, command.startDate());
+            presenceCatalogValidator.validateExitReasonCode(normalizedRuleSystemCode, exitReasonCode, command.startDate());
         }
 
-        if (command.endDate() == null && presenceRepository.existsActivePresence(command.employeeId())) {
-            throw new ActivePresenceAlreadyExistsException(command.employeeId());
+        if (command.endDate() == null && presenceRepository.existsActivePresence(employee.employeeId())) {
+            throw new ActivePresenceAlreadyExistsException(
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+            );
         }
 
-        if (presenceRepository.existsOverlappingPeriod(command.employeeId(), command.startDate(), command.endDate())) {
-            throw new PresenceOverlapException(command.employeeId());
+        if (presenceRepository.existsOverlappingPeriod(employee.employeeId(), command.startDate(), command.endDate())) {
+            throw new PresenceOverlapException(
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+            );
         }
 
-        int nextPresenceNumber = presenceRepository.findMaxPresenceNumberByEmployeeId(command.employeeId())
+        int nextPresenceNumber = presenceRepository.findMaxPresenceNumberByEmployeeId(employee.employeeId())
                 .map(value -> value + 1)
                 .orElse(1);
 
         Presence newPresence = new Presence(
                 null,
-                command.employeeId(),
+            employee.employeeId(),
                 nextPresenceNumber,
                 companyCode,
                 entryReasonCode,
@@ -80,5 +100,29 @@ public class CreatePresenceService implements CreatePresenceUseCase {
         );
 
         return presenceRepository.save(newPresence);
+    }
+
+    private String normalizeRuleSystemCode(String ruleSystemCode) {
+        if (ruleSystemCode == null || ruleSystemCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("ruleSystemCode is required");
+        }
+
+        return ruleSystemCode.trim().toUpperCase();
+    }
+
+    private String normalizeEmployeeTypeCode(String employeeTypeCode) {
+        if (employeeTypeCode == null || employeeTypeCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("employeeTypeCode is required");
+        }
+
+        return employeeTypeCode.trim().toUpperCase();
+    }
+
+    private String normalizeEmployeeNumber(String employeeNumber) {
+        if (employeeNumber == null || employeeNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("employeeNumber is required");
+        }
+
+        return employeeNumber.trim();
     }
 }

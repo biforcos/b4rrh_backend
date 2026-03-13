@@ -34,6 +34,10 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CreatePresenceServiceTest {
 
+    private static final String RULE_SYSTEM_CODE = "ESP";
+    private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
+    private static final String EMPLOYEE_NUMBER = "EMP001";
+
     @Mock
     private PresenceRepository presenceRepository;
     @Mock
@@ -58,7 +62,9 @@ class CreatePresenceServiceTest {
     @Test
     void createsPresenceAndAssignsNextPresenceNumber() {
         CreatePresenceCommand command = new CreatePresenceCommand(
-                10L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
                 "ac01",
                 "ent01",
                 null,
@@ -66,8 +72,9 @@ class CreatePresenceServiceTest {
                 null
         );
 
-        when(employeePresenceLookupPort.findByIdForUpdate(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
         when(presenceRepository.existsActivePresence(10L)).thenReturn(false);
         when(presenceRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(false);
         when(presenceRepository.findMaxPresenceNumberByEmployeeId(10L)).thenReturn(Optional.of(4));
@@ -99,7 +106,8 @@ class CreatePresenceServiceTest {
         assertEquals(5, captor.getValue().getPresenceNumber());
 
         InOrder inOrder = inOrder(employeePresenceLookupPort, presenceRepository);
-        inOrder.verify(employeePresenceLookupPort).findByIdForUpdate(10L);
+        inOrder.verify(employeePresenceLookupPort)
+                .findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
         inOrder.verify(presenceRepository).existsActivePresence(10L);
         inOrder.verify(presenceRepository).existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null);
         inOrder.verify(presenceRepository).findMaxPresenceNumberByEmployeeId(10L);
@@ -108,7 +116,9 @@ class CreatePresenceServiceTest {
     @Test
     void rejectsInvalidCatalogValue() {
         CreatePresenceCommand command = new CreatePresenceCommand(
-                10L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
                 "bad",
                 "ENT01",
                 null,
@@ -116,8 +126,9 @@ class CreatePresenceServiceTest {
                 null
         );
 
-        when(employeePresenceLookupPort.findByIdForUpdate(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
 
         assertThrows(PresenceCatalogValueInvalidException.class, () -> service.create(command));
         verify(presenceRepository, never()).save(any(Presence.class));
@@ -126,7 +137,9 @@ class CreatePresenceServiceTest {
     @Test
     void rejectsInvalidDateRange() {
         CreatePresenceCommand command = new CreatePresenceCommand(
-                10L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
                 "AC01",
                 "ENT01",
                 null,
@@ -134,9 +147,11 @@ class CreatePresenceServiceTest {
                 LocalDate.of(2026, 1, 10)
         );
 
-        when(employeePresenceLookupPort.findByIdForUpdate(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
-        when(presenceRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10))).thenReturn(false);
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(presenceRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10)))
+                .thenReturn(false);
         when(presenceRepository.findMaxPresenceNumberByEmployeeId(10L)).thenReturn(Optional.empty());
 
         assertThrows(InvalidPresenceDateRangeException.class, () -> service.create(command));
@@ -146,7 +161,9 @@ class CreatePresenceServiceTest {
     @Test
     void rejectsOverlappingPresence() {
         CreatePresenceCommand command = new CreatePresenceCommand(
-                10L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
                 "AC01",
                 "ENT01",
                 null,
@@ -154,8 +171,9 @@ class CreatePresenceServiceTest {
                 null
         );
 
-        when(employeePresenceLookupPort.findByIdForUpdate(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
         when(presenceRepository.existsActivePresence(10L)).thenReturn(false);
         when(presenceRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(true);
 
@@ -165,7 +183,9 @@ class CreatePresenceServiceTest {
     @Test
     void rejectsSecondActivePresence() {
         CreatePresenceCommand command = new CreatePresenceCommand(
-                10L,
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
                 "AC01",
                 "ENT01",
                 null,
@@ -173,12 +193,17 @@ class CreatePresenceServiceTest {
                 null
         );
 
-        when(employeePresenceLookupPort.findByIdForUpdate(10L)).thenReturn(Optional.of(new EmployeePresenceContext(10L, "ESP")));
-        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeePresenceLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
         when(presenceRepository.existsActivePresence(10L)).thenReturn(true);
 
         assertThrows(ActivePresenceAlreadyExistsException.class, () -> service.create(command));
         verify(presenceRepository, never()).save(any(Presence.class));
+    }
+
+    private EmployeePresenceContext employeeContext(Long employeeId) {
+        return new EmployeePresenceContext(employeeId, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
     }
 
     private static final class TestPresenceCatalogValidator extends PresenceCatalogValidator {

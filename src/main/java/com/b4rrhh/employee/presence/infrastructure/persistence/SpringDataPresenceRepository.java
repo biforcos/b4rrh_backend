@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface SpringDataPresenceRepository extends JpaRepository<PresenceEntity, Long> {
 
-    Optional<PresenceEntity> findByIdAndEmployeeId(Long id, Long employeeId);
+        Optional<PresenceEntity> findByEmployeeIdAndPresenceNumber(Long employeeId, Integer presenceNumber);
 
     List<PresenceEntity> findByEmployeeIdOrderByStartDateAsc(Long employeeId);
 

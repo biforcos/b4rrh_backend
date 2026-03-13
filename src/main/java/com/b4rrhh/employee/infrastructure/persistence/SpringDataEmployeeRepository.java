@@ -5,5 +5,9 @@ import java.util.Optional;
 
 public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEntity, Long> {
 
-    Optional<EmployeeEntity> findByRuleSystemCodeAndEmployeeNumber(String ruleSystemCode, String employeeNumber);
+    Optional<EmployeeEntity> findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber
+    );
 }
