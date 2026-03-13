@@ -296,3 +296,11 @@ The goal is to explore:
 - Controlled schema evolution
 
 The project prioritizes **clarity and domain integrity over speed**.
+
+## Architecture
+
+The architecture decisions of this project are documented as ADRs.
+
+See:
+
+- docs/architecture/adr/ADR-001-vertical-architecture-and-api-identity.md
