@@ -383,6 +383,175 @@ paths:
         '409':
           description: Address already closed
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers:
+    post:
+      operationId: createWorkCenterByBusinessKey
+      summary: Create employee work center assignment by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkCenterRequest'
+      responses:
+        '201':
+          description: Work center assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or catalog not found
+        '409':
+          description: >-
+            The requested period overlaps an existing work center assignment for this employee,
+            or the period [startDate, endDate] is not fully contained within any of the
+            employee's active presence periods.
+    get:
+      operationId: listEmployeeWorkCentersByBusinessKey
+      summary: List employee work center assignments by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Work center assignment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkCenterResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}:
+    get:
+      operationId: getWorkCenterByBusinessKey
+      summary: Get employee work center assignment by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: workCenterAssignmentNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Work center assignment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkCenterResponse'
+        '404':
+          description: Rule system, employee, or work center assignment not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close:
+    post:
+      operationId: closeWorkCenterByBusinessKey
+      summary: Close employee work center assignment by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: workCenterAssignmentNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseWorkCenterRequest'
+      responses:
+        '200':
+          description: Work center assignment closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or work center assignment not found
+        '409':
+          description: >-
+            The work center assignment is already closed, or the resulting closed period
+            is not fully contained within any of the employee's active presence periods.
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers:
     post:
       operationId: createIdentifierByBusinessKey
@@ -1136,6 +1305,63 @@ components:
         regionCode:
           type: string
           nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateWorkCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - workCenterCode
+        - startDate
+      properties:
+        workCenterCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active WORK_CENTER rule entities for the employee ruleSystemCode.
+        startDate:
+          type: string
+          format: date
+          description: >-
+            Start date of the work center assignment (yyyy-MM-dd). Must fall within
+            an existing employee presence period. Same-day validity (startDate == endDate) is allowed.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Optional end date (yyyy-MM-dd). When provided, must be >= startDate and the period
+            [startDate, endDate] must be fully contained within a single employee presence period.
+    CloseWorkCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+          description: >-
+            Date on which the assignment ends (yyyy-MM-dd). Must be >= the assignment's startDate.
+            The resulting period [startDate, endDate] must be fully contained within
+            an existing employee presence period.
+    WorkCenterResponse:
+      type: object
+      required:
+        - workCenterAssignmentNumber
+        - workCenterCode
+        - startDate
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+        workCenterCode:
+          type: string
+          description: Code from active WORK_CENTER rule entities in the employee ruleSystemCode catalog.
         startDate:
           type: string
           format: date
