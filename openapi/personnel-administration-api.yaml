@@ -383,6 +383,201 @@ paths:
         '409':
           description: Address already closed
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers:
+    post:
+      operationId: createIdentifierByBusinessKey
+      summary: Create employee identifier
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIdentifierRequest'
+      responses:
+        '201':
+          description: Identifier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or catalog not found
+        '409':
+          description: Identifier already exists for type or primary conflict
+    get:
+      operationId: listEmployeeIdentifiersByBusinessKey
+      summary: List employee identifiers
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Identifier list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IdentifierResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers/{identifierTypeCode}:
+    get:
+      operationId: getIdentifierByBusinessKey
+      summary: Get employee identifier by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: identifierTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '200':
+          description: Identifier found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierResponse'
+        '404':
+          description: Rule system, employee, or identifier not found
+    put:
+      operationId: updateIdentifierByBusinessKey
+      summary: Update employee identifier
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: identifierTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIdentifierRequest'
+      responses:
+        '200':
+          description: Identifier updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, catalog, or identifier not found
+        '409':
+          description: Primary identifier conflict
+    delete:
+      operationId: deleteIdentifierByBusinessKey
+      summary: Delete employee identifier
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: identifierTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '204':
+          description: Identifier deleted
+        '404':
+          description: Rule system, employee, or identifier not found
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts:
     post:
       operationId: createContactByBusinessKey
@@ -946,6 +1141,70 @@ components:
           type: string
           format: date
           nullable: true
+    CreateIdentifierRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - identifierTypeCode
+        - identifierValue
+      properties:
+        identifierTypeCode:
+          type: string
+          maxLength: 30
+        identifierValue:
+          type: string
+          maxLength: 120
+        issuingCountryCode:
+          type: string
+          maxLength: 3
+          nullable: true
+        expirationDate:
+          type: string
+          format: date
+          nullable: true
+        isPrimary:
+          type: boolean
+          nullable: true
+    UpdateIdentifierRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - identifierValue
+      properties:
+        identifierValue:
+          type: string
+          maxLength: 120
+        issuingCountryCode:
+          type: string
+          maxLength: 3
+          nullable: true
+        expirationDate:
+          type: string
+          format: date
+          nullable: true
+        isPrimary:
+          type: boolean
+          nullable: true
+    IdentifierResponse:
+      type: object
+      required:
+        - identifierTypeCode
+        - identifierValue
+        - isPrimary
+      properties:
+        identifierTypeCode:
+          type: string
+        identifierValue:
+          type: string
+        issuingCountryCode:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          format: date
+          nullable: true
+        isPrimary:
+          type: boolean
     CreateContactRequest:
       type: object
       additionalProperties: false
