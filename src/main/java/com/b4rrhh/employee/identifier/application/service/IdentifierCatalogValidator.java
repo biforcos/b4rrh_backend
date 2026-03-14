@@ -25,12 +25,30 @@ public class IdentifierCatalogValidator {
         return value.trim().toUpperCase();
     }
 
+    public String normalizeOptionalCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+
+        return value.trim().toUpperCase();
+    }
+
     public void validateIdentifierTypeCode(String ruleSystemCode, String identifierTypeCode, LocalDate referenceDate) {
         validateCatalog(
                 ruleSystemCode,
                 IdentifierRuleEntityTypeCodes.EMPLOYEE_IDENTIFIER_TYPE,
                 identifierTypeCode,
                 "identifierTypeCode",
+                referenceDate
+        );
+    }
+
+    public void validateCountryCode(String ruleSystemCode, String countryCode, LocalDate referenceDate) {
+        validateCatalog(
+                ruleSystemCode,
+                IdentifierRuleEntityTypeCodes.COUNTRY,
+                countryCode,
+                "issuingCountryCode",
                 referenceDate
         );
     }

@@ -56,6 +56,25 @@ class AddressCatalogValidatorTest {
         );
     }
 
+            @Test
+            void validatesCountryCodeFromSharedCountryCatalog() {
+            when(ruleEntityRepository.findByBusinessKey("ESP", "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntityWithDates("ESP", LocalDate.of(1900, 1, 1), null)));
+
+            assertDoesNotThrow(() -> validator.validateCountryCode("ESP", "ESP", LocalDate.of(2026, 1, 31)));
+            }
+
+            @Test
+            void rejectsCountryCodeOutsideValidityRange() {
+            when(ruleEntityRepository.findByBusinessKey("ESP", "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntityWithDates("ESP", LocalDate.of(1900, 1, 1), LocalDate.of(2025, 12, 31))));
+
+            assertThrows(
+                AddressCatalogValueInvalidException.class,
+                () -> validator.validateCountryCode("ESP", "ESP", LocalDate.of(2026, 1, 1))
+            );
+            }
+
     private RuleEntity activeRuleEntityWithDates(LocalDate startDate, LocalDate endDate) {
         return new RuleEntity(
                 1L,
@@ -63,6 +82,22 @@ class AddressCatalogValidatorTest {
                 "EMPLOYEE_ADDRESS_TYPE",
                 "HOME",
                 "Home",
+                null,
+                true,
+                startDate,
+                endDate,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    private RuleEntity activeCountryRuleEntityWithDates(String code, LocalDate startDate, LocalDate endDate) {
+        return new RuleEntity(
+                2L,
+                "ESP",
+                "COUNTRY",
+                code,
+                "Country",
                 null,
                 true,
                 startDate,

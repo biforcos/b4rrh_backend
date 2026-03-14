@@ -311,6 +311,30 @@ class CreateAddressServiceTest {
     }
 
     @Test
+    void rejectsInvalidCountryCatalogValue() {
+        CreateAddressCommand command = new CreateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                "HOME",
+                "Calle Mayor 10",
+                "Madrid",
+                "bad_country",
+                null,
+                null,
+                LocalDate.of(2026, 1, 10),
+                null
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+
+        assertThrows(AddressCatalogValueInvalidException.class, () -> service.create(command));
+        verify(addressRepository, never()).save(any(Address.class));
+    }
+
+    @Test
     void rejectsInvalidDateRangeWhenEndDateIsBeforeStartDate() {
         CreateAddressCommand command = new CreateAddressCommand(
                 RULE_SYSTEM_CODE,
@@ -349,6 +373,13 @@ class CreateAddressServiceTest {
         public void validateAddressTypeCode(String ruleSystemCode, String addressTypeCode, LocalDate referenceDate) {
             if ("BAD".equals(addressTypeCode)) {
                 throw new AddressCatalogValueInvalidException("addressTypeCode", addressTypeCode);
+            }
+        }
+
+        @Override
+        public void validateCountryCode(String ruleSystemCode, String countryCode, LocalDate referenceDate) {
+            if ("BAD_COUNTRY".equals(countryCode)) {
+                throw new AddressCatalogValueInvalidException("countryCode", countryCode);
             }
         }
 

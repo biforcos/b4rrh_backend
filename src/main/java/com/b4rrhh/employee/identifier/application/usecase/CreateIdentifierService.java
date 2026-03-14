@@ -63,6 +63,15 @@ public class CreateIdentifierService implements CreateIdentifierUseCase {
         );
         identifierCatalogValidator.validateIdentifierTypeCode(normalizedRuleSystemCode, identifierTypeCode, LocalDate.now());
 
+        String normalizedIssuingCountryCode = identifierCatalogValidator.normalizeOptionalCode(command.issuingCountryCode());
+        if (normalizedIssuingCountryCode != null) {
+            identifierCatalogValidator.validateCountryCode(
+                normalizedRuleSystemCode,
+                normalizedIssuingCountryCode,
+                LocalDate.now()
+            );
+        }
+
         identifierRepository.findByEmployeeIdAndIdentifierTypeCode(employee.employeeId(), identifierTypeCode)
                 .ifPresent(existing -> {
                     throw new IdentifierAlreadyExistsException(
@@ -78,7 +87,7 @@ public class CreateIdentifierService implements CreateIdentifierUseCase {
                 employee.employeeId(),
                 identifierTypeCode,
                 command.identifierValue(),
-                command.issuingCountryCode(),
+                normalizedIssuingCountryCode,
                 command.expirationDate(),
                 command.isPrimary(),
                 null,

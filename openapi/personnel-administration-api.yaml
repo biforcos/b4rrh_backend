@@ -1083,6 +1083,7 @@ components:
         countryCode:
           type: string
           maxLength: 3
+          description: ISO 3166-1 alpha-3 code validated against active COUNTRY rule entities for the employee ruleSystemCode.
         postalCode:
           type: string
           maxLength: 20
@@ -1128,6 +1129,7 @@ components:
           type: string
         countryCode:
           type: string
+          description: ISO 3166-1 alpha-3 code from COUNTRY rule entities in the employee ruleSystemCode catalog.
         postalCode:
           type: string
           nullable: true
@@ -1158,6 +1160,7 @@ components:
           type: string
           maxLength: 3
           nullable: true
+          description: Optional ISO 3166-1 alpha-3 code validated against active COUNTRY rule entities for the employee ruleSystemCode.
         expirationDate:
           type: string
           format: date
@@ -1178,6 +1181,7 @@ components:
           type: string
           maxLength: 3
           nullable: true
+          description: Optional ISO 3166-1 alpha-3 code validated against active COUNTRY rule entities for the employee ruleSystemCode.
         expirationDate:
           type: string
           format: date
@@ -1199,6 +1203,7 @@ components:
         issuingCountryCode:
           type: string
           nullable: true
+          description: Optional ISO 3166-1 alpha-3 code from COUNTRY rule entities in the employee ruleSystemCode catalog.
         expirationDate:
           type: string
           format: date
@@ -1254,6 +1259,7 @@ components:
           type: string
           minLength: 3
           maxLength: 3
+          description: ISO 3166-1 alpha-3 country code. Values should align with COUNTRY rule entity codes.
     RuleSystemResponse:
       type: object
       required:
@@ -1268,6 +1274,7 @@ components:
           type: string
         countryCode:
           type: string
+          description: ISO 3166-1 alpha-3 country code aligned with COUNTRY rule entity codes.
         active:
           type: boolean
     CreateRuleEntityTypeRequest:

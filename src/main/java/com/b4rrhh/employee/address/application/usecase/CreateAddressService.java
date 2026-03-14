@@ -57,6 +57,9 @@ public class CreateAddressService implements CreateAddressUseCase {
         String addressTypeCode = addressCatalogValidator.normalizeRequiredCode("addressTypeCode", command.addressTypeCode());
         addressCatalogValidator.validateAddressTypeCode(normalizedRuleSystemCode, addressTypeCode, command.startDate());
 
+        String countryCode = addressCatalogValidator.normalizeRequiredCode("countryCode", command.countryCode());
+        addressCatalogValidator.validateCountryCode(normalizedRuleSystemCode, countryCode, command.startDate());
+
         int nextAddressNumber = addressRepository.findMaxAddressNumberByEmployeeId(employee.employeeId())
                 .map(value -> value + 1)
                 .orElse(1);
@@ -68,7 +71,7 @@ public class CreateAddressService implements CreateAddressUseCase {
                 addressTypeCode,
                 command.street(),
                 command.city(),
-                command.countryCode(),
+                countryCode,
                 command.postalCode(),
                 command.regionCode(),
                 command.startDate(),
@@ -77,19 +80,19 @@ public class CreateAddressService implements CreateAddressUseCase {
                 null
         );
 
-            if (addressRepository.existsOverlappingPeriodByAddressType(
+        if (addressRepository.existsOverlappingPeriodByAddressType(
                 employee.employeeId(),
                 newAddress.getAddressTypeCode(),
                 newAddress.getStartDate(),
                 newAddress.getEndDate()
-            )) {
-                throw new AddressOverlapException(
+        )) {
+            throw new AddressOverlapException(
                     normalizedRuleSystemCode,
                     normalizedEmployeeTypeCode,
                     normalizedEmployeeNumber,
                     newAddress.getAddressTypeCode()
-                );
-            }
+            );
+        }
 
         return addressRepository.save(newAddress);
     }

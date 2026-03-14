@@ -4,6 +4,7 @@ import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierLookupPort;
 import com.b4rrhh.employee.identifier.application.service.IdentifierCatalogValidator;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierEmployeeNotFoundException;
+import com.b4rrhh.employee.identifier.domain.exception.IdentifierCatalogValueInvalidException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierPrimaryAlreadyExistsException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierValueInvalidException;
@@ -77,6 +78,8 @@ class UpdateIdentifierServiceTest {
                 .thenReturn(Optional.of(existingIdentifier(10L, "NATIONAL_ID", false)));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
                 .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
         when(identifierRepository.existsByEmployeeIdAndIsPrimaryTrueAndIdentifierTypeCodeNot(10L, "NATIONAL_ID"))
                 .thenReturn(false);
         when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -134,6 +137,32 @@ class UpdateIdentifierServiceTest {
                 .thenReturn(true);
 
         assertThrows(IdentifierPrimaryAlreadyExistsException.class, () -> service.update(command));
+    }
+
+    @Test
+    void rejectsUpdateWhenIssuingCountryCodeIsInvalid() {
+        UpdateIdentifierCommand command = new UpdateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                "NATIONAL_ID",
+                "87654321Z",
+                "ZZZ",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID"))
+                .thenReturn(Optional.of(existingIdentifier(10L, "NATIONAL_ID", false)));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ZZZ"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IdentifierCatalogValueInvalidException.class, () -> service.update(command));
     }
 
     @Test
@@ -211,6 +240,22 @@ class UpdateIdentifierServiceTest {
                 LocalDateTime.now()
         );
     }
+
+        private RuleEntity activeCountryRuleEntity(String ruleSystemCode, String code) {
+                return new RuleEntity(
+                                2L,
+                                ruleSystemCode,
+                                "COUNTRY",
+                                code,
+                                code,
+                                "Country",
+                                true,
+                                LocalDate.of(1900, 1, 1),
+                                null,
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
 
     private Identifier existingIdentifier(Long employeeId, String identifierTypeCode, boolean isPrimary) {
         return new Identifier(

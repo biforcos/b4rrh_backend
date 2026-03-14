@@ -73,9 +73,18 @@ public class UpdateIdentifierService implements UpdateIdentifierUseCase {
                 LocalDate.now()
         );
 
+        String normalizedIssuingCountryCode = identifierCatalogValidator.normalizeOptionalCode(command.issuingCountryCode());
+        if (normalizedIssuingCountryCode != null) {
+            identifierCatalogValidator.validateCountryCode(
+                normalizedRuleSystemCode,
+                normalizedIssuingCountryCode,
+                LocalDate.now()
+            );
+        }
+
         Identifier updated = existing.update(
                 command.identifierValue(),
-                command.issuingCountryCode(),
+            normalizedIssuingCountryCode,
                 command.expirationDate(),
                 command.isPrimary()
         );

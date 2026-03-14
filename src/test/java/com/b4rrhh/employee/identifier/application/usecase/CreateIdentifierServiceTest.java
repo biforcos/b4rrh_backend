@@ -77,6 +77,8 @@ class CreateIdentifierServiceTest {
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
                 .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
         when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID")).thenReturn(Optional.empty());
         when(identifierRepository.existsByEmployeeIdAndIsPrimaryTrue(10L)).thenReturn(false);
         when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> {
@@ -124,6 +126,31 @@ class CreateIdentifierServiceTest {
         when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IdentifierCatalogValueInvalidException.class, () -> service.create(command));
+        verify(identifierRepository, never()).save(any(Identifier.class));
+    }
+
+    @Test
+    void rejectsCreateWhenIssuingCountryCodeIsInvalid() {
+        CreateIdentifierCommand command = new CreateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                "EMP001",
+                "NATIONAL_ID",
+                "12345678A",
+                "ZZZ",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
+                .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ZZZ"))
                 .thenReturn(Optional.empty());
 
         assertThrows(IdentifierCatalogValueInvalidException.class, () -> service.create(command));
@@ -263,6 +290,22 @@ class CreateIdentifierServiceTest {
                 LocalDateTime.now()
         );
     }
+
+        private RuleEntity activeCountryRuleEntity(String ruleSystemCode, String code) {
+                return new RuleEntity(
+                                2L,
+                                ruleSystemCode,
+                                "COUNTRY",
+                                code,
+                                code,
+                                "Country",
+                                true,
+                                LocalDate.of(1900, 1, 1),
+                                null,
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
 
     private Identifier existingIdentifier(Long employeeId, String identifierTypeCode, boolean isPrimary) {
         return new Identifier(
