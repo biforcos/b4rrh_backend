@@ -343,3 +343,42 @@ Represents absences such as vacation, sickness or leave.
 ## Functional Business Key
 
 (employee, absence_number)
+
+---
+
+# 11. `employee.cost_center`
+
+Represents temporal employee allocations to cost centers with percentage.
+
+## Structural Properties
+
+- historized = true
+- occurrence_type = MULTIPLE
+- simultaneous_occurrences = MULTIPLE_ACTIVE
+- lifecycle_strategy = CLOSE
+- delete_policy = FORBIDDEN
+
+## Fields
+
+- cost_center_code
+- allocation_percentage
+- start_date
+- end_date
+
+## Functional Business Key
+
+(employee, cost_center_code, start_date)
+
+Expanded functional identity:
+
+(rule_system_code, employee_type_code, employee_number, cost_center_code, start_date)
+
+## Rules
+
+- a cost center allocation belongs to exactly one employee
+- `cost_center_code` must exist in the COST_CENTER catalog for the employee rule system
+- `allocation_percentage` must be greater than 0 and less than or equal to 100
+- the allocation period must be fully contained in one presence period
+- overlapping allocations are allowed for different cost center codes
+- overlapping allocations are forbidden for the same cost center code
+- no synthetic number field is used for public identity

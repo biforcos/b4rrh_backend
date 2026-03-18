@@ -552,6 +552,241 @@ paths:
             The work center assignment is already closed, or the resulting closed period
             is not fully contained within any of the employee's active presence periods.
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers:
+    post:
+      operationId: createCostCenterByBusinessKey
+      summary: Create employee cost center allocation by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCostCenterRequest'
+      responses:
+        '201':
+          description: Cost center allocation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or catalog not found
+        '409':
+          description: >-
+            Cost center overlap exists for the same employee and cost center code,
+            or the requested period is not fully contained within employee presence history.
+    get:
+      operationId: listEmployeeCostCentersByBusinessKey
+      summary: List employee cost center allocations by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Cost center allocation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CostCenterResponse'
+        '404':
+          description: Rule system or employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}:
+    get:
+      operationId: getCostCenterByBusinessKey
+      summary: Get employee cost center allocation by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: costCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Cost center allocation found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterResponse'
+        '404':
+          description: Rule system, employee, or cost center allocation not found
+    put:
+      operationId: updateCostCenterByBusinessKey
+      summary: Update employee cost center allocation by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: costCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCostCenterRequest'
+      responses:
+        '200':
+          description: Cost center allocation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or cost center allocation not found
+        '409':
+          description: >-
+            Cost center allocation is already closed,
+            or the resulting period is outside employee presence history.
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}/close:
+    post:
+      operationId: closeCostCenterByBusinessKey
+      summary: Close employee cost center allocation by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: costCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseCostCenterRequest'
+      responses:
+        '200':
+          description: Cost center allocation closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or cost center allocation not found
+        '409':
+          description: >-
+            Cost center allocation is already closed,
+            or the resulting period is outside employee presence history.
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers:
     post:
       operationId: createIdentifierByBusinessKey
@@ -1362,6 +1597,71 @@ components:
         workCenterCode:
           type: string
           description: Code from active WORK_CENTER rule entities in the employee ruleSystemCode catalog.
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateCostCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - costCenterCode
+        - allocationPercentage
+        - startDate
+      properties:
+        costCenterCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active COST_CENTER rule entities for the employee ruleSystemCode.
+        allocationPercentage:
+          type: number
+          format: double
+          description: Allocation percentage greater than 0 and less than or equal to 100.
+        startDate:
+          type: string
+          format: date
+          description: Start date of the cost center allocation (yyyy-MM-dd).
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
+    UpdateCostCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - allocationPercentage
+      properties:
+        allocationPercentage:
+          type: number
+          format: double
+          description: Allocation percentage greater than 0 and less than or equal to 100.
+    CloseCostCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+          description: Date on which the allocation ends (yyyy-MM-dd). Must be greater than or equal to startDate.
+    CostCenterResponse:
+      type: object
+      required:
+        - costCenterCode
+        - allocationPercentage
+        - startDate
+      properties:
+        costCenterCode:
+          type: string
+          description: Code from active COST_CENTER rule entities in the employee ruleSystemCode catalog.
+        allocationPercentage:
+          type: number
+          format: double
         startDate:
           type: string
           format: date

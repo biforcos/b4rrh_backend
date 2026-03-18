@@ -38,6 +38,7 @@ Verticals inside this context:
     presence
     contact
     address
+    cost_center
     contract
     assignment
     compensation
