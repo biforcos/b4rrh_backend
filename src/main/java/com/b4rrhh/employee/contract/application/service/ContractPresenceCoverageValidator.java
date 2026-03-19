@@ -5,18 +5,18 @@ import com.b4rrhh.employee.contract.application.port.PresencePeriod;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOutsidePresencePeriodException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.temporal.support.TimelineCoverageValidator;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 
 @Component
 public class ContractPresenceCoverageValidator {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
     private final ContractPresenceConsistencyPort contractPresenceConsistencyPort;
+    private final TimelineCoverageValidator timelineCoverageValidator = new TimelineCoverageValidator();
 
     public ContractPresenceCoverageValidator(
             ContractPresenceConsistencyPort contractPresenceConsistencyPort
@@ -32,7 +32,10 @@ public class ContractPresenceCoverageValidator {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        if (!contractPresenceConsistencyPort.existsPresenceContainingPeriod(employeeId, startDate, endDate)) {
+        DateRange candidatePeriod = new DateRange(startDate, endDate);
+        List<DateRange> presenceRanges = toPresenceRanges(employeeId);
+
+        if (!timelineCoverageValidator.isContained(List.of(candidatePeriod), presenceRanges)) {
             throw new ContractOutsidePresencePeriodException(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -50,29 +53,25 @@ public class ContractPresenceCoverageValidator {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        List<PresencePeriod> presencePeriods = contractPresenceConsistencyPort
-                .findPresencePeriodsByEmployeeIdOrderByStartDate(employeeId)
+        List<DateRange> presenceRanges = toPresenceRanges(employeeId);
+        List<DateRange> contractRanges = projectedContractHistory
                 .stream()
-                .sorted(Comparator.comparing(PresencePeriod::startDate))
+                .map(contract -> new DateRange(contract.getStartDate(), contract.getEndDate()))
                 .toList();
 
-        List<Contract> sortedContracts = projectedContractHistory
-                .stream()
-                .sorted(Comparator.comparing(Contract::getStartDate))
-                .toList();
-
-        for (Contract contract : sortedContracts) {
-            validatePeriodWithinPresence(
-                    employeeId,
-                    contract.getStartDate(),
-                    contract.getEndDate(),
-                    ruleSystemCode,
-                    employeeTypeCode,
-                    employeeNumber
-            );
+        for (DateRange contractRange : contractRanges) {
+            if (!timelineCoverageValidator.isContained(List.of(contractRange), presenceRanges)) {
+                throw new ContractOutsidePresencePeriodException(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        contractRange.startDate(),
+                        contractRange.endDate()
+                );
+            }
         }
 
-        if (!isFullyCovered(presencePeriods, sortedContracts)) {
+        if (!timelineCoverageValidator.isFullyCovered(contractRanges, presenceRanges)) {
             throw new ContractCoverageIncompleteException(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -81,68 +80,15 @@ public class ContractPresenceCoverageValidator {
         }
     }
 
-    private boolean isFullyCovered(
-            List<PresencePeriod> presencePeriods,
-            List<Contract> contracts
-    ) {
-        if (presencePeriods.isEmpty()) {
-            return contracts.isEmpty();
-        }
-
-        for (PresencePeriod presencePeriod : presencePeriods) {
-            LocalDate presenceStart = presencePeriod.startDate();
-            LocalDate presenceEnd = normalizeEndDate(presencePeriod.endDate());
-            LocalDate cursor = presenceStart;
-
-            for (Contract contract : contracts) {
-                LocalDate contractStart = contract.getStartDate();
-                LocalDate contractEnd = normalizeEndDate(contract.getEndDate());
-
-                if (contractEnd.isBefore(presenceStart) || contractStart.isAfter(presenceEnd)) {
-                    continue;
-                }
-
-                LocalDate effectiveStart = contractStart.isBefore(presenceStart)
-                        ? presenceStart
-                    : contractStart;
-                LocalDate effectiveEnd = contractEnd.isAfter(presenceEnd)
-                        ? presenceEnd
-                    : contractEnd;
-
-                if (effectiveStart.isAfter(cursor)) {
-                    return false;
-                }
-
-                if (!effectiveEnd.isBefore(cursor)) {
-                    cursor = advanceCursor(effectiveEnd);
-                }
-
-                if (isCursorBeyondPresenceEnd(cursor, presenceEnd)) {
-                    break;
-                }
-            }
-
-            if (!isCursorBeyondPresenceEnd(cursor, presenceEnd)) {
-                return false;
-            }
-        }
-
-        return true;
+    private List<DateRange> toPresenceRanges(Long employeeId) {
+        return contractPresenceConsistencyPort
+                .findPresencePeriodsByEmployeeIdOrderByStartDate(employeeId)
+                .stream()
+                .map(this::toDateRange)
+                .toList();
     }
 
-    private boolean isCursorBeyondPresenceEnd(LocalDate cursor, LocalDate presenceEnd) {
-        return cursor.isAfter(presenceEnd) || (MAX_DATE.equals(presenceEnd) && MAX_DATE.equals(cursor));
-    }
-
-    private LocalDate normalizeEndDate(LocalDate endDate) {
-        return endDate == null ? MAX_DATE : endDate;
-    }
-
-    private LocalDate advanceCursor(LocalDate endDate) {
-        if (MAX_DATE.equals(endDate)) {
-            return MAX_DATE;
-        }
-
-        return endDate.plusDays(1);
+    private DateRange toDateRange(PresencePeriod presencePeriod) {
+        return new DateRange(presencePeriod.startDate(), presencePeriod.endDate());
     }
 }

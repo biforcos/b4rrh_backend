@@ -5,18 +5,18 @@ import com.b4rrhh.employee.labor_classification.application.port.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOutsidePresencePeriodException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.temporal.support.TimelineCoverageValidator;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 
 @Component
 public class LaborClassificationPresenceCoverageValidator {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
     private final LaborClassificationPresenceConsistencyPort laborClassificationPresenceConsistencyPort;
+    private final TimelineCoverageValidator timelineCoverageValidator = new TimelineCoverageValidator();
 
     public LaborClassificationPresenceCoverageValidator(
             LaborClassificationPresenceConsistencyPort laborClassificationPresenceConsistencyPort
@@ -32,7 +32,10 @@ public class LaborClassificationPresenceCoverageValidator {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        if (!laborClassificationPresenceConsistencyPort.existsPresenceContainingPeriod(employeeId, startDate, endDate)) {
+        DateRange candidatePeriod = new DateRange(startDate, endDate);
+        List<DateRange> presenceRanges = toPresenceRanges(employeeId);
+
+        if (!timelineCoverageValidator.isContained(List.of(candidatePeriod), presenceRanges)) {
             throw new LaborClassificationOutsidePresencePeriodException(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -50,29 +53,28 @@ public class LaborClassificationPresenceCoverageValidator {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        List<PresencePeriod> presencePeriods = laborClassificationPresenceConsistencyPort
-                .findPresencePeriodsByEmployeeIdOrderByStartDate(employeeId)
+        List<DateRange> presenceRanges = toPresenceRanges(employeeId);
+        List<DateRange> laborClassificationRanges = projectedLaborClassificationHistory
                 .stream()
-                .sorted(Comparator.comparing(PresencePeriod::startDate))
+                .map(laborClassification -> new DateRange(
+                        laborClassification.getStartDate(),
+                        laborClassification.getEndDate()
+                ))
                 .toList();
 
-        List<LaborClassification> sortedClassifications = projectedLaborClassificationHistory
-                .stream()
-                .sorted(Comparator.comparing(LaborClassification::getStartDate))
-                .toList();
-
-        for (LaborClassification laborClassification : sortedClassifications) {
-            validatePeriodWithinPresence(
-                    employeeId,
-                    laborClassification.getStartDate(),
-                    laborClassification.getEndDate(),
-                    ruleSystemCode,
-                    employeeTypeCode,
-                    employeeNumber
-            );
+        for (DateRange laborClassificationRange : laborClassificationRanges) {
+            if (!timelineCoverageValidator.isContained(List.of(laborClassificationRange), presenceRanges)) {
+                throw new LaborClassificationOutsidePresencePeriodException(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        laborClassificationRange.startDate(),
+                        laborClassificationRange.endDate()
+                );
+            }
         }
 
-        if (!isFullyCovered(presencePeriods, sortedClassifications)) {
+        if (!timelineCoverageValidator.isFullyCovered(laborClassificationRanges, presenceRanges)) {
             throw new LaborClassificationCoverageIncompleteException(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -81,68 +83,15 @@ public class LaborClassificationPresenceCoverageValidator {
         }
     }
 
-    private boolean isFullyCovered(
-            List<PresencePeriod> presencePeriods,
-            List<LaborClassification> laborClassifications
-    ) {
-        if (presencePeriods.isEmpty()) {
-            return laborClassifications.isEmpty();
-        }
-
-        for (PresencePeriod presencePeriod : presencePeriods) {
-            LocalDate presenceStart = presencePeriod.startDate();
-            LocalDate presenceEnd = normalizeEndDate(presencePeriod.endDate());
-            LocalDate cursor = presenceStart;
-
-            for (LaborClassification laborClassification : laborClassifications) {
-                LocalDate classificationStart = laborClassification.getStartDate();
-                LocalDate classificationEnd = normalizeEndDate(laborClassification.getEndDate());
-
-                if (classificationEnd.isBefore(presenceStart) || classificationStart.isAfter(presenceEnd)) {
-                    continue;
-                }
-
-                LocalDate effectiveStart = classificationStart.isBefore(presenceStart)
-                        ? presenceStart
-                        : classificationStart;
-                LocalDate effectiveEnd = classificationEnd.isAfter(presenceEnd)
-                        ? presenceEnd
-                        : classificationEnd;
-
-                if (effectiveStart.isAfter(cursor)) {
-                    return false;
-                }
-
-                if (!effectiveEnd.isBefore(cursor)) {
-                    cursor = advanceCursor(effectiveEnd);
-                }
-
-                if (isCursorBeyondPresenceEnd(cursor, presenceEnd)) {
-                    break;
-                }
-            }
-
-            if (!isCursorBeyondPresenceEnd(cursor, presenceEnd)) {
-                return false;
-            }
-        }
-
-        return true;
+    private List<DateRange> toPresenceRanges(Long employeeId) {
+        return laborClassificationPresenceConsistencyPort
+                .findPresencePeriodsByEmployeeIdOrderByStartDate(employeeId)
+                .stream()
+                .map(this::toDateRange)
+                .toList();
     }
 
-    private boolean isCursorBeyondPresenceEnd(LocalDate cursor, LocalDate presenceEnd) {
-        return cursor.isAfter(presenceEnd) || (MAX_DATE.equals(presenceEnd) && MAX_DATE.equals(cursor));
-    }
-
-    private LocalDate normalizeEndDate(LocalDate endDate) {
-        return endDate == null ? MAX_DATE : endDate;
-    }
-
-    private LocalDate advanceCursor(LocalDate endDate) {
-        if (MAX_DATE.equals(endDate)) {
-            return MAX_DATE;
-        }
-
-        return endDate.plusDays(1);
+    private DateRange toDateRange(PresencePeriod presencePeriod) {
+        return new DateRange(presencePeriod.startDate(), presencePeriod.endDate());
     }
 }

@@ -83,6 +83,12 @@ This structure helps maintain clarity as the system grows.
 
 ---
 
+## TODO
+
+- Normalize HTTP adapter package naming to a single convention (`infrastructure.rest` vs `infrastructure.web`).
+
+---
+
 ## Domain Overview
 
 ### Employee Module
