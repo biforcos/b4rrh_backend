@@ -50,6 +50,79 @@
           "response": []
         },
         {
+          "name": "List Employees (Directory)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body).to.be.an('array');",
+                  "});",
+                  "pm.test('Directory item shape when present', function () {",
+                  "    var body = pm.response.json();",
+                  "    if (body.length > 0) {",
+                  "        pm.expect(body[0]).to.have.property('ruleSystemCode');",
+                  "        pm.expect(body[0]).to.have.property('employeeTypeCode');",
+                  "        pm.expect(body[0]).to.have.property('employeeNumber');",
+                  "        pm.expect(body[0]).to.have.property('displayName');",
+                  "        pm.expect(body[0]).to.have.property('status');",
+                  "        pm.expect(body[0]).to.have.property('workCenterCode');",
+                  "        pm.expect(body[0]).to.not.have.property('id');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees?q={{employeeSearchQ}}&ruleSystemCode={{ruleSystemCode}}&employeeTypeCode={{employeeTypeCode}}&status={{employeeStatus}}&size={{pageSize}}&page={{pageNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{employeeSearchQ}}"
+                },
+                {
+                  "key": "ruleSystemCode",
+                  "value": "{{ruleSystemCode}}"
+                },
+                {
+                  "key": "employeeTypeCode",
+                  "value": "{{employeeTypeCode}}"
+                },
+                {
+                  "key": "status",
+                  "value": "{{employeeStatus}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{pageSize}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{pageNumber}}"
+                }
+              ]
+            },
+            "description": "GET /employees?q=...&ruleSystemCode=...&employeeTypeCode=...&status=...&size=...&page=..."
+          },
+          "response": []
+        },
+        {
           "name": "Get Employee By Business Key",
           "event": [
             {
@@ -933,6 +1006,22 @@
     {
       "key": "employeeTypeCode",
       "value": "INTERNAL"
+    },
+    {
+      "key": "employeeSearchQ",
+      "value": "EMP"
+    },
+    {
+      "key": "employeeStatus",
+      "value": "ACTIVE"
+    },
+    {
+      "key": "pageSize",
+      "value": "20"
+    },
+    {
+      "key": "pageNumber",
+      "value": "0"
     },
     {
       "key": "contactTypeCode",
