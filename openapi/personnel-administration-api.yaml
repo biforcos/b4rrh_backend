@@ -5,6 +5,63 @@ info:
 
 paths:
   /employees:
+    get:
+      operationId: listEmployees
+      summary: List or search employees for directory reads
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Free text search over employee number and name-related fields.
+        - in: query
+          name: ruleSystemCode
+          required: false
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: employeeTypeCode
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+          description: Page size limit. Defaults to 50.
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+          description: Zero-based page index. Defaults to 0.
+      responses:
+        '200':
+          description: Employee directory list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployeeDirectoryItemResponse'
+        '400':
+          description: Invalid query parameters
     post:
       operationId: createEmployee
       summary: Create employee
@@ -1928,6 +1985,37 @@ components:
           nullable: true
         status:
           type: string
+
+    EmployeeDirectoryItemResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - displayName
+        - status
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        displayName:
+          type: string
+          description: Preferred name when available, otherwise composed from first/last names.
+        status:
+          type: string
+          maxLength: 30
+        workCenterCode:
+          type: string
+          maxLength: 30
+          nullable: true
+          description: Active work center assignment code on current date, when available.
+
     CreatePresenceRequest:
       type: object
       required:
