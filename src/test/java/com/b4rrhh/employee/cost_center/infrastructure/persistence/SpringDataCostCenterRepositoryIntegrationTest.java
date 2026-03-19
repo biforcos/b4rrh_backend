@@ -30,7 +30,8 @@ class SpringDataCostCenterRepositoryIntegrationTest {
     void setUpSchema() {
         jdbcTemplate.execute("create schema if not exists employee");
         jdbcTemplate.execute("drop table if exists employee.cost_center");
-        jdbcTemplate.execute("drop table if exists employee.employee");
+        jdbcTemplate.execute("drop table if exists employee.contract");
+        jdbcTemplate.execute("drop table if exists employee.employee cascade");
         jdbcTemplate.execute("""
                 create table employee.employee (
                     id bigint primary key,

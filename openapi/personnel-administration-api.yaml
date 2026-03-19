@@ -787,6 +787,268 @@ paths:
             Cost center allocation is already closed,
             or the resulting period is outside employee presence history.
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
+    post:
+      operationId: createContractByBusinessKey
+      summary: Create employee contract by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractRequest'
+      responses:
+        '201':
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or catalog values not found
+        '409':
+          description: >-
+            Contract period overlaps, is outside employee presence history,
+            or results in incomplete presence coverage.
+    get:
+      operationId: listEmployeeContractsByBusinessKey
+      summary: List employee contracts by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Contract list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContractResponse'
+        '404':
+          description: Employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/replace-from-date:
+    post:
+      operationId: replaceContractFromDateByBusinessKey
+      summary: Replace employee contract from effective date by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceContractFromDateRequest'
+      responses:
+        '200':
+          description: Contract replaced from effective date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee not found
+        '409':
+          description: >-
+            Replacement results in an invalid timeline
+            (overlap, outside presence, incomplete coverage, or impossible transition).
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}:
+    get:
+      operationId: getContractByBusinessKey
+      summary: Get employee contract by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Contract found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '404':
+          description: Employee or contract not found
+    put:
+      operationId: updateContractByBusinessKey
+      summary: Update employee contract by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContractRequest'
+      responses:
+        '200':
+          description: Contract updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or contract not found
+        '409':
+          description: >-
+            Contract is already closed,
+            or the resulting timeline is invalid (overlap, outside presence, incomplete coverage).
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}/close:
+    post:
+      operationId: closeContractByBusinessKey
+      summary: Close employee contract by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseContractRequest'
+      responses:
+        '200':
+          description: Contract closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or contract not found
+        '409':
+          description: >-
+            Contract is already closed,
+            or closing creates timeline inconsistencies with employee presence.
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications:
     post:
       operationId: createLaborClassificationByBusinessKey
@@ -1924,6 +2186,106 @@ components:
         allocationPercentage:
           type: number
           format: double
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateContractRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contractCode
+        - contractSubtypeCode
+        - startDate
+      properties:
+        contractCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: Code validated against active CONTRACT rule entities for the employee ruleSystemCode.
+        contractSubtypeCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: >-
+            Code validated against active CONTRACT_SUBTYPE rule entities for the employee ruleSystemCode
+            and against the contract-subtype relation.
+        startDate:
+          type: string
+          format: date
+          description: Start date of the contract period (yyyy-MM-dd).
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
+    ReplaceContractFromDateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - effectiveDate
+        - contractCode
+        - contractSubtypeCode
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: Effective date from which the contract is replaced (yyyy-MM-dd).
+        contractCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: Code validated against active CONTRACT rule entities for the employee ruleSystemCode.
+        contractSubtypeCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: >-
+            Code validated against active CONTRACT_SUBTYPE rule entities for the employee ruleSystemCode
+            and against the contract-subtype relation for effectiveDate.
+    UpdateContractRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contractCode
+        - contractSubtypeCode
+      properties:
+        contractCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+        contractSubtypeCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+    CloseContractRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+          description: Date on which the contract period ends (yyyy-MM-dd).
+    ContractResponse:
+      type: object
+      required:
+        - contractCode
+        - contractSubtypeCode
+        - startDate
+      properties:
+        contractCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+        contractSubtypeCode:
+          type: string
+          minLength: 3
+          maxLength: 3
         startDate:
           type: string
           format: date
