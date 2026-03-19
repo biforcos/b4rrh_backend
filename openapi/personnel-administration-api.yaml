@@ -787,6 +787,268 @@ paths:
             Cost center allocation is already closed,
             or the resulting period is outside employee presence history.
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications:
+    post:
+      operationId: createLaborClassificationByBusinessKey
+      summary: Create employee labor classification by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLaborClassificationRequest'
+      responses:
+        '201':
+          description: Labor classification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborClassificationResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or catalog values not found
+        '409':
+          description: >-
+            Labor classification period overlaps, is outside employee presence history,
+            or results in incomplete presence coverage.
+    get:
+      operationId: listEmployeeLaborClassificationsByBusinessKey
+      summary: List employee labor classifications by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Labor classification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaborClassificationResponse'
+        '404':
+          description: Employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/replace-from-date:
+    post:
+      operationId: replaceLaborClassificationFromDateByBusinessKey
+      summary: Replace employee labor classification from effective date by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceLaborClassificationFromDateRequest'
+      responses:
+        '200':
+          description: Labor classification replaced from effective date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborClassificationResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee not found
+        '409':
+          description: >-
+            Replacement results in an invalid timeline
+            (overlap, outside presence, incomplete coverage, or impossible transition).
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}:
+    get:
+      operationId: getLaborClassificationByBusinessKey
+      summary: Get employee labor classification by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Labor classification found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborClassificationResponse'
+        '404':
+          description: Employee or labor classification not found
+    put:
+      operationId: updateLaborClassificationByBusinessKey
+      summary: Update employee labor classification by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLaborClassificationRequest'
+      responses:
+        '200':
+          description: Labor classification updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborClassificationResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or labor classification not found
+        '409':
+          description: >-
+            Labor classification is already closed,
+            or the resulting timeline is invalid (overlap, outside presence, incomplete coverage).
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}/close:
+    post:
+      operationId: closeLaborClassificationByBusinessKey
+      summary: Close employee labor classification by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseLaborClassificationRequest'
+      responses:
+        '200':
+          description: Labor classification closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborClassificationResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee or labor classification not found
+        '409':
+          description: >-
+            Labor classification is already closed,
+            or closing creates timeline inconsistencies with employee presence.
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers:
     post:
       operationId: createIdentifierByBusinessKey
@@ -1662,6 +1924,96 @@ components:
         allocationPercentage:
           type: number
           format: double
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CreateLaborClassificationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - agreementCode
+        - agreementCategoryCode
+        - startDate
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active AGREEMENT rule entities for the employee ruleSystemCode.
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+          description: >-
+            Code validated against active AGREEMENT_CATEGORY rule entities for the employee ruleSystemCode
+            and against the agreement-category relation.
+        startDate:
+          type: string
+          format: date
+          description: Start date of the labor classification period (yyyy-MM-dd).
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
+    ReplaceLaborClassificationFromDateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - effectiveDate
+        - agreementCode
+        - agreementCategoryCode
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: Effective date from which the labor classification is replaced (yyyy-MM-dd).
+        agreementCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active AGREEMENT rule entities for the employee ruleSystemCode.
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+          description: >-
+            Code validated against active AGREEMENT_CATEGORY rule entities for the employee ruleSystemCode
+            and against the agreement-category relation for effectiveDate.
+    UpdateLaborClassificationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - agreementCode
+        - agreementCategoryCode
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+    CloseLaborClassificationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
+          description: Date on which the labor classification period ends (yyyy-MM-dd).
+    LaborClassificationResponse:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+        - startDate
+      properties:
+        agreementCode:
+          type: string
+        agreementCategoryCode:
+          type: string
         startDate:
           type: string
           format: date
