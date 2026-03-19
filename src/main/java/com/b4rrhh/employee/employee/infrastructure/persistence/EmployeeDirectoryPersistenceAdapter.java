@@ -20,7 +20,7 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
 
     @Override
     public List<EmployeeDirectoryItem> findDirectoryByFilters(
-            String queryText,
+            String q,
             String ruleSystemCode,
             String employeeTypeCode,
             String status,
@@ -29,7 +29,7 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
     ) {
         return springDataEmployeeRepository
                 .findDirectoryByFilters(
-                        queryText,
+                        q,
                         ruleSystemCode,
                         employeeTypeCode,
                         status,

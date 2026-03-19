@@ -47,25 +47,25 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
               and (:employeeTypeCode is null or e.employeeTypeCode = :employeeTypeCode)
               and (:status is null or e.status = :status)
               and (
-                    :queryText is null
-                    or upper(e.employeeNumber) like concat('%', :queryText, '%')
-                    or upper(e.ruleSystemCode) like concat('%', :queryText, '%')
-                    or upper(e.employeeTypeCode) like concat('%', :queryText, '%')
-                    or upper(e.firstName) like concat('%', :queryText, '%')
-                    or upper(e.lastName1) like concat('%', :queryText, '%')
-                    or upper(coalesce(e.lastName2, '')) like concat('%', :queryText, '%')
-                    or upper(coalesce(e.preferredName, '')) like concat('%', :queryText, '%')
+                                        :q is null
+                                        or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')
+                                        or upper(e.ruleSystemCode) like concat('%', cast(:q as string), '%')
+                                        or upper(e.employeeTypeCode) like concat('%', cast(:q as string), '%')
+                                        or upper(e.firstName) like concat('%', cast(:q as string), '%')
+                                        or upper(e.lastName1) like concat('%', cast(:q as string), '%')
+                                        or upper(coalesce(e.lastName2, '')) like concat('%', cast(:q as string), '%')
+                                        or upper(coalesce(e.preferredName, '')) like concat('%', cast(:q as string), '%')
                     or upper(
                         concat(
                             concat(concat(e.firstName, ' '), e.lastName1),
                             concat(' ', coalesce(e.lastName2, ''))
                         )
-                    ) like concat('%', :queryText, '%')
+                                        ) like concat('%', cast(:q as string), '%')
               )
             order by e.ruleSystemCode, e.employeeTypeCode, e.employeeNumber
             """)
     List<EmployeeDirectoryProjection> findDirectoryByFilters(
-            @Param("queryText") String queryText,
+                        @Param("q") String q,
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("employeeTypeCode") String employeeTypeCode,
             @Param("status") String status,

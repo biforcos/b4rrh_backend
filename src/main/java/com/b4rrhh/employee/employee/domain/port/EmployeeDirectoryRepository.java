@@ -7,7 +7,7 @@ import java.util.List;
 public interface EmployeeDirectoryRepository {
 
     List<EmployeeDirectoryItem> findDirectoryByFilters(
-            String queryText,
+            String q,
             String ruleSystemCode,
             String employeeTypeCode,
             String status,
