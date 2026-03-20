@@ -10,6 +10,11 @@ import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundExc
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.temporal.support.ReplaceMode;
+import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlan;
+import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlanner;
+import com.b4rrhh.employee.temporal.support.TemporalDates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +26,8 @@ import java.util.List;
 @Service
 public class ReplaceContractFromDateService implements ReplaceContractFromDateUseCase {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
+    private static final StrongTimelineReplacePlanner STRONG_TIMELINE_REPLACE_PLANNER =
+            new StrongTimelineReplacePlanner();
 
     private final ContractRepository contractRepository;
     private final EmployeeContractLookupPort employeeContractLookupPort;
@@ -131,18 +137,19 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
             String contractCode,
             String contractSubtypeCode
     ) {
-        Contract coveringPeriod = currentHistory.stream()
-                .filter(period -> isCoveringDate(period, effectiveDate))
-                .findFirst()
-                .orElse(null);
+        StrongTimelineReplacePlan timelinePlan = STRONG_TIMELINE_REPLACE_PLANNER.plan(
+            toDateRanges(currentHistory),
+            effectiveDate
+        );
 
-        if (coveringPeriod == null) {
+        if (timelinePlan.mode() == ReplaceMode.NO_COVERING) {
+            DateRange insertRange = timelinePlan.periodToInsert();
             Contract newPeriod = new Contract(
                     employeeId,
                     contractCode,
                     contractSubtypeCode,
-                    effectiveDate,
-                    null
+                insertRange.startDate(),
+                insertRange.endDate()
             );
 
             List<Contract> projected = new ArrayList<>(currentHistory);
@@ -152,33 +159,38 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
             return new ReplacementPlan(null, newPeriod, newPeriod, projected);
         }
 
-        if (coveringPeriod.getStartDate().equals(effectiveDate)) {
+            if (timelinePlan.mode() == ReplaceMode.EXACT_START) {
+                DateRange updateRange = timelinePlan.periodToUpdate();
             Contract replaced = new Contract(
                     employeeId,
                     contractCode,
                     contractSubtypeCode,
-                    coveringPeriod.getStartDate(),
-                    coveringPeriod.getEndDate()
+                    updateRange.startDate(),
+                    updateRange.endDate()
             );
 
             List<Contract> projected = replaceByStartDate(currentHistory, replaced);
             return new ReplacementPlan(replaced, null, replaced, projected);
         }
 
+            Contract coveringPeriod = getPeriodByIndex(currentHistory, timelinePlan.coveringPeriodIndex());
+            DateRange updateRange = timelinePlan.periodToUpdate();
+            DateRange insertRange = timelinePlan.periodToInsert();
+
         Contract adjustedExisting = new Contract(
                 employeeId,
                 coveringPeriod.getContractCode(),
                 coveringPeriod.getContractSubtypeCode(),
-                coveringPeriod.getStartDate(),
-                effectiveDate.minusDays(1)
+                updateRange.startDate(),
+                updateRange.endDate()
         );
 
         Contract replacement = new Contract(
                 employeeId,
                 contractCode,
                 contractSubtypeCode,
-                effectiveDate,
-                coveringPeriod.getEndDate()
+                insertRange.startDate(),
+                insertRange.endDate()
         );
 
         List<Contract> projected = replaceByStartDate(currentHistory, adjustedExisting);
@@ -186,6 +198,20 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
         projected.sort(Comparator.comparing(Contract::getStartDate));
 
         return new ReplacementPlan(adjustedExisting, replacement, replacement, projected);
+    }
+
+    private List<DateRange> toDateRanges(List<Contract> history) {
+        return history.stream()
+                .map(period -> new DateRange(period.getStartDate(), period.getEndDate()))
+                .toList();
+    }
+
+    private Contract getPeriodByIndex(List<Contract> history, Integer index) {
+        if (index == null || index < 0 || index >= history.size()) {
+            throw new IllegalStateException("Invalid covering period index in replacement plan");
+        }
+
+        return history.get(index);
     }
 
     private List<Contract> replaceByStartDate(
@@ -204,14 +230,6 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
         return projected;
     }
 
-    private boolean isCoveringDate(Contract period, LocalDate date) {
-        if (period.getStartDate().isAfter(date)) {
-            return false;
-        }
-
-        return period.getEndDate() == null || !period.getEndDate().isBefore(date);
-    }
-
     private void validateNoOverlap(
             List<Contract> projectedHistory,
             String ruleSystemCode,
@@ -225,7 +243,7 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
         for (int index = 1; index < sorted.size(); index++) {
             Contract previous = sorted.get(index - 1);
             Contract current = sorted.get(index);
-            LocalDate previousEnd = normalizeEndDate(previous.getEndDate());
+            LocalDate previousEnd = TemporalDates.effectiveEnd(previous.getEndDate());
 
             if (!current.getStartDate().isAfter(previousEnd)) {
                 throw new ContractOverlapException(
@@ -237,10 +255,6 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
                 );
             }
         }
-    }
-
-    private LocalDate normalizeEndDate(LocalDate endDate) {
-        return endDate == null ? MAX_DATE : endDate;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

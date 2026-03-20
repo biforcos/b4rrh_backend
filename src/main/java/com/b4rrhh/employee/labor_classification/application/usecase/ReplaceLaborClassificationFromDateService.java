@@ -10,6 +10,11 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.temporal.support.ReplaceMode;
+import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlan;
+import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlanner;
+import com.b4rrhh.employee.temporal.support.TemporalDates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +26,8 @@ import java.util.List;
 @Service
 public class ReplaceLaborClassificationFromDateService implements ReplaceLaborClassificationFromDateUseCase {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
+    private static final StrongTimelineReplacePlanner STRONG_TIMELINE_REPLACE_PLANNER =
+            new StrongTimelineReplacePlanner();
 
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
@@ -131,18 +137,19 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
             String agreementCode,
             String agreementCategoryCode
     ) {
-        LaborClassification coveringPeriod = currentHistory.stream()
-                .filter(period -> isCoveringDate(period, effectiveDate))
-                .findFirst()
-                .orElse(null);
+        StrongTimelineReplacePlan timelinePlan = STRONG_TIMELINE_REPLACE_PLANNER.plan(
+            toDateRanges(currentHistory),
+            effectiveDate
+        );
 
-        if (coveringPeriod == null) {
+        if (timelinePlan.mode() == ReplaceMode.NO_COVERING) {
+            DateRange insertRange = timelinePlan.periodToInsert();
             LaborClassification newPeriod = new LaborClassification(
                     employeeId,
                     agreementCode,
                     agreementCategoryCode,
-                    effectiveDate,
-                    null
+                insertRange.startDate(),
+                insertRange.endDate()
             );
 
             List<LaborClassification> projected = new ArrayList<>(currentHistory);
@@ -152,33 +159,38 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
             return new ReplacementPlan(null, newPeriod, newPeriod, projected);
         }
 
-        if (coveringPeriod.getStartDate().equals(effectiveDate)) {
+            if (timelinePlan.mode() == ReplaceMode.EXACT_START) {
+                DateRange updateRange = timelinePlan.periodToUpdate();
             LaborClassification replaced = new LaborClassification(
                     employeeId,
                     agreementCode,
                     agreementCategoryCode,
-                    coveringPeriod.getStartDate(),
-                    coveringPeriod.getEndDate()
+                    updateRange.startDate(),
+                    updateRange.endDate()
             );
 
             List<LaborClassification> projected = replaceByStartDate(currentHistory, replaced);
             return new ReplacementPlan(replaced, null, replaced, projected);
         }
 
+            LaborClassification coveringPeriod = getPeriodByIndex(currentHistory, timelinePlan.coveringPeriodIndex());
+            DateRange updateRange = timelinePlan.periodToUpdate();
+            DateRange insertRange = timelinePlan.periodToInsert();
+
         LaborClassification adjustedExisting = new LaborClassification(
                 employeeId,
                 coveringPeriod.getAgreementCode(),
                 coveringPeriod.getAgreementCategoryCode(),
-                coveringPeriod.getStartDate(),
-                effectiveDate.minusDays(1)
+                updateRange.startDate(),
+                updateRange.endDate()
         );
 
         LaborClassification replacement = new LaborClassification(
                 employeeId,
                 agreementCode,
                 agreementCategoryCode,
-                effectiveDate,
-                coveringPeriod.getEndDate()
+                insertRange.startDate(),
+                insertRange.endDate()
         );
 
         List<LaborClassification> projected = replaceByStartDate(currentHistory, adjustedExisting);
@@ -186,6 +198,20 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
         projected.sort(Comparator.comparing(LaborClassification::getStartDate));
 
         return new ReplacementPlan(adjustedExisting, replacement, replacement, projected);
+    }
+
+    private List<DateRange> toDateRanges(List<LaborClassification> history) {
+        return history.stream()
+                .map(period -> new DateRange(period.getStartDate(), period.getEndDate()))
+                .toList();
+    }
+
+    private LaborClassification getPeriodByIndex(List<LaborClassification> history, Integer index) {
+        if (index == null || index < 0 || index >= history.size()) {
+            throw new IllegalStateException("Invalid covering period index in replacement plan");
+        }
+
+        return history.get(index);
     }
 
     private List<LaborClassification> replaceByStartDate(
@@ -204,14 +230,6 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
         return projected;
     }
 
-    private boolean isCoveringDate(LaborClassification period, LocalDate date) {
-        if (period.getStartDate().isAfter(date)) {
-            return false;
-        }
-
-        return period.getEndDate() == null || !period.getEndDate().isBefore(date);
-    }
-
     private void validateNoOverlap(
             List<LaborClassification> projectedHistory,
             String ruleSystemCode,
@@ -225,7 +243,7 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
         for (int index = 1; index < sorted.size(); index++) {
             LaborClassification previous = sorted.get(index - 1);
             LaborClassification current = sorted.get(index);
-            LocalDate previousEnd = normalizeEndDate(previous.getEndDate());
+            LocalDate previousEnd = TemporalDates.effectiveEnd(previous.getEndDate());
 
             if (!current.getStartDate().isAfter(previousEnd)) {
                 throw new LaborClassificationOverlapException(
@@ -237,10 +255,6 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
                 );
             }
         }
-    }
-
-    private LocalDate normalizeEndDate(LocalDate endDate) {
-        return endDate == null ? MAX_DATE : endDate;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {
