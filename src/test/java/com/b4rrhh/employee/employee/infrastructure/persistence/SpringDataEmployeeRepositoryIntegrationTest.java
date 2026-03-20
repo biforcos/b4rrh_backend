@@ -29,7 +29,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
     void setUpSchema() {
         jdbcTemplate.execute("create schema if not exists employee");
         jdbcTemplate.execute("drop table if exists employee.work_center");
-        jdbcTemplate.execute("drop table if exists employee.employee");
+        jdbcTemplate.execute("drop table if exists employee.employee cascade");
 
         jdbcTemplate.execute("""
                 create table employee.employee (
