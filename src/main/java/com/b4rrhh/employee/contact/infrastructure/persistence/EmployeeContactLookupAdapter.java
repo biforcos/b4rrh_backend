@@ -2,19 +2,19 @@ package com.b4rrhh.employee.contact.infrastructure.persistence;
 
 import com.b4rrhh.employee.contact.application.port.EmployeeContactContext;
 import com.b4rrhh.employee.contact.application.port.EmployeeContactLookupPort;
-import jakarta.persistence.EntityManager;
+import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeEntity;
+import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedLookupSupport;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Optional;
 
 @Component
 public class EmployeeContactLookupAdapter implements EmployeeContactLookupPort {
 
-    private final EntityManager entityManager;
+    private final EmployeeOwnedLookupSupport employeeOwnedLookupSupport;
 
-    public EmployeeContactLookupAdapter(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public EmployeeContactLookupAdapter(EmployeeOwnedLookupSupport employeeOwnedLookupSupport) {
+        this.employeeOwnedLookupSupport = employeeOwnedLookupSupport;
     }
 
     @Override
@@ -23,19 +23,12 @@ public class EmployeeContactLookupAdapter implements EmployeeContactLookupPort {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        List<?> rows = entityManager.createNativeQuery("""
-                select id, rule_system_code, employee_type_code, employee_number
-                from employee.employee
-                where upper(trim(rule_system_code)) = :ruleSystemCode
-                  and upper(trim(employee_type_code)) = :employeeTypeCode
-                  and trim(employee_number) = :employeeNumber
-                """)
-                .setParameter("ruleSystemCode", ruleSystemCode)
-                .setParameter("employeeTypeCode", employeeTypeCode)
-                .setParameter("employeeNumber", employeeNumber)
-                .getResultList();
-
-        return mapResult(rows);
+        return employeeOwnedLookupSupport.findOwnedByBusinessKey(
+            ruleSystemCode,
+            employeeTypeCode,
+            employeeNumber,
+            employee -> Optional.of(toContext(employee))
+        );
     }
 
     @Override
@@ -44,37 +37,20 @@ public class EmployeeContactLookupAdapter implements EmployeeContactLookupPort {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        List<?> rows = entityManager.createNativeQuery("""
-                select id, rule_system_code, employee_type_code, employee_number
-                from employee.employee
-                where upper(trim(rule_system_code)) = :ruleSystemCode
-                  and upper(trim(employee_type_code)) = :employeeTypeCode
-                  and trim(employee_number) = :employeeNumber
-                for update
-                """)
-                .setParameter("ruleSystemCode", ruleSystemCode)
-                .setParameter("employeeTypeCode", employeeTypeCode)
-                .setParameter("employeeNumber", employeeNumber)
-                .getResultList();
-
-        return mapResult(rows);
+        return employeeOwnedLookupSupport.findOwnedByBusinessKeyForUpdate(
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                employee -> Optional.of(toContext(employee))
+        );
     }
 
-    private Optional<EmployeeContactContext> mapResult(List<?> rows) {
-        if (rows.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Object row = rows.get(0);
-        if (!(row instanceof Object[] columns) || columns.length < 4) {
-            throw new IllegalStateException("Unexpected row shape for employee contact lookup query");
-        }
-
-        Long id = ((Number) columns[0]).longValue();
-        String ruleSystemCode = (String) columns[1];
-        String employeeTypeCode = (String) columns[2];
-        String employeeNumber = (String) columns[3];
-
-        return Optional.of(new EmployeeContactContext(id, ruleSystemCode, employeeTypeCode, employeeNumber));
+    private EmployeeContactContext toContext(EmployeeEntity employee) {
+        return new EmployeeContactContext(
+                employee.getId(),
+                employee.getRuleSystemCode(),
+                employee.getEmployeeTypeCode(),
+                employee.getEmployeeNumber()
+        );
     }
 }

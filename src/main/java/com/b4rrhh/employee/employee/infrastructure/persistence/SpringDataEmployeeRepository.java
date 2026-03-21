@@ -1,7 +1,9 @@
 package com.b4rrhh.employee.employee.infrastructure.persistence;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +17,33 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
             String ruleSystemCode,
             String employeeTypeCode,
             String employeeNumber
+    );
+
+    @Query("""
+        select e
+        from EmployeeEntity e
+        where upper(trim(e.ruleSystemCode)) = :ruleSystemCode
+          and upper(trim(e.employeeTypeCode)) = :employeeTypeCode
+          and trim(e.employeeNumber) = :employeeNumber
+        """)
+    Optional<EmployeeEntity> findByBusinessKey(
+        @Param("ruleSystemCode") String ruleSystemCode,
+        @Param("employeeTypeCode") String employeeTypeCode,
+        @Param("employeeNumber") String employeeNumber
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select e
+        from EmployeeEntity e
+        where upper(trim(e.ruleSystemCode)) = :ruleSystemCode
+          and upper(trim(e.employeeTypeCode)) = :employeeTypeCode
+          and trim(e.employeeNumber) = :employeeNumber
+        """)
+    Optional<EmployeeEntity> findByBusinessKeyForUpdate(
+        @Param("ruleSystemCode") String ruleSystemCode,
+        @Param("employeeTypeCode") String employeeTypeCode,
+        @Param("employeeNumber") String employeeNumber
     );
 
     @Query("""
