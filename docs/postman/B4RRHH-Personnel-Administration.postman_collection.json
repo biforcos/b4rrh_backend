@@ -673,6 +673,47 @@
             "description": "GET /rule-systems/{ruleSystemCode}"
           },
           "response": []
+        },
+        {
+          "name": "Update Rule System By Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 400 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spain Updated\",\n  \"countryCode\": \"ESP\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-systems/{{ruleSystemCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-systems",
+                "{{ruleSystemCode}}"
+              ]
+            },
+            "description": "PUT /rule-systems/{ruleSystemCode}"
+          },
+          "response": []
         }
       ]
     },

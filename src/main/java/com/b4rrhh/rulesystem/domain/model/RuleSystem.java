@@ -6,9 +6,9 @@ public class RuleSystem {
 
     private final Long id;
     private final String code;
-    private final String name;
-    private final String countryCode;
-    private final boolean active;
+    private String name;
+    private String countryCode;
+    private boolean active;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -37,4 +37,10 @@ public class RuleSystem {
     public boolean isActive() { return active; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void update(String name, String countryCode, Boolean active) {
+        this.name = name;
+        this.countryCode = countryCode;
+        this.active = active;
+    }
 }
