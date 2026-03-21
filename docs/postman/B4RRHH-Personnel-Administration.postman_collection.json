@@ -118,7 +118,50 @@
                 }
               ]
             },
-            "description": "GET /employees?q=...&ruleSystemCode=...&employeeTypeCode=...&status=...&size=...&page=..."
+            "description": "GET /employees"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Employee By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 400 or 404', function () {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Juan\",\n  \"lastName1\": \"Perez\",\n  \"lastName2\": \"Garcia\",\n  \"preferredName\": \"Juan Perez\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
           },
           "response": []
         },
