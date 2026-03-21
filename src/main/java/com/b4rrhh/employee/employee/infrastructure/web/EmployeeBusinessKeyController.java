@@ -1,20 +1,30 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
+import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeCommand;
+import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeResponse;
+import com.b4rrhh.employee.employee.infrastructure.web.dto.UpdateEmployeeRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class EmployeeBusinessKeyController {
 
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
+    private final UpdateEmployeeUseCase updateEmployeeUseCase;
 
-    public EmployeeBusinessKeyController(GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase) {
+    public EmployeeBusinessKeyController(
+            GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
+            UpdateEmployeeUseCase updateEmployeeUseCase
+    ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
+        this.updateEmployeeUseCase = updateEmployeeUseCase;
     }
 
     @GetMapping("/employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}")
@@ -26,6 +36,28 @@ public class EmployeeBusinessKeyController {
         return getEmployeeByBusinessKeyUseCase.getByBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .map(employee -> ResponseEntity.ok(toResponse(employee)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}")
+    public ResponseEntity<EmployeeResponse> updateByBusinessKey(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody UpdateEmployeeRequest request
+    ) {
+        Employee updated = updateEmployeeUseCase.update(
+                new UpdateEmployeeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.firstName(),
+                        request.lastName1(),
+                        request.lastName2(),
+                        request.preferredName()
+                )
+        );
+
+        return ResponseEntity.ok(toResponse(updated));
     }
 
     private EmployeeResponse toResponse(Employee employee) {

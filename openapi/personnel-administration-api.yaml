@@ -111,6 +111,45 @@ paths:
                 $ref: '#/components/schemas/EmployeeResponse'
         '404':
           description: Rule system or employee not found
+    put:
+      operationId: updateEmployeeByBusinessKey
+      summary: Update employee core identity fields by business key
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeRequest'
+      responses:
+        '200':
+          description: Employee updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey:
     get:
@@ -2030,6 +2069,27 @@ components:
         employeeNumber:
           type: string
           maxLength: 15
+        firstName:
+          type: string
+          maxLength: 100
+        lastName1:
+          type: string
+          maxLength: 100
+        lastName2:
+          type: string
+          maxLength: 100
+          nullable: true
+        preferredName:
+          type: string
+          maxLength: 300
+          nullable: true
+
+    UpdateEmployeeRequest:
+      type: object
+      required:
+        - firstName
+        - lastName1
+      properties:
         firstName:
           type: string
           maxLength: 100

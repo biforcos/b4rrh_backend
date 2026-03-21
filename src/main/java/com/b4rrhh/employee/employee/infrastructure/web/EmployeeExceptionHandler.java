@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
+import com.b4rrhh.employee.employee.domain.exception.EmployeeNotFoundException;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeRuleSystemNotFoundException;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {EmployeeController.class, EmployeeBusinessKeyController.class})
 public class EmployeeExceptionHandler {
+
+    @ExceptionHandler(EmployeeNotFoundException.class)
+    public ResponseEntity<EmployeeErrorResponse> handleEmployeeNotFound(EmployeeNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new EmployeeErrorResponse(ex.getMessage()));
+    }
 
     @ExceptionHandler(EmployeeRuleSystemNotFoundException.class)
     public ResponseEntity<EmployeeErrorResponse> handleRuleSystemNotFound(EmployeeRuleSystemNotFoundException ex) {

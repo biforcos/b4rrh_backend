@@ -53,4 +53,25 @@ public class Employee {
     public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public Employee updateIdentityFields(
+            String firstName,
+            String lastName1,
+            String lastName2,
+            String preferredName
+    ) {
+        return new Employee(
+                id,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                firstName,
+                lastName1,
+                lastName2,
+                preferredName,
+                status,
+                createdAt,
+                LocalDateTime.now()
+        );
+    }
 }

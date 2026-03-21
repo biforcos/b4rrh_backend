@@ -2,6 +2,7 @@ package com.b4rrhh.employee.address.infrastructure.persistence;
 
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeEntity;
+import com.b4rrhh.employee.employee.infrastructure.persistence.SpringDataEmployeeRepository;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedLookupSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +21,14 @@ import static org.mockito.Mockito.when;
 class EmployeeAddressLookupAdapterTest {
 
     @Mock
-    private EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport;
+    private SpringDataEmployeeRepository springDataEmployeeRepository;
 
     private EmployeeAddressLookupAdapter adapter;
 
     @BeforeEach
     void setUp() {
+        EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport =
+                new EmployeeBusinessKeyLookupSupport(springDataEmployeeRepository);
         EmployeeOwnedLookupSupport employeeOwnedLookupSupport = new EmployeeOwnedLookupSupport(employeeBusinessKeyLookupSupport);
         adapter = new EmployeeAddressLookupAdapter(employeeOwnedLookupSupport);
     }
@@ -33,7 +36,7 @@ class EmployeeAddressLookupAdapterTest {
     @Test
     void mapsEmployeeContextFromBusinessKeyLookup() {
         EmployeeEntity employee = employeeEntity(41L, "ESP", "INTERNAL", "EMP001");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
+        when(springDataEmployeeRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee));
 
         Optional<EmployeeAddressContext> result = adapter.findByBusinessKey("ESP", "INTERNAL", "EMP001");
@@ -48,7 +51,7 @@ class EmployeeAddressLookupAdapterTest {
     @Test
     void mapsEmployeeContextFromBusinessKeyLookupForUpdate() {
         EmployeeEntity employee = employeeEntity(42L, "ESP", "EXTERNAL", "EMP002");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002"))
+        when(springDataEmployeeRepository.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002"))
                 .thenReturn(Optional.of(employee));
 
         Optional<EmployeeAddressContext> result = adapter.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002");
@@ -62,7 +65,7 @@ class EmployeeAddressLookupAdapterTest {
 
     @Test
     void returnsEmptyWhenEmployeeDoesNotExist() {
-        when(employeeBusinessKeyLookupSupport.findByBusinessKey("ESP", "INTERNAL", "EMP003"))
+        when(springDataEmployeeRepository.findByBusinessKey("ESP", "INTERNAL", "EMP003"))
                 .thenReturn(Optional.empty());
 
         Optional<EmployeeAddressContext> result = adapter.findByBusinessKey("ESP", "INTERNAL", "EMP003");
@@ -72,7 +75,7 @@ class EmployeeAddressLookupAdapterTest {
 
     @Test
     void returnsEmptyWhenEmployeeDoesNotExistForUpdate() {
-        when(employeeBusinessKeyLookupSupport.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP004"))
+        when(springDataEmployeeRepository.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP004"))
                 .thenReturn(Optional.empty());
 
         Optional<EmployeeAddressContext> result = adapter.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP004");

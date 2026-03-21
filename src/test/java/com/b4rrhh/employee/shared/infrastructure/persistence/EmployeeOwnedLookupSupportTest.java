@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.shared.infrastructure.persistence;
 
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeEntity;
+import com.b4rrhh.employee.employee.infrastructure.persistence.SpringDataEmployeeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,18 +19,20 @@ import static org.mockito.Mockito.when;
 class EmployeeOwnedLookupSupportTest {
 
     @Mock
-    private EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport;
+        private SpringDataEmployeeRepository springDataEmployeeRepository;
 
     private EmployeeOwnedLookupSupport support;
 
     @BeforeEach
     void setUp() {
+                EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport =
+                                new EmployeeBusinessKeyLookupSupport(springDataEmployeeRepository);
         support = new EmployeeOwnedLookupSupport(employeeBusinessKeyLookupSupport);
     }
 
     @Test
     void findOwnedByBusinessKeyReturnsEmptyWhenEmployeeDoesNotExist() {
-        when(employeeBusinessKeyLookupSupport.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                when(springDataEmployeeRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.empty());
 
         Optional<String> result = support.findOwnedByBusinessKey(
@@ -45,7 +48,7 @@ class EmployeeOwnedLookupSupportTest {
     @Test
     void findOwnedByBusinessKeyForUpdateResolvesOwnedResource() {
         EmployeeEntity employee = employeeEntity(12L, "ESP", "INTERNAL", "EMP001");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001"))
+                when(springDataEmployeeRepository.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee));
 
         Optional<String> result = support.findOwnedByBusinessKeyForUpdate(
@@ -61,7 +64,7 @@ class EmployeeOwnedLookupSupportTest {
 
     @Test
     void findOwnedByBusinessKeyOrThrowThrowsEmployeeNotFoundException() {
-        when(employeeBusinessKeyLookupSupport.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                when(springDataEmployeeRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(
@@ -82,7 +85,7 @@ class EmployeeOwnedLookupSupportTest {
     @Test
     void findOwnedByBusinessKeyForUpdateOrThrowThrowsOwnedNotFoundException() {
         EmployeeEntity employee = employeeEntity(15L, "ESP", "INTERNAL", "EMP001");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001"))
+                when(springDataEmployeeRepository.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee));
 
         IllegalStateException exception = assertThrows(

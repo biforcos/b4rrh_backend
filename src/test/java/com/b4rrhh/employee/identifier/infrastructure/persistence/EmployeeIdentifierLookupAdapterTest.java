@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.identifier.infrastructure.persistence;
 
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeEntity;
+import com.b4rrhh.employee.employee.infrastructure.persistence.SpringDataEmployeeRepository;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedLookupSupport;
@@ -20,12 +21,14 @@ import static org.mockito.Mockito.when;
 class EmployeeIdentifierLookupAdapterTest {
 
     @Mock
-    private EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport;
+    private SpringDataEmployeeRepository springDataEmployeeRepository;
 
     private EmployeeIdentifierLookupAdapter adapter;
 
     @BeforeEach
     void setUp() {
+        EmployeeBusinessKeyLookupSupport employeeBusinessKeyLookupSupport =
+                new EmployeeBusinessKeyLookupSupport(springDataEmployeeRepository);
         EmployeeOwnedLookupSupport employeeOwnedLookupSupport = new EmployeeOwnedLookupSupport(employeeBusinessKeyLookupSupport);
         adapter = new EmployeeIdentifierLookupAdapter(employeeOwnedLookupSupport);
     }
@@ -33,7 +36,7 @@ class EmployeeIdentifierLookupAdapterTest {
     @Test
     void mapsEmployeeContextFromBusinessKeyLookup() {
         EmployeeEntity employee = employeeEntity(31L, "ESP", "INTERNAL", "EMP001");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
+        when(springDataEmployeeRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee));
 
         Optional<EmployeeIdentifierContext> result = adapter.findByBusinessKey("ESP", "INTERNAL", "EMP001");
@@ -48,7 +51,7 @@ class EmployeeIdentifierLookupAdapterTest {
     @Test
     void mapsEmployeeContextFromBusinessKeyLookupForUpdate() {
         EmployeeEntity employee = employeeEntity(32L, "ESP", "EXTERNAL", "EMP002");
-        when(employeeBusinessKeyLookupSupport.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002"))
+        when(springDataEmployeeRepository.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002"))
                 .thenReturn(Optional.of(employee));
 
         Optional<EmployeeIdentifierContext> result = adapter.findByBusinessKeyForUpdate("ESP", "EXTERNAL", "EMP002");
