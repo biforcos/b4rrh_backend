@@ -4,6 +4,7 @@ import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,38 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
                 .findByRuleSystemCodeAndRuleEntityTypeCodeAndCode(ruleSystemCode, ruleEntityTypeCode, code)
                 .map(this::toDomain);
     }
+
+        @Override
+        public Optional<RuleEntity> findByBusinessKeyAndStartDate(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+        ) {
+        return springDataRuleEntityRepository
+            .findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                ruleSystemCode,
+                ruleEntityTypeCode,
+                code,
+                startDate
+            )
+            .map(this::toDomain);
+        }
+
+        @Override
+        public void deleteByBusinessKeyAndStartDate(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+        ) {
+        springDataRuleEntityRepository.deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+            ruleSystemCode,
+            ruleEntityTypeCode,
+            code,
+            startDate
+        );
+        }
 
     @Override
     public RuleEntity save(RuleEntity ruleEntity) {

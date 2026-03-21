@@ -2028,6 +2028,46 @@ paths:
                 items:
                   $ref: '#/components/schemas/RuleEntityResponse'
 
+  /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}:
+    delete:
+      operationId: deleteRuleEntityByBusinessKey
+      summary: Delete rule entity by functional business key
+      description: |
+        Delete is allowed only when the target rule entity exists and is not referenced by business resources.
+        This operation is business-key only and does not use technical identifiers.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: ruleEntityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '204':
+          description: Rule entity deleted
+        '404':
+          description: Rule entity not found
+        '409':
+          description: Rule entity is in use and cannot be deleted
+
   /rule-systems/{ruleSystemCode}:
     get:
       operationId: getRuleSystemByCode

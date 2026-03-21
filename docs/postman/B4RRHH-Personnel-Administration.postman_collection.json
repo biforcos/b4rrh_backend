@@ -1070,6 +1070,41 @@
             "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01"
           },
           "response": []
+        },
+        {
+          "name": "Delete Rule Entity By Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204, 404 or 409', function () {",
+                  "    pm.expect([204, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/{{ruleSystemCode}}/{{ruleEntityTypeCode}}/{{ruleEntityCode}}/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "{{ruleSystemCode}}",
+                "{{ruleEntityTypeCode}}",
+                "{{ruleEntityCode}}",
+                "{{startDate}}"
+              ]
+            },
+            "description": "DELETE /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}"
+          },
+          "response": []
         }
       ]
     },
