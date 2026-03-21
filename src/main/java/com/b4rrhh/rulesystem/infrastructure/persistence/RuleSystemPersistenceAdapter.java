@@ -28,7 +28,9 @@ public class RuleSystemPersistenceAdapter implements RuleSystemRepository {
 
     @Override
     public RuleSystem save(RuleSystem ruleSystem) {
-        RuleSystemEntity entity = toEntity(ruleSystem);
+        RuleSystemEntity entity = ruleSystem.getId() == null
+                ? toNewEntity(ruleSystem)
+                : toExistingEntity(ruleSystem);
         RuleSystemEntity saved = springDataRuleSystemRepository.save(entity);
         return toDomain(saved);
     }
@@ -45,15 +47,25 @@ public class RuleSystemPersistenceAdapter implements RuleSystemRepository {
         );
     }
 
-    private RuleSystemEntity toEntity(RuleSystem ruleSystem) {
+    private RuleSystemEntity toNewEntity(RuleSystem ruleSystem) {
         RuleSystemEntity entity = new RuleSystemEntity();
-        entity.setId(ruleSystem.getId());
         entity.setCode(ruleSystem.getCode());
+        applyMutableFields(entity, ruleSystem);
+        return entity;
+    }
+
+    private RuleSystemEntity toExistingEntity(RuleSystem ruleSystem) {
+        RuleSystemEntity entity = springDataRuleSystemRepository.findByCode(ruleSystem.getCode())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Rule system not found for update with code: " + ruleSystem.getCode()
+                ));
+        applyMutableFields(entity, ruleSystem);
+        return entity;
+    }
+
+    private void applyMutableFields(RuleSystemEntity entity, RuleSystem ruleSystem) {
         entity.setName(ruleSystem.getName());
         entity.setCountryCode(ruleSystem.getCountryCode());
         entity.setActive(ruleSystem.isActive());
-        entity.setCreatedAt(ruleSystem.getCreatedAt());
-        entity.setUpdatedAt(ruleSystem.getUpdatedAt());
-        return entity;
     }
 }
