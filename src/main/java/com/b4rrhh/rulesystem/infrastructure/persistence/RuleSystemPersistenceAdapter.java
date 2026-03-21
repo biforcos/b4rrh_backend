@@ -52,6 +52,8 @@ public class RuleSystemPersistenceAdapter implements RuleSystemRepository {
         entity.setName(ruleSystem.getName());
         entity.setCountryCode(ruleSystem.getCountryCode());
         entity.setActive(ruleSystem.isActive());
+        entity.setCreatedAt(ruleSystem.getCreatedAt());
+        entity.setUpdatedAt(ruleSystem.getUpdatedAt());
         return entity;
     }
 }
