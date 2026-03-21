@@ -988,6 +988,1276 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Journey (Business Key API)",
+      "item": [
+        {
+          "name": "Get Employee Journey (Tracks)",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/journey",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "journey"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employee Journey V2 (Timeline Events)",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/journey-v2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "journey-v2"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey-v2"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Addresses (Business Key API)",
+      "item": [
+        {
+          "name": "Create Address By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "addresses"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressTypeCode\": \"{{addressTypeCode}}\",\n  \"street\": \"Gran Via 1\",\n  \"city\": \"Madrid\",\n  \"countryCode\": \"{{countryCode}}\",\n  \"postalCode\": \"28013\",\n  \"regionCode\": \"MD\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Addresses By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "addresses"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Address By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/addresses/{{addressNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "addresses",
+                "{{addressNumber}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Address By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/addresses/{{addressNumber}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "addresses",
+                "{{addressNumber}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Work Centers (Business Key API)",
+      "item": [
+        {
+          "name": "Create Work Center By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workCenterCode\": \"MADRID_HQ\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Work Centers By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Work Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers/{{workCenterAssignmentNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers",
+                "{{workCenterAssignmentNumber}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Work Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers/{{workCenterAssignmentNumber}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers",
+                "{{workCenterAssignmentNumber}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cost Centers (Business Key API)",
+      "item": [
+        {
+          "name": "Create Cost Center By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/cost-centers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "cost-centers"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"costCenterCode\": \"{{costCenterCode}}\",\n  \"allocationPercentage\": 50.0,\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Cost Centers By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/cost-centers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "cost-centers"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cost Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/cost-centers/{{costCenterCode}}/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "cost-centers",
+                "{{costCenterCode}}",
+                "{{startDate}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Cost Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/cost-centers/{{costCenterCode}}/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "cost-centers",
+                "{{costCenterCode}}",
+                "{{startDate}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocationPercentage\": 60.0\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close Cost Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/cost-centers/{{costCenterCode}}/{{startDate}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "cost-centers",
+                "{{costCenterCode}}",
+                "{{startDate}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Contracts (Business Key API)",
+      "item": [
+        {
+          "name": "Create Contract By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractCode\": \"{{contractCode}}\",\n  \"contractSubtypeCode\": \"{{contractSubtypeCode}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Contracts By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Contract By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts",
+                "{{startDate}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Contract By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts",
+                "{{startDate}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractCode\": \"{{contractCode}}\",\n  \"contractSubtypeCode\": \"{{contractSubtypeCode}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close Contract By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts/{{startDate}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts",
+                "{{startDate}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replace Contract From Date By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/contracts/replace-from-date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "contracts",
+                "replace-from-date"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/replace-from-date",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"effectiveDate\": \"{{startDate}}\",\n  \"contractCode\": \"{{contractCode}}\",\n  \"contractSubtypeCode\": \"{{contractSubtypeCode}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Labor Classifications (Business Key API)",
+      "item": [
+        {
+          "name": "Create Labor Classification By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreementCode\": \"{{agreementCode}}\",\n  \"agreementCategoryCode\": \"{{agreementCategoryCode}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Labor Classifications By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Labor Classification By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications",
+                "{{startDate}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Labor Classification By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications",
+                "{{startDate}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreementCode\": \"{{agreementCode}}\",\n  \"agreementCategoryCode\": \"{{agreementCategoryCode}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close Labor Classification By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications/{{startDate}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications",
+                "{{startDate}}",
+                "close"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replace Labor Classification From Date By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/labor-classifications/replace-from-date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "labor-classifications",
+                "replace-from-date"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/replace-from-date",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"effectiveDate\": \"{{startDate}}\",\n  \"agreementCode\": \"{{agreementCode}}\",\n  \"agreementCategoryCode\": \"{{agreementCategoryCode}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Identifiers (Business Key API)",
+      "item": [
+        {
+          "name": "Create Identifier By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([201, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/identifiers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "identifiers"
+              ]
+            },
+            "description": "POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifierTypeCode\": \"{{identifierTypeCode}}\",\n  \"identifierValue\": \"ID-0001\",\n  \"issuingCountryCode\": \"{{countryCode}}\",\n  \"expirationDate\": null,\n  \"isPrimary\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Identifiers By Employee Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/identifiers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "identifiers"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Identifier By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/identifiers/{{identifierTypeCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "identifiers",
+                "{{identifierTypeCode}}"
+              ]
+            },
+            "description": "GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers/{identifierTypeCode}"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Identifier By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/identifiers/{{identifierTypeCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "identifiers",
+                "{{identifierTypeCode}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers/{identifierTypeCode}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifierValue\": \"ID-0002\",\n  \"issuingCountryCode\": \"{{countryCode}}\",\n  \"expirationDate\": null,\n  \"isPrimary\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Identifier By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([204, 404]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/identifiers/{{identifierTypeCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "identifiers",
+                "{{identifierTypeCode}}"
+              ]
+            },
+            "description": "DELETE /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers/{identifierTypeCode}"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -1042,6 +2312,50 @@
     {
       "key": "active",
       "value": "true"
+    },
+    {
+      "key": "addressNumber",
+      "value": "1"
+    },
+    {
+      "key": "contractCode",
+      "value": "IND"
+    },
+    {
+      "key": "addressTypeCode",
+      "value": "HOME"
+    },
+    {
+      "key": "agreementCode",
+      "value": "AGR_MAIN"
+    },
+    {
+      "key": "countryCode",
+      "value": "ESP"
+    },
+    {
+      "key": "costCenterCode",
+      "value": "CC10"
+    },
+    {
+      "key": "agreementCategoryCode",
+      "value": "CAT_A"
+    },
+    {
+      "key": "startDate",
+      "value": "2026-01-10"
+    },
+    {
+      "key": "workCenterAssignmentNumber",
+      "value": "1"
+    },
+    {
+      "key": "identifierTypeCode",
+      "value": "NATIONAL_ID"
+    },
+    {
+      "key": "contractSubtypeCode",
+      "value": "FT1"
     }
   ]
 }

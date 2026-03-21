@@ -144,6 +144,52 @@ paths:
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/EmployeeJourneyTracksResponse'
+        '400':
+          description: Invalid business key input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyErrorResponse'
+        '404':
+          description: Employee not found for journey read model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyErrorResponse'
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey-v2:
+    get:
+      operationId: getEmployeeJourneyV2
+      summary: Get employee journey timeline as chronological events (read-only view)
+      description: |
+        Read-only event-based timeline for employee lifecycle visualization.
+        This endpoint does not mutate data and does not replace canonical write verticals.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Event-based employee journey timeline
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/EmployeeJourneyResponse'
         '400':
           description: Invalid business key input
@@ -2062,7 +2108,7 @@ components:
           nullable: true
           description: Active work center assignment code on current date, when available.
 
-    EmployeeJourneyResponse:
+    EmployeeJourneyTracksResponse:
       type: object
       required:
         - employee
@@ -2074,6 +2120,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JourneyTrackResponse'
+
+    EmployeeJourneyResponse:
+      type: object
+      required:
+        - employee
+        - events
+      properties:
+        employee:
+          $ref: '#/components/schemas/JourneyEmployeeHeader'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/JourneyEventResponse'
 
     JourneyEmployeeHeader:
       type: object
@@ -2131,6 +2190,66 @@ components:
         details:
           type: object
           additionalProperties: true
+
+    JourneyEventResponse:
+      type: object
+      required:
+        - eventDate
+        - eventType
+        - trackCode
+        - title
+        - status
+        - isCurrent
+        - details
+      properties:
+        eventDate:
+          type: string
+          format: date
+        eventType:
+          $ref: '#/components/schemas/JourneyEventType'
+        trackCode:
+          $ref: '#/components/schemas/JourneyTrackCode'
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/JourneyEventStatus'
+        isCurrent:
+          type: boolean
+        details:
+          type: object
+          additionalProperties: true
+
+    JourneyEventType:
+      type: string
+      enum:
+        - HIRE
+        - REHIRE
+        - TERMINATION
+        - PRESENCE_START
+        - PRESENCE_END
+        - CONTRACT_START
+        - CONTRACT_CHANGE
+        - CONTRACT_END
+        - LABOR_CLASSIFICATION_START
+        - LABOR_CLASSIFICATION_CHANGE
+        - LABOR_CLASSIFICATION_END
+
+    JourneyTrackCode:
+      type: string
+      enum:
+        - PRESENCE
+        - CONTRACT
+        - LABOR_CLASSIFICATION
+
+    JourneyEventStatus:
+      type: string
+      enum:
+        - completed
+        - current
+        - future
 
     JourneyErrorResponse:
       type: object
