@@ -2402,6 +2402,27 @@ paths:
         '400':
           description: Invalid request
 
+  /catalog-bindings/{resourceCode}:
+    get:
+      operationId: getCatalogBindingsByResourceCode
+      summary: Get catalog bindings by resource code
+      parameters:
+        - in: path
+          name: resourceCode
+          required: true
+          schema:
+            type: string
+            maxLength: 80
+      responses:
+        '200':
+          description: Catalog bindings for the requested resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogBindingsByResourceResponse'
+        '400':
+          description: Invalid resource code
+
   /rule-systems/{ruleSystemCode}:
     get:
       operationId: getRuleSystemByCode
@@ -3355,6 +3376,49 @@ components:
           type: string
           format: date
           nullable: true
+    CatalogFieldBindingResponse:
+      type: object
+      required:
+        - fieldCode
+        - catalogKind
+        - active
+      properties:
+        fieldCode:
+          type: string
+          maxLength: 80
+        catalogKind:
+          type: string
+          enum:
+            - DIRECT
+            - DEPENDENT
+            - CUSTOM
+        ruleEntityTypeCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        dependsOnFieldCode:
+          type: string
+          maxLength: 80
+          nullable: true
+        customResolverCode:
+          type: string
+          maxLength: 80
+          nullable: true
+        active:
+          type: boolean
+    CatalogBindingsByResourceResponse:
+      type: object
+      required:
+        - resourceCode
+        - fields
+      properties:
+        resourceCode:
+          type: string
+          maxLength: 80
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogFieldBindingResponse'
     CreateRuleSystemRequest:
       type: object
       required:
