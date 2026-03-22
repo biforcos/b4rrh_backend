@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntityEntity, Long> {
 
+    LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
+
     @Query("""
         select re
         from RuleEntityEntity re
@@ -32,17 +34,37 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
             String code
     );
 
-        Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+    Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
             String ruleSystemCode,
             String ruleEntityTypeCode,
             String code,
             LocalDate startDate
-        );
+    );
 
-        long deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+    @Query("""
+        select (count(re) > 0)
+        from RuleEntityEntity re
+        where re.ruleSystemCode = :ruleSystemCode
+          and re.ruleEntityTypeCode = :ruleEntityTypeCode
+          and re.code = :code
+          and re.startDate <> :excludedStartDate
+          and re.startDate <= coalesce(:projectedEndDate, :maxDate)
+          and :projectedStartDate <= coalesce(re.endDate, :maxDate)
+        """)
+    boolean existsOverlapExcludingStartDate(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
+            @Param("code") String code,
+            @Param("projectedStartDate") LocalDate projectedStartDate,
+            @Param("projectedEndDate") LocalDate projectedEndDate,
+            @Param("excludedStartDate") LocalDate excludedStartDate,
+            @Param("maxDate") LocalDate maxDate
+    );
+
+    long deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
             String ruleSystemCode,
             String ruleEntityTypeCode,
             String code,
             LocalDate startDate
-        );
+    );
 }

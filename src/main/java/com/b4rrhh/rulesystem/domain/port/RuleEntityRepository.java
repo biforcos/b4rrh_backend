@@ -11,6 +11,14 @@ public interface RuleEntityRepository {
     List<RuleEntity> findByFilters(String ruleSystemCode, String ruleEntityTypeCode, String code, Boolean active);
     Optional<RuleEntity> findByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code);
     Optional<RuleEntity> findByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate);
+    boolean existsOverlapExcludingStartDate(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate projectedStartDate,
+            LocalDate projectedEndDate,
+            LocalDate excludedStartDate
+    );
     void deleteByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate);
     RuleEntity save(RuleEntity ruleEntity);
 }

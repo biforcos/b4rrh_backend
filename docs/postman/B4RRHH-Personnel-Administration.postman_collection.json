@@ -1105,6 +1105,130 @@
             "description": "DELETE /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}"
           },
           "response": []
+        },
+        {
+          "name": "Get Rule Entity Occurrence By Full Business Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/{{ruleSystemCode}}/{{ruleEntityTypeCode}}/{{ruleEntityCode}}/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "{{ruleSystemCode}}",
+                "{{ruleEntityTypeCode}}",
+                "{{ruleEntityCode}}",
+                "{{startDate}}"
+              ]
+            },
+            "description": "GET /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}"
+          },
+          "response": []
+        },
+        {
+          "name": "Correct Rule Entity Occurrence",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 400, 404 or 409', function () {",
+                  "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Catalog Value Corrected\",\n  \"description\": \"Corrected description\",\n  \"endDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/{{ruleSystemCode}}/{{ruleEntityTypeCode}}/{{ruleEntityCode}}/{{startDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "{{ruleSystemCode}}",
+                "{{ruleEntityTypeCode}}",
+                "{{ruleEntityCode}}",
+                "{{startDate}}"
+              ]
+            },
+            "description": "PUT /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Rule Entity Occurrence",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, 400, 404 or 409', function () {",
+                  "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rule-entities/{{ruleSystemCode}}/{{ruleEntityTypeCode}}/{{ruleEntityCode}}/{{startDate}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rule-entities",
+                "{{ruleSystemCode}}",
+                "{{ruleEntityTypeCode}}",
+                "{{ruleEntityCode}}",
+                "{{startDate}}",
+                "close"
+              ]
+            },
+            "description": "POST /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}/close"
+          },
+          "response": []
         }
       ]
     },

@@ -1,5 +1,8 @@
 package com.b4rrhh.rulesystem.domain.model;
 
+import com.b4rrhh.rulesystem.domain.exception.RuleEntityAlreadyClosedException;
+import com.b4rrhh.rulesystem.domain.exception.RuleEntityInvalidDateRangeException;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -9,11 +12,11 @@ public class RuleEntity {
     private final String ruleSystemCode;
     private final String ruleEntityTypeCode;
     private final String code;
-    private final String name;
-    private final String description;
-    private final boolean active;
+    private String name;
+    private String description;
+    private boolean active;
     private final LocalDate startDate;
-    private final LocalDate endDate;
+    private LocalDate endDate;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -54,4 +57,38 @@ public class RuleEntity {
     public LocalDate getEndDate() { return endDate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void correct(String name, String description, LocalDate endDate) {
+        validateDateRange(startDate, endDate);
+
+        this.name = name;
+        this.description = normalizeDescription(description);
+        this.endDate = endDate;
+        this.active = endDate == null;
+    }
+
+    public void close(LocalDate endDate) {
+        if (this.endDate != null) {
+            throw new RuleEntityAlreadyClosedException(ruleSystemCode, ruleEntityTypeCode, code);
+        }
+
+        validateDateRange(startDate, endDate);
+        this.endDate = endDate;
+        this.active = false;
+    }
+
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (endDate != null && endDate.isBefore(startDate)) {
+            throw new RuleEntityInvalidDateRangeException(startDate, endDate);
+        }
+    }
+
+    private String normalizeDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+
+        String normalized = description.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
 }

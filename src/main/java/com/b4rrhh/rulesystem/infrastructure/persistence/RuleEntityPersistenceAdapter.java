@@ -37,37 +37,57 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
                 .map(this::toDomain);
     }
 
-        @Override
-        public Optional<RuleEntity> findByBusinessKeyAndStartDate(
+    @Override
+    public Optional<RuleEntity> findByBusinessKeyAndStartDate(
             String ruleSystemCode,
             String ruleEntityTypeCode,
             String code,
             LocalDate startDate
-        ) {
+    ) {
         return springDataRuleEntityRepository
-            .findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                .findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                        ruleSystemCode,
+                        ruleEntityTypeCode,
+                        code,
+                        startDate
+                )
+                .map(this::toDomain);
+    }
+
+    @Override
+    public boolean existsOverlapExcludingStartDate(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate projectedStartDate,
+            LocalDate projectedEndDate,
+            LocalDate excludedStartDate
+    ) {
+        return springDataRuleEntityRepository.existsOverlapExcludingStartDate(
+                ruleSystemCode,
+                ruleEntityTypeCode,
+                code,
+                projectedStartDate,
+                projectedEndDate,
+                excludedStartDate,
+                SpringDataRuleEntityRepository.MAX_DATE
+        );
+    }
+
+    @Override
+    public void deleteByBusinessKeyAndStartDate(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+    ) {
+        springDataRuleEntityRepository.deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
                 ruleSystemCode,
                 ruleEntityTypeCode,
                 code,
                 startDate
-            )
-            .map(this::toDomain);
-        }
-
-        @Override
-        public void deleteByBusinessKeyAndStartDate(
-            String ruleSystemCode,
-            String ruleEntityTypeCode,
-            String code,
-            LocalDate startDate
-        ) {
-        springDataRuleEntityRepository.deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
-            ruleSystemCode,
-            ruleEntityTypeCode,
-            code,
-            startDate
         );
-        }
+    }
 
     @Override
     public RuleEntity save(RuleEntity ruleEntity) {

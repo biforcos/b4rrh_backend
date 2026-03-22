@@ -2029,6 +2029,95 @@ paths:
                   $ref: '#/components/schemas/RuleEntityResponse'
 
   /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}:
+    get:
+      operationId: getRuleEntityByBusinessKey
+      summary: Get rule entity occurrence by full business key
+      description: Returns the exact occurrence identified by ruleSystemCode, ruleEntityTypeCode, code and startDate.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: ruleEntityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rule entity occurrence found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+        '404':
+          description: Rule entity occurrence not found
+    put:
+      operationId: correctRuleEntityByBusinessKey
+      summary: Correct existing rule entity occurrence
+      description: |
+        Corrects mutable fields of the same occurrence identified by the full business key.
+        Identity fields (ruleSystemCode, ruleEntityTypeCode, code, startDate) are immutable.
+        This operation does not create a new occurrence.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: ruleEntityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectRuleEntityRequest'
+      responses:
+        '200':
+          description: Rule entity occurrence corrected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+        '400':
+          description: Invalid request payload
+        '404':
+          description: Rule entity occurrence not found
+        '409':
+          description: Domain conflict while correcting the occurrence
     delete:
       operationId: deleteRuleEntityByBusinessKey
       summary: Delete rule entity by functional business key
@@ -2067,6 +2156,58 @@ paths:
           description: Rule entity not found
         '409':
           description: Rule entity is in use and cannot be deleted
+
+  /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}/close:
+    post:
+      operationId: closeRuleEntityByBusinessKey
+      summary: Close rule entity occurrence validity
+      description: |
+        Explicit domain action to close an existing occurrence by setting endDate.
+        Identity fields remain immutable.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: ruleEntityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseRuleEntityRequest'
+      responses:
+        '200':
+          description: Rule entity occurrence closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleEntityResponse'
+        '400':
+          description: Invalid request payload
+        '404':
+          description: Rule entity occurrence not found
+        '409':
+          description: Domain conflict while closing the occurrence
 
   /rule-systems/{ruleSystemCode}:
     get:
@@ -3085,3 +3226,27 @@ components:
           type: string
           format: date
           nullable: true
+    CorrectRuleEntityRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    CloseRuleEntityRequest:
+      type: object
+      required:
+        - endDate
+      properties:
+        endDate:
+          type: string
+          format: date
