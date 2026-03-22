@@ -1574,6 +1574,83 @@
           "response": []
         },
         {
+          "name": "Update Work Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([200, 400, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers/{{workCenterAssignmentNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers",
+                "{{workCenterAssignmentNumber}}"
+              ]
+            },
+            "description": "PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workCenterCode\": \"BARCELONA_HQ\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Work Center By Business Key",
+          "event": {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is expected', function () {",
+                "    pm.expect([204, 404, 409]).to.include(pm.response.code);",
+                "});"
+              ]
+            }
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{ruleSystemCode}}/{{employeeTypeCode}}/{{employeeNumber}}/work-centers/{{workCenterAssignmentNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{ruleSystemCode}}",
+                "{{employeeTypeCode}}",
+                "{{employeeNumber}}",
+                "work-centers",
+                "{{workCenterAssignmentNumber}}"
+              ]
+            },
+            "description": "DELETE /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}"
+          },
+          "response": []
+        },
+        {
           "name": "Close Work Center By Business Key",
           "event": {
             "listen": "test",

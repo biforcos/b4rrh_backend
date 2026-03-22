@@ -795,6 +795,49 @@ paths:
             Resulting period overlaps another assignment for this employee,
             is not fully contained within employee presence history,
             or references an invalid catalog value.
+    delete:
+      operationId: deleteWorkCenterByBusinessKey
+      summary: Delete employee work center assignment by business key
+      description: >-
+        Administrative deletion of a specific work center assignment occurrence identified by
+        business keys. This operation does not represent a workflow transition and does not
+        replace close. Deletion is forbidden when the assignment startDate exactly matches the
+        startDate of any presence for the same employee; in that case the occurrence must be
+        corrected instead of deleted.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: workCenterAssignmentNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Work center assignment deleted
+        '404':
+          description: Rule system, employee, or work center assignment not found
+        '409':
+          description: >-
+            Deletion is not allowed because the assignment startDate matches the startDate of
+            an employee presence. The occurrence must be corrected instead of deleted.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close:
     post:
