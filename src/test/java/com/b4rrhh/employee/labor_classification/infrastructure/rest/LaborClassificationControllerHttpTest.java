@@ -3,6 +3,7 @@ package com.b4rrhh.employee.labor_classification.infrastructure.rest;
 import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
+import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationCatalogReadPort;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +53,8 @@ class LaborClassificationControllerHttpTest {
     private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
         @Mock
         private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
+        @Mock
+        private LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -61,7 +66,8 @@ class LaborClassificationControllerHttpTest {
                 getLaborClassificationByBusinessKeyUseCase,
                 updateLaborClassificationUseCase,
                 closeLaborClassificationUseCase,
-                replaceLaborClassificationFromDateUseCase
+                replaceLaborClassificationFromDateUseCase,
+                laborClassificationCatalogReadPort
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -179,6 +185,44 @@ class LaborClassificationControllerHttpTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_OVERLAP"));
+    }
+
+    @Test
+    void listEnrichesAgreementAndCategoryNamesWhenPresent() throws Exception {
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any()))
+                .thenReturn(List.of(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null)));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+                .thenReturn(Optional.of("Office Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.of("Administrative Category"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].agreementCode").value("AGR_OFFICE"))
+                .andExpect(jsonPath("$[0].agreementName").value("Office Agreement"))
+                .andExpect(jsonPath("$[0].agreementCategoryCode").value("CAT_ADMIN"))
+                .andExpect(jsonPath("$[0].agreementCategoryName").value("Administrative Category"))
+                .andExpect(jsonPath("$[0].id").doesNotExist())
+                .andExpect(jsonPath("$[0].employeeId").doesNotExist());
+    }
+
+    @Test
+    void getByBusinessKeyKeepsCodesWhenCategoryLabelMissing() throws Exception {
+        when(getLaborClassificationByBusinessKeyUseCase.getByBusinessKey(any()))
+                .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+                .thenReturn(Optional.of("Office Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"))
+                .andExpect(jsonPath("$.agreementName").value("Office Agreement"))
+                .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_ADMIN"))
+                .andExpect(jsonPath("$.agreementCategoryName").isEmpty())
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.employeeId").doesNotExist());
     }
 
     @Test

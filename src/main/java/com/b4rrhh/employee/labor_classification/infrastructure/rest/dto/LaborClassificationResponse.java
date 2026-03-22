@@ -4,7 +4,9 @@ import java.time.LocalDate;
 
 public record LaborClassificationResponse(
         String agreementCode,
+        String agreementName,
         String agreementCategoryCode,
+        String agreementCategoryName,
         LocalDate startDate,
         LocalDate endDate
 ) {

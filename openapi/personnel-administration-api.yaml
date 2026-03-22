@@ -3299,8 +3299,14 @@ components:
       properties:
         agreementCode:
           type: string
+        agreementName:
+          type: string
+          nullable: true
         agreementCategoryCode:
           type: string
+        agreementCategoryName:
+          type: string
+          nullable: true
         startDate:
           type: string
           format: date

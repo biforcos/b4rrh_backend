@@ -6,6 +6,7 @@ import com.b4rrhh.employee.labor_classification.application.command.GetLaborClas
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationCatalogReadPort;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -42,6 +43,7 @@ public class LaborClassificationController {
     private final UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
         private final ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
+        private final LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
 
     public LaborClassificationController(
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
@@ -49,7 +51,8 @@ public class LaborClassificationController {
             GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase,
             UpdateLaborClassificationUseCase updateLaborClassificationUseCase,
                         CloseLaborClassificationUseCase closeLaborClassificationUseCase,
-                        ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase
+                        ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase,
+                        LaborClassificationCatalogReadPort laborClassificationCatalogReadPort
     ) {
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
@@ -57,6 +60,7 @@ public class LaborClassificationController {
         this.updateLaborClassificationUseCase = updateLaborClassificationUseCase;
         this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
                 this.replaceLaborClassificationFromDateUseCase = replaceLaborClassificationFromDateUseCase;
+                this.laborClassificationCatalogReadPort = laborClassificationCatalogReadPort;
     }
 
     @PostMapping
@@ -94,7 +98,7 @@ public class LaborClassificationController {
                         employeeNumber
                 ))
                 .stream()
-                .map(this::toResponse)
+                .map(laborClassification -> toResponse(ruleSystemCode, laborClassification))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -116,7 +120,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(laborClassification));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, laborClassification));
     }
 
     @PutMapping("/{startDate}")
@@ -186,7 +190,27 @@ public class LaborClassificationController {
     private LaborClassificationResponse toResponse(LaborClassification laborClassification) {
         return new LaborClassificationResponse(
                 laborClassification.getAgreementCode(),
+                null,
                 laborClassification.getAgreementCategoryCode(),
+                null,
+                laborClassification.getStartDate(),
+                laborClassification.getEndDate()
+        );
+    }
+
+    private LaborClassificationResponse toResponse(String ruleSystemCode, LaborClassification laborClassification) {
+        String agreementName = laborClassificationCatalogReadPort
+                .findAgreementName(ruleSystemCode, laborClassification.getAgreementCode())
+                .orElse(null);
+        String agreementCategoryName = laborClassificationCatalogReadPort
+                .findAgreementCategoryName(ruleSystemCode, laborClassification.getAgreementCategoryCode())
+                .orElse(null);
+
+        return new LaborClassificationResponse(
+                laborClassification.getAgreementCode(),
+                agreementName,
+                laborClassification.getAgreementCategoryCode(),
+                agreementCategoryName,
                 laborClassification.getStartDate(),
                 laborClassification.getEndDate()
         );
