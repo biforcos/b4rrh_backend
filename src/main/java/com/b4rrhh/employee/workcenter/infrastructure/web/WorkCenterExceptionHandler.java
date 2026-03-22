@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
+
 @RestControllerAdvice(assignableTypes = WorkCenterController.class)
 public class WorkCenterExceptionHandler {
 
@@ -24,8 +26,19 @@ public class WorkCenterExceptionHandler {
             WorkCenterRuleSystemNotFoundException.class
     })
     public ResponseEntity<WorkCenterErrorResponse> handleNotFound(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new WorkCenterErrorResponse(ex.getMessage()));
+        if (ex instanceof WorkCenterNotFoundException) {
+            return notFound(
+                    "WORK_CENTER_NOT_FOUND",
+                    "No existe la asignacion de centro de trabajo indicada para el empleado.",
+                    null
+            );
+        }
+
+        return notFound(
+                "WORK_CENTER_NOT_FOUND",
+                "No se ha encontrado el empleado o el sistema de reglas solicitado.",
+                null
+        );
     }
 
     @ExceptionHandler({
@@ -34,8 +47,19 @@ public class WorkCenterExceptionHandler {
             IllegalArgumentException.class
     })
     public ResponseEntity<WorkCenterErrorResponse> handleBadRequest(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new WorkCenterErrorResponse(ex.getMessage()));
+        if (ex instanceof WorkCenterCatalogValueInvalidException) {
+            return notFound(
+                    "WORK_CENTER_CATALOG_NOT_FOUND",
+                    "El centro de trabajo indicado no existe o no esta activo en catalogo para la fecha informada.",
+                    Map.of("field", "workCenterCode")
+            );
+        }
+
+        return conflict(
+                "WORK_CENTER_INVALID_PERIOD",
+                "La correccion de centro de trabajo es invalida por fechas o datos inconsistentes.",
+                null
+        );
     }
 
     @ExceptionHandler({
@@ -45,7 +69,50 @@ public class WorkCenterExceptionHandler {
             WorkCenterPresenceCoverageGapException.class
     })
     public ResponseEntity<WorkCenterErrorResponse> handleConflict(RuntimeException ex) {
+        if (ex instanceof WorkCenterOverlapException) {
+            return conflict(
+                    "WORK_CENTER_OVERLAP",
+                    "El periodo informado se solapa con otra asignacion de centro de trabajo del empleado.",
+                    null
+            );
+        }
+        if (ex instanceof WorkCenterOutsidePresencePeriodException) {
+            return conflict(
+                    "WORK_CENTER_OUTSIDE_PRESENCE",
+                    "El periodo informado queda fuera de cualquier presencia valida del empleado.",
+                    null
+            );
+        }
+        if (ex instanceof WorkCenterAlreadyClosedException) {
+            return conflict(
+                    "WORK_CENTER_ALREADY_CLOSED",
+                    "La asignacion de centro de trabajo ya estaba cerrada y no puede cerrarse nuevamente.",
+                    null
+            );
+        }
+
+        return conflict(
+                "WORK_CENTER_INVALID_PERIOD",
+                "La operacion de centro de trabajo entra en conflicto con las reglas temporales del empleado.",
+                null
+        );
+    }
+
+    private ResponseEntity<WorkCenterErrorResponse> notFound(
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new WorkCenterErrorResponse(code, message, details));
+    }
+
+    private ResponseEntity<WorkCenterErrorResponse> conflict(
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new WorkCenterErrorResponse(ex.getMessage()));
+                .body(new WorkCenterErrorResponse(code, message, details));
     }
 }

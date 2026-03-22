@@ -8,7 +8,11 @@ import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusines
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,7 +134,83 @@ class WorkCenterControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("Work center period overlaps")));
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_OVERLAP"))
+                .andExpect(jsonPath("$.message", containsString("solapa")));
+    }
+
+    @Test
+    void createMapsCatalogNotFoundToHttp404() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterCatalogValueInvalidException("workCenterCode", "UNKNOWN"));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "UNKNOWN",
+                                  "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_CATALOG_NOT_FOUND"))
+                .andExpect(jsonPath("$.details.field").value("workCenterCode"));
+    }
+
+    @Test
+    void createMapsOutsidePresenceToHttp409() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterOutsidePresencePeriodException(
+                        "ESP",
+                        "INTERNAL",
+                        "EMP001",
+                        LocalDate.of(2026, 1, 10),
+                        null
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "MADRID_HQ",
+                                  "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_OUTSIDE_PRESENCE"));
+    }
+
+    @Test
+    void closeMapsAlreadyClosedToHttp409() throws Exception {
+        when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterAlreadyClosedException(1));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/1/close")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "endDate": "2026-01-20"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_ALREADY_CLOSED"));
+    }
+
+    @Test
+    void updateMapsInvalidPeriodToHttp409() throws Exception {
+        when(updateWorkCenterUseCase.update(any(UpdateWorkCenterCommand.class)))
+                .thenThrow(new InvalidWorkCenterDateRangeException("endDate must be greater than or equal to startDate"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/work-centers/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "BARCELONA_HQ",
+                                  "startDate": "2026-02-21",
+                                  "endDate": "2026-02-20"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_INVALID_PERIOD"));
     }
 
     @Test
@@ -174,7 +254,7 @@ class WorkCenterControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("Work center assignment not found")));
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_NOT_FOUND"));
     }
 
     @Test
@@ -192,7 +272,7 @@ class WorkCenterControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("Work center period overlaps")));
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_OVERLAP"));
     }
 
     private WorkCenter workCenter(
