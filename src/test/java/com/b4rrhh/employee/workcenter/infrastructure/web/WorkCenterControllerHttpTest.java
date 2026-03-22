@@ -21,6 +21,7 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundExcepti
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,6 +79,9 @@ class WorkCenterControllerHttpTest {
 
     @BeforeEach
     void setUp() {
+        WorkCenterResponseAssembler workCenterResponseAssembler =
+                new WorkCenterResponseAssembler(workCenterCatalogReadPort);
+
         WorkCenterController controller = new WorkCenterController(
                 createWorkCenterUseCase,
                 closeWorkCenterUseCase,
@@ -85,7 +89,7 @@ class WorkCenterControllerHttpTest {
                 getWorkCenterByBusinessKeyUseCase,
                 listEmployeeWorkCentersUseCase,
                 updateWorkCenterUseCase,
-                workCenterCatalogReadPort
+                workCenterResponseAssembler
         );
 
         lenient().when(workCenterCatalogReadPort.findWorkCenterName(anyString(), anyString()))
