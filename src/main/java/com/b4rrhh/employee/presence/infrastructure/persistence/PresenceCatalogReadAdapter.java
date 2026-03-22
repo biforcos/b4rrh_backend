@@ -24,12 +24,46 @@ public class PresenceCatalogReadAdapter implements PresenceCatalogReadPort {
             return Optional.empty();
         }
 
-        return ruleEntityRepository
-                .findByBusinessKey(
-                        normalizedRuleSystemCode,
+        return findCatalogName(
+                normalizedRuleSystemCode,
                 PresenceRuleEntityTypeCodes.EMPLOYEE_PRESENCE_COMPANY,
-                        normalizedCompanyCode
-                )
+                normalizedCompanyCode
+        );
+    }
+
+    @Override
+    public Optional<String> findEntryReasonName(String ruleSystemCode, String entryReasonCode) {
+        String normalizedRuleSystemCode = normalizeToUppercase(ruleSystemCode);
+        String normalizedEntryReasonCode = normalizeToUppercase(entryReasonCode);
+        if (normalizedRuleSystemCode == null || normalizedEntryReasonCode == null) {
+            return Optional.empty();
+        }
+
+        return findCatalogName(
+                normalizedRuleSystemCode,
+                PresenceRuleEntityTypeCodes.EMPLOYEE_PRESENCE_ENTRY_REASON,
+                normalizedEntryReasonCode
+        );
+    }
+
+    @Override
+    public Optional<String> findExitReasonName(String ruleSystemCode, String exitReasonCode) {
+        String normalizedRuleSystemCode = normalizeToUppercase(ruleSystemCode);
+        String normalizedExitReasonCode = normalizeToUppercase(exitReasonCode);
+        if (normalizedRuleSystemCode == null || normalizedExitReasonCode == null) {
+            return Optional.empty();
+        }
+
+        return findCatalogName(
+                normalizedRuleSystemCode,
+                PresenceRuleEntityTypeCodes.EMPLOYEE_PRESENCE_EXIT_REASON,
+                normalizedExitReasonCode
+        );
+    }
+
+    private Optional<String> findCatalogName(String ruleSystemCode, String ruleEntityTypeCode, String code) {
+        return ruleEntityRepository
+                .findByBusinessKey(ruleSystemCode, ruleEntityTypeCode, code)
                 .map(entity -> entity.getName() == null ? null : entity.getName().trim())
                 .filter(name -> name != null && !name.isEmpty());
     }

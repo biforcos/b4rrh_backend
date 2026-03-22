@@ -72,6 +72,10 @@ class PresenceBusinessKeyControllerTest {
 
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
                 .thenReturn(Optional.of("Empresa Activa"));
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+            .thenReturn(Optional.of("Alta inicial"));
+        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
+            .thenReturn(Optional.empty());
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(activePresence());
 
         ResponseEntity<PresenceResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
@@ -80,6 +84,8 @@ class PresenceBusinessKeyControllerTest {
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().presenceNumber());
         assertEquals("Empresa Activa", response.getBody().companyName());
+        assertEquals("Alta inicial", response.getBody().entryReasonName());
+        assertNull(response.getBody().exitReasonName());
 
         ArgumentCaptor<CreatePresenceCommand> captor = ArgumentCaptor.forClass(CreatePresenceCommand.class);
         verify(createPresenceUseCase).create(captor.capture());
@@ -93,6 +99,10 @@ class PresenceBusinessKeyControllerTest {
     void listsPresencesUsingEmployeeBusinessKey() {
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
                 .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+            .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
+            .thenReturn(Optional.empty());
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activePresence()));
 
@@ -104,6 +114,8 @@ class PresenceBusinessKeyControllerTest {
         assertEquals(1, response.getBody().get(0).presenceNumber());
         assertEquals("AC01", response.getBody().get(0).companyCode());
         assertNull(response.getBody().get(0).companyName());
+        assertNull(response.getBody().get(0).entryReasonName());
+        assertNull(response.getBody().get(0).exitReasonName());
     }
 
     @Test

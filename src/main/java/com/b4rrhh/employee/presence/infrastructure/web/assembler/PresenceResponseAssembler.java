@@ -20,13 +20,21 @@ public class PresenceResponseAssembler {
         String companyName = presenceCatalogReadPort
                 .findCompanyName(ruleSystemCode, presence.getCompanyCode())
                 .orElse(null);
+        String entryReasonName = presenceCatalogReadPort
+                .findEntryReasonName(ruleSystemCode, presence.getEntryReasonCode())
+                .orElse(null);
+        String exitReasonName = presenceCatalogReadPort
+                .findExitReasonName(ruleSystemCode, presence.getExitReasonCode())
+                .orElse(null);
 
         return new PresenceResponse(
                 presence.getPresenceNumber(),
                 presence.getCompanyCode(),
                 companyName,
                 presence.getEntryReasonCode(),
+                entryReasonName,
                 presence.getExitReasonCode(),
+                exitReasonName,
                 presence.getStartDate(),
                 presence.getEndDate()
         );

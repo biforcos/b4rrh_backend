@@ -47,6 +47,56 @@ class PresenceCatalogReadAdapterTest {
         verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC99");
     }
 
+    @Test
+    void findEntryReasonNameUsesEntryReasonTypeAndReturnsLabelWhenFound() {
+        PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
+        RuleEntity entity = ruleEntity("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT01", " Alta inicial ");
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT01"))
+                .thenReturn(Optional.of(entity));
+
+        Optional<String> result = adapter.findEntryReasonName(" esp ", " ent01 ");
+
+        assertEquals(Optional.of("Alta inicial"), result);
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT01");
+    }
+
+    @Test
+    void findEntryReasonNameReturnsEmptyWhenLabelIsMissing() {
+        PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT99"))
+                .thenReturn(Optional.empty());
+
+        Optional<String> result = adapter.findEntryReasonName("ESP", "ENT99");
+
+        assertTrue(result.isEmpty());
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT99");
+    }
+
+    @Test
+    void findExitReasonNameUsesExitReasonTypeAndReturnsLabelWhenFound() {
+        PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
+        RuleEntity entity = ruleEntity("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "EXT01", " Baja ");
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "EXT01"))
+                .thenReturn(Optional.of(entity));
+
+        Optional<String> result = adapter.findExitReasonName(" esp ", " ext01 ");
+
+        assertEquals(Optional.of("Baja"), result);
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "EXT01");
+    }
+
+    @Test
+    void findExitReasonNameReturnsEmptyWhenLabelIsMissing() {
+        PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "EXT99"))
+                .thenReturn(Optional.empty());
+
+        Optional<String> result = adapter.findExitReasonName("ESP", "EXT99");
+
+        assertTrue(result.isEmpty());
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "EXT99");
+    }
+
     private RuleEntity ruleEntity(String ruleSystemCode, String ruleEntityTypeCode, String code, String name) {
         return new RuleEntity(
                 1L,

@@ -2853,9 +2853,17 @@ components:
           description: Optional display name from COMPANY rule entities in the employee ruleSystemCode catalog.
         entryReasonCode:
           type: string
+        entryReasonName:
+          type: string
+          nullable: true
+          description: Optional display name from EMPLOYEE_PRESENCE_ENTRY_REASON rule entities in the employee ruleSystemCode catalog.
         exitReasonCode:
           type: string
           nullable: true
+        exitReasonName:
+          type: string
+          nullable: true
+          description: Optional display name from EMPLOYEE_PRESENCE_EXIT_REASON rule entities in the employee ruleSystemCode catalog.
         startDate:
           type: string
           format: date

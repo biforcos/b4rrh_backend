@@ -25,38 +25,54 @@ class PresenceResponseAssemblerTest {
     @Test
     void toResponseEnrichesCompanyLabelWhenPresent() {
         PresenceResponseAssembler assembler = new PresenceResponseAssembler(presenceCatalogReadPort);
-        Presence presence = presence(1, "AC01");
+        Presence presence = presence(1, "AC01", "ENT01", "EXT01");
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
                 .thenReturn(Optional.of("Empresa Activa"));
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+            .thenReturn(Optional.of("Alta inicial"));
+        when(presenceCatalogReadPort.findExitReasonName("ESP", "EXT01"))
+            .thenReturn(Optional.of("Baja voluntaria"));
 
         PresenceResponse response = assembler.toResponse("ESP", presence);
 
         assertEquals(1, response.presenceNumber());
         assertEquals("AC01", response.companyCode());
         assertEquals("Empresa Activa", response.companyName());
+        assertEquals("Alta inicial", response.entryReasonName());
+        assertEquals("Baja voluntaria", response.exitReasonName());
     }
 
     @Test
     void toResponseKeepsCompanyCodeAndUsesNullWhenLabelMissing() {
         PresenceResponseAssembler assembler = new PresenceResponseAssembler(presenceCatalogReadPort);
-        Presence presence = presence(1, "AC01");
+        Presence presence = presence(1, "AC01", "ENT01", "EXT01");
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+                .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+                .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findExitReasonName("ESP", "EXT01"))
                 .thenReturn(Optional.empty());
 
         PresenceResponse response = assembler.toResponse("ESP", presence);
 
         assertEquals("AC01", response.companyCode());
         assertNull(response.companyName());
+        assertNull(response.entryReasonName());
+        assertNull(response.exitReasonName());
     }
 
     private Presence presence(int presenceNumber, String companyCode) {
+        return presence(presenceNumber, companyCode, "ENT01", null);
+    }
+
+    private Presence presence(int presenceNumber, String companyCode, String entryReasonCode, String exitReasonCode) {
         return new Presence(
                 20L,
                 10L,
                 presenceNumber,
                 companyCode,
-                "ENT01",
-                null,
+                entryReasonCode,
+                exitReasonCode,
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),

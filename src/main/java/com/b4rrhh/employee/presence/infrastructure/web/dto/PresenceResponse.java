@@ -7,7 +7,9 @@ public record PresenceResponse(
         String companyCode,
         String companyName,
         String entryReasonCode,
+        String entryReasonName,
         String exitReasonCode,
+        String exitReasonName,
         LocalDate startDate,
         LocalDate endDate
 ) {

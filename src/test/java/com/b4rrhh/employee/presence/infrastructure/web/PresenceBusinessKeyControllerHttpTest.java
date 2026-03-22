@@ -62,6 +62,10 @@ class PresenceBusinessKeyControllerHttpTest {
     void createReturnsCompanyNameWhenCatalogLabelExists() throws Exception {
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
                 .thenReturn(Optional.of("Empresa Activa"));
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+                .thenReturn(Optional.of("Alta inicial"));
+        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
+                .thenReturn(Optional.empty());
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(activePresence());
 
@@ -78,6 +82,9 @@ class PresenceBusinessKeyControllerHttpTest {
                 .andExpect(jsonPath("$.presenceNumber").value(1))
                 .andExpect(jsonPath("$.companyCode").value("AC01"))
                 .andExpect(jsonPath("$.companyName").value("Empresa Activa"))
+                .andExpect(jsonPath("$.entryReasonCode").value("ENT01"))
+                .andExpect(jsonPath("$.entryReasonName").value("Alta inicial"))
+                .andExpect(jsonPath("$.exitReasonName").isEmpty())
                 .andExpect(jsonPath("$.employeeId").doesNotExist())
                 .andExpect(jsonPath("$.id").doesNotExist());
     }
@@ -85,6 +92,10 @@ class PresenceBusinessKeyControllerHttpTest {
     @Test
     void createReturnsNullCompanyNameWhenCatalogLabelIsMissing() throws Exception {
         when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+                .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+                .thenReturn(Optional.empty());
+        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
                 .thenReturn(Optional.empty());
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(activePresence());
@@ -100,7 +111,9 @@ class PresenceBusinessKeyControllerHttpTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.companyCode").value("AC01"))
-                .andExpect(jsonPath("$.companyName").isEmpty());
+                .andExpect(jsonPath("$.companyName").isEmpty())
+                .andExpect(jsonPath("$.entryReasonName").isEmpty())
+                .andExpect(jsonPath("$.exitReasonName").isEmpty());
     }
 
     private Presence activePresence() {
