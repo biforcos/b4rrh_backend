@@ -1,5 +1,8 @@
 package com.b4rrhh.employee.workcenter.infrastructure.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.b4rrhh.employee.workcenter.application.port.WorkCenterCatalogReadPort;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
@@ -26,19 +29,26 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class WorkCenterControllerHttpTest {
+
+        private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private CreateWorkCenterUseCase createWorkCenterUseCase;
@@ -59,6 +71,8 @@ class WorkCenterControllerHttpTest {
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
         @Mock
         private UpdateWorkCenterUseCase updateWorkCenterUseCase;
+        @Mock
+        private WorkCenterCatalogReadPort workCenterCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -70,8 +84,12 @@ class WorkCenterControllerHttpTest {
                 deleteWorkCenterUseCase,
                 getWorkCenterByBusinessKeyUseCase,
                 listEmployeeWorkCentersUseCase,
-                updateWorkCenterUseCase
+                updateWorkCenterUseCase,
+                workCenterCatalogReadPort
         );
+
+        lenient().when(workCenterCatalogReadPort.findWorkCenterName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new WorkCenterExceptionHandler())
@@ -324,6 +342,38 @@ class WorkCenterControllerHttpTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_DELETE_FORBIDDEN_AT_PRESENCE_START"))
                 .andExpect(jsonPath("$.message").value("La asignación no puede eliminarse porque inicia una presence del empleado. Corrígela si necesitas cambiarla."));
+    }
+
+    @Test
+    void getReturnsWorkCenterWithResolvedLabel() throws Exception {
+        when(getWorkCenterByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1))
+                .thenReturn(Optional.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
+        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+                .thenReturn(Optional.of("Oficina central"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workCenterCode").value("MADRID_HQ"))
+                .andExpect(jsonPath("$.workCenterName").value("Oficina central"))
+                .andExpect(jsonPath("$.id").doesNotExist());
+    }
+
+    @Test
+    void listReturnsWorkCenterWithNullLabelWhenCatalogEntryIsMissing() throws Exception {
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
+        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+                .thenReturn(Optional.empty());
+
+        MvcResult result = mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].workCenterCode").value("MADRID_HQ"))
+                .andExpect(jsonPath("$[0].id").doesNotExist())
+                .andReturn();
+
+        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode first = body.path(0);
+        assertTrue(!first.has("workCenterName") || first.get("workCenterName").isNull());
     }
 
     private WorkCenter workCenter(

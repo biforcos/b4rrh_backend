@@ -3042,6 +3042,10 @@ components:
         workCenterCode:
           type: string
           description: Code from active WORK_CENTER rule entities in the employee ruleSystemCode catalog.
+        workCenterName:
+          type: string
+          nullable: true
+          description: Optional visible label resolved from WORK_CENTER rule entities for the employee ruleSystemCode and workCenterCode.
         startDate:
           type: string
           format: date

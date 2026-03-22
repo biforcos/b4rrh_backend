@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public record WorkCenterResponse(
         Integer workCenterAssignmentNumber,
         String workCenterCode,
+        String workCenterName,
         LocalDate startDate,
         LocalDate endDate
 ) {

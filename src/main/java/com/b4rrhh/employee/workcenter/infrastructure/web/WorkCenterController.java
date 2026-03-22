@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.workcenter.infrastructure.web;
 
+import com.b4rrhh.employee.workcenter.application.port.WorkCenterCatalogReadPort;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
@@ -38,6 +39,7 @@ public class WorkCenterController {
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
         private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
+        private final WorkCenterCatalogReadPort workCenterCatalogReadPort;
 
     public WorkCenterController(
             CreateWorkCenterUseCase createWorkCenterUseCase,
@@ -45,7 +47,8 @@ public class WorkCenterController {
             DeleteWorkCenterUseCase deleteWorkCenterUseCase,
             GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase,
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
-            UpdateWorkCenterUseCase updateWorkCenterUseCase
+            UpdateWorkCenterUseCase updateWorkCenterUseCase,
+            WorkCenterCatalogReadPort workCenterCatalogReadPort
     ) {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.closeWorkCenterUseCase = closeWorkCenterUseCase;
@@ -53,6 +56,7 @@ public class WorkCenterController {
         this.getWorkCenterByBusinessKeyUseCase = getWorkCenterByBusinessKeyUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
         this.updateWorkCenterUseCase = updateWorkCenterUseCase;
+        this.workCenterCatalogReadPort = workCenterCatalogReadPort;
     }
 
     @PostMapping
@@ -73,7 +77,7 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -85,7 +89,7 @@ public class WorkCenterController {
         List<WorkCenterResponse> response = listEmployeeWorkCentersUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(this::toResponse)
+                .map(workCenter -> toResponse(ruleSystemCode, workCenter))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -99,12 +103,12 @@ public class WorkCenterController {
             @PathVariable Integer workCenterAssignmentNumber
     ) {
         return getWorkCenterByBusinessKeyUseCase.getByBusinessKey(
-                                                ruleSystemCode,
-                                                employeeTypeCode,
-                                                employeeNumber,
-                                                workCenterAssignmentNumber
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        workCenterAssignmentNumber
                 )
-                .map(workCenter -> ResponseEntity.ok(toResponse(workCenter)))
+                .map(workCenter -> ResponseEntity.ok(toResponse(ruleSystemCode, workCenter)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -128,7 +132,7 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, updated));
     }
 
     @PostMapping("/{workCenterAssignmentNumber}/close")
@@ -149,7 +153,7 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(closed));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, closed));
     }
 
     @DeleteMapping("/{workCenterAssignmentNumber}")
@@ -171,10 +175,15 @@ public class WorkCenterController {
         return ResponseEntity.noContent().build();
     }
 
-    private WorkCenterResponse toResponse(WorkCenter workCenter) {
+    private WorkCenterResponse toResponse(String ruleSystemCode, WorkCenter workCenter) {
+        String workCenterName = workCenterCatalogReadPort
+                .findWorkCenterName(ruleSystemCode, workCenter.getWorkCenterCode())
+                .orElse(null);
+
         return new WorkCenterResponse(
                 workCenter.getWorkCenterAssignmentNumber(),
                 workCenter.getWorkCenterCode(),
+                workCenterName,
                 workCenter.getStartDate(),
                 workCenter.getEndDate()
         );
