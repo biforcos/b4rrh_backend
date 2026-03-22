@@ -12,11 +12,13 @@ import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKey
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
+import com.b4rrhh.employee.contract.application.port.ContractCatalogReadPort;
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.infrastructure.rest.assembler.ContractResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,10 +31,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -56,6 +61,8 @@ class ContractControllerHttpTest {
     private CloseContractUseCase closeContractUseCase;
         @Mock
         private ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
+        @Mock
+        private ContractCatalogReadPort contractCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -67,8 +74,14 @@ class ContractControllerHttpTest {
                 getContractByBusinessKeyUseCase,
                 updateContractUseCase,
                 closeContractUseCase,
-                replaceContractFromDateUseCase
+                replaceContractFromDateUseCase,
+                new ContractResponseAssembler(contractCatalogReadPort)
         );
+
+        lenient().when(contractCatalogReadPort.findContractTypeName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        lenient().when(contractCatalogReadPort.findContractSubtypeName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ContractExceptionHandler())
@@ -77,6 +90,10 @@ class ContractControllerHttpTest {
 
     @Test
     void createMapsPathAndBodyToCommandAndHidesTechnicalIds() throws Exception {
+        when(contractCatalogReadPort.findContractTypeName("ESP", "IND"))
+                .thenReturn(Optional.of("Indefinido"));
+        when(contractCatalogReadPort.findContractSubtypeName("ESP", "FT1"))
+                .thenReturn(Optional.of("Tiempo completo"));
         when(createContractUseCase.create(any(CreateContractCommand.class)))
                 .thenReturn(contract("IND", "FT1", LocalDate.of(2026, 1, 1), null));
 
@@ -91,7 +108,9 @@ class ContractControllerHttpTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.contractCode").value("IND"))
+                .andExpect(jsonPath("$.contractTypeName").value("Indefinido"))
                 .andExpect(jsonPath("$.contractSubtypeCode").value("FT1"))
+                .andExpect(jsonPath("$.contractSubtypeName").value("Tiempo completo"))
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.employeeId").doesNotExist());
 
@@ -106,6 +125,14 @@ class ContractControllerHttpTest {
 
     @Test
     void listMapsPathToCommandAndReturns200() throws Exception {
+        when(contractCatalogReadPort.findContractTypeName("ESP", "IND"))
+                .thenReturn(Optional.of("Indefinido"));
+        when(contractCatalogReadPort.findContractSubtypeName("ESP", "FT1"))
+                .thenReturn(Optional.empty());
+        when(contractCatalogReadPort.findContractTypeName("ESP", "TMP"))
+                .thenReturn(Optional.empty());
+        when(contractCatalogReadPort.findContractSubtypeName("ESP", "PT1"))
+                .thenReturn(Optional.of("Parcial"));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
                 .thenReturn(List.of(
                         contract("IND", "FT1", LocalDate.of(2026, 1, 1), null),
@@ -115,9 +142,13 @@ class ContractControllerHttpTest {
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/contracts"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].contractCode").value("IND"))
+                .andExpect(jsonPath("$[0].contractTypeName").value("Indefinido"))
                 .andExpect(jsonPath("$[0].contractSubtypeCode").value("FT1"))
+                .andExpect(jsonPath("$[0].contractSubtypeName").isEmpty())
                 .andExpect(jsonPath("$[1].contractCode").value("TMP"))
-                .andExpect(jsonPath("$[1].contractSubtypeCode").value("PT1"));
+                .andExpect(jsonPath("$[1].contractTypeName").isEmpty())
+                .andExpect(jsonPath("$[1].contractSubtypeCode").value("PT1"))
+                .andExpect(jsonPath("$[1].contractSubtypeName").value("Parcial"));
 
         ArgumentCaptor<ListEmployeeContractsCommand> captor =
                 ArgumentCaptor.forClass(ListEmployeeContractsCommand.class);

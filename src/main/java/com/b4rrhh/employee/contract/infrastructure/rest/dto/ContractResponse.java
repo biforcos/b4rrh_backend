@@ -4,7 +4,9 @@ import java.time.LocalDate;
 
 public record ContractResponse(
         String contractCode,
+        String contractTypeName,
         String contractSubtypeCode,
+        String contractSubtypeName,
         LocalDate startDate,
         LocalDate endDate
 ) {

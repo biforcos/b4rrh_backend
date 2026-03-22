@@ -3223,10 +3223,18 @@ components:
           type: string
           minLength: 3
           maxLength: 3
+        contractTypeName:
+          type: string
+          nullable: true
+          description: Optional display name from CONTRACT rule entities in the employee ruleSystemCode catalog.
         contractSubtypeCode:
           type: string
           minLength: 3
           maxLength: 3
+        contractSubtypeName:
+          type: string
+          nullable: true
+          description: Optional display name from CONTRACT_SUBTYPE rule entities in the employee ruleSystemCode catalog.
         startDate:
           type: string
           format: date

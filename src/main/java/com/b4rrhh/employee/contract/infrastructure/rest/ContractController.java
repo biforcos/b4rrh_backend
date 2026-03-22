@@ -13,6 +13,7 @@ import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUse
 import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.infrastructure.rest.assembler.ContractResponseAssembler;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.CloseContractRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.CreateContractRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractResponse;
@@ -42,6 +43,7 @@ public class ContractController {
     private final UpdateContractUseCase updateContractUseCase;
     private final CloseContractUseCase closeContractUseCase;
         private final ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
+        private final ContractResponseAssembler contractResponseAssembler;
 
     public ContractController(
             CreateContractUseCase createContractUseCase,
@@ -49,7 +51,8 @@ public class ContractController {
             GetContractByBusinessKeyUseCase getContractByBusinessKeyUseCase,
             UpdateContractUseCase updateContractUseCase,
                         CloseContractUseCase closeContractUseCase,
-                        ReplaceContractFromDateUseCase replaceContractFromDateUseCase
+                        ReplaceContractFromDateUseCase replaceContractFromDateUseCase,
+                        ContractResponseAssembler contractResponseAssembler
     ) {
         this.createContractUseCase = createContractUseCase;
         this.listEmployeeContractsUseCase = listEmployeeContractsUseCase;
@@ -57,6 +60,7 @@ public class ContractController {
         this.updateContractUseCase = updateContractUseCase;
         this.closeContractUseCase = closeContractUseCase;
                 this.replaceContractFromDateUseCase = replaceContractFromDateUseCase;
+                this.contractResponseAssembler = contractResponseAssembler;
     }
 
     @PostMapping
@@ -78,7 +82,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -94,7 +98,7 @@ public class ContractController {
                         employeeNumber
                 ))
                 .stream()
-                .map(this::toResponse)
+                .map(contract -> toResponse(ruleSystemCode, contract))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -116,7 +120,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(contract));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, contract));
     }
 
     @PutMapping("/{startDate}")
@@ -138,7 +142,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, updated));
     }
 
     @PostMapping("/{startDate}/close")
@@ -159,7 +163,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(closed));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, closed));
     }
 
     @PostMapping("/replace-from-date")
@@ -180,15 +184,10 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(replaced));
+                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced));
     }
 
-    private ContractResponse toResponse(Contract contract) {
-        return new ContractResponse(
-                contract.getContractCode(),
-                contract.getContractSubtypeCode(),
-                contract.getStartDate(),
-                contract.getEndDate()
-        );
+        private ContractResponse toResponse(String ruleSystemCode, Contract contract) {
+                return contractResponseAssembler.toResponse(ruleSystemCode, contract);
     }
 }
