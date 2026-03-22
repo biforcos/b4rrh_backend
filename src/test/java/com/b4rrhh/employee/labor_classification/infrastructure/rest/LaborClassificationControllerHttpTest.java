@@ -14,6 +14,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler.LaborClassificationResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,15 +55,18 @@ class LaborClassificationControllerHttpTest {
     private UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     @Mock
     private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
-        @Mock
-        private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
-        @Mock
-        private LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
+                @Mock
+                private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
+                @Mock
+                private LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
+        LaborClassificationResponseAssembler laborClassificationResponseAssembler =
+                new LaborClassificationResponseAssembler(laborClassificationCatalogReadPort);
+
         LaborClassificationController controller = new LaborClassificationController(
                 createLaborClassificationUseCase,
                 listEmployeeLaborClassificationsUseCase,
@@ -70,7 +74,7 @@ class LaborClassificationControllerHttpTest {
                 updateLaborClassificationUseCase,
                 closeLaborClassificationUseCase,
                 replaceLaborClassificationFromDateUseCase,
-                laborClassificationCatalogReadPort
+                laborClassificationResponseAssembler
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -85,8 +89,8 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void createMapsPathAndBodyToCommandAndHidesTechnicalIds() throws Exception {
-        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class)))
-                .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        LaborClassification created = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
+        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(created);
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
@@ -120,13 +124,13 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void closeEndpointUsesDomainActionPath() throws Exception {
-        when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class)))
-                .thenReturn(laborClassification(
-                        "AGR_OFFICE",
-                        "CAT_ADMIN",
-                        LocalDate.of(2026, 1, 1),
-                        LocalDate.of(2026, 1, 31)
-                ));
+        LaborClassification closed = laborClassification(
+                "AGR_OFFICE",
+                "CAT_ADMIN",
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 31)
+        );
+        when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class))).thenReturn(closed);
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
@@ -154,8 +158,9 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void replaceFromDateMapsPathAndBodyToCommandAndReturns200() throws Exception {
+        LaborClassification replaced = laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 3, 1), null);
         when(replaceLaborClassificationFromDateUseCase.replaceFromDate(any(ReplaceLaborClassificationFromDateCommand.class)))
-                .thenReturn(laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 3, 1), null));
+                .thenReturn(replaced);
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_TECH"))
                 .thenReturn(Optional.of("Technical Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_TECH_1"))
@@ -192,8 +197,8 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void updateReturnsEnrichedLabels() throws Exception {
-        when(updateLaborClassificationUseCase.update(any()))
-                .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        LaborClassification updated = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
+        when(updateLaborClassificationUseCase.update(any())).thenReturn(updated);
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
@@ -242,8 +247,9 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void listEnrichesAgreementAndCategoryNamesWhenPresent() throws Exception {
+        LaborClassification laborClassification = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any()))
-                .thenReturn(List.of(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null)));
+                .thenReturn(List.of(laborClassification));
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
@@ -261,8 +267,9 @@ class LaborClassificationControllerHttpTest {
 
     @Test
     void getByBusinessKeyKeepsCodesWhenCategoryLabelMissing() throws Exception {
+        LaborClassification laborClassification = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(getLaborClassificationByBusinessKeyUseCase.getByBusinessKey(any()))
-                .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+                .thenReturn(laborClassification);
         when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))

@@ -6,7 +6,6 @@ import com.b4rrhh.employee.labor_classification.application.command.GetLaborClas
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
-import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationCatalogReadPort;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -14,6 +13,7 @@ import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployee
 import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler.LaborClassificationResponseAssembler;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.CloseLaborClassificationRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.CreateLaborClassificationRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationResponse;
@@ -43,24 +43,24 @@ public class LaborClassificationController {
     private final UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
         private final ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
-        private final LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
+        private final LaborClassificationResponseAssembler laborClassificationResponseAssembler;
 
     public LaborClassificationController(
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase,
             GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase,
             UpdateLaborClassificationUseCase updateLaborClassificationUseCase,
-                        CloseLaborClassificationUseCase closeLaborClassificationUseCase,
-                        ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase,
-                        LaborClassificationCatalogReadPort laborClassificationCatalogReadPort
+            CloseLaborClassificationUseCase closeLaborClassificationUseCase,
+            ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase,
+            LaborClassificationResponseAssembler laborClassificationResponseAssembler
     ) {
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
         this.getLaborClassificationByBusinessKeyUseCase = getLaborClassificationByBusinessKeyUseCase;
         this.updateLaborClassificationUseCase = updateLaborClassificationUseCase;
         this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
-                this.replaceLaborClassificationFromDateUseCase = replaceLaborClassificationFromDateUseCase;
-                this.laborClassificationCatalogReadPort = laborClassificationCatalogReadPort;
+        this.replaceLaborClassificationFromDateUseCase = replaceLaborClassificationFromDateUseCase;
+        this.laborClassificationResponseAssembler = laborClassificationResponseAssembler;
     }
 
     @PostMapping
@@ -82,7 +82,8 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(laborClassificationResponseAssembler.toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -91,15 +92,14 @@ public class LaborClassificationController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber
     ) {
-        List<LaborClassificationResponse> response = listEmployeeLaborClassificationsUseCase
-                .listByEmployeeBusinessKey(new ListEmployeeLaborClassificationsCommand(
+        List<LaborClassificationResponse> response = laborClassificationResponseAssembler.toResponseList(
+                ruleSystemCode,
+                listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(new ListEmployeeLaborClassificationsCommand(
                         ruleSystemCode,
                         employeeTypeCode,
                         employeeNumber
                 ))
-                .stream()
-                .map(laborClassification -> toResponse(ruleSystemCode, laborClassification))
-                .toList();
+        );
 
         return ResponseEntity.ok(response);
     }
@@ -120,7 +120,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, laborClassification));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, laborClassification));
     }
 
     @PutMapping("/{startDate}")
@@ -142,7 +142,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, updated));
     }
 
     @PostMapping("/{startDate}/close")
@@ -163,7 +163,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed));
     }
 
     @PostMapping("/replace-from-date")
@@ -184,24 +184,6 @@ public class LaborClassificationController {
                 )
         );
 
-                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced));
-    }
-
-    private LaborClassificationResponse toResponse(String ruleSystemCode, LaborClassification laborClassification) {
-        String agreementName = laborClassificationCatalogReadPort
-                .findAgreementName(ruleSystemCode, laborClassification.getAgreementCode())
-                .orElse(null);
-        String agreementCategoryName = laborClassificationCatalogReadPort
-                .findAgreementCategoryName(ruleSystemCode, laborClassification.getAgreementCategoryCode())
-                .orElse(null);
-
-        return new LaborClassificationResponse(
-                laborClassification.getAgreementCode(),
-                agreementName,
-                laborClassification.getAgreementCategoryCode(),
-                agreementCategoryName,
-                laborClassification.getStartDate(),
-                laborClassification.getEndDate()
-        );
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, replaced));
     }
 }
