@@ -6,10 +6,13 @@ import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUseCase;
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
+import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
+import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
+import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 
@@ -29,17 +33,20 @@ public class AddressBusinessKeyController {
     private final CloseAddressUseCase closeAddressUseCase;
     private final GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     private final ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
+        private final UpdateAddressUseCase updateAddressUseCase;
 
     public AddressBusinessKeyController(
             CreateAddressUseCase createAddressUseCase,
             CloseAddressUseCase closeAddressUseCase,
             GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase,
-            ListEmployeeAddressesUseCase listEmployeeAddressesUseCase
+                        ListEmployeeAddressesUseCase listEmployeeAddressesUseCase,
+                        UpdateAddressUseCase updateAddressUseCase
     ) {
         this.createAddressUseCase = createAddressUseCase;
         this.closeAddressUseCase = closeAddressUseCase;
         this.getAddressByBusinessKeyUseCase = getAddressByBusinessKeyUseCase;
         this.listEmployeeAddressesUseCase = listEmployeeAddressesUseCase;
+                this.updateAddressUseCase = updateAddressUseCase;
     }
 
     @PostMapping
@@ -98,6 +105,31 @@ public class AddressBusinessKeyController {
                 )
                 .map(address -> ResponseEntity.ok(toResponse(address)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{addressNumber}")
+    public ResponseEntity<AddressResponse> update(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable Integer addressNumber,
+            @RequestBody UpdateAddressRequest request
+    ) {
+        Address updated = updateAddressUseCase.update(
+                new UpdateAddressCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        addressNumber,
+                        request.street(),
+                        request.city(),
+                        request.countryCode(),
+                        request.postalCode(),
+                        request.regionCode()
+                )
+        );
+
+        return ResponseEntity.ok(toResponse(updated));
     }
 
     @PostMapping("/{addressNumber}/close")

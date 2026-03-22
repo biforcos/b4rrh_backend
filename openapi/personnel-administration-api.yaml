@@ -521,6 +521,58 @@ paths:
                 $ref: '#/components/schemas/AddressResponse'
         '404':
           description: Rule system, employee, or address not found
+    put:
+      operationId: updateAddressByBusinessKey
+      summary: Correct employee address by business key
+      description: >-
+        Administrative correction of the same address occurrence identified by
+        ruleSystemCode, employeeTypeCode, employeeNumber, and addressNumber.
+        This operation does not create a new occurrence and does not mutate
+        occurrence identity fields.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: addressNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAddressRequest'
+      responses:
+        '200':
+          description: Address corrected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or address not found
+        '409':
+          description: Domain conflict if correction is invalid
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
     post:
@@ -2642,6 +2694,32 @@ components:
         endDate:
           type: string
           format: date
+    UpdateAddressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - street
+        - city
+        - countryCode
+      properties:
+        street:
+          type: string
+          maxLength: 300
+        city:
+          type: string
+          maxLength: 120
+        countryCode:
+          type: string
+          maxLength: 3
+          description: ISO 3166-1 alpha-3 code validated against active COUNTRY rule entities for the employee ruleSystemCode.
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        regionCode:
+          type: string
+          maxLength: 30
+          nullable: true
     AddressResponse:
       type: object
       required:

@@ -79,6 +79,30 @@ public class Address {
         );
     }
 
+            public Address correct(
+                String street,
+                String city,
+                String countryCode,
+                String postalCode,
+                String regionCode
+            ) {
+            return new Address(
+                id,
+                employeeId,
+                addressNumber,
+                addressTypeCode,
+                street,
+                city,
+                countryCode,
+                postalCode,
+                regionCode,
+                startDate,
+                endDate,
+                createdAt,
+                updatedAt
+            );
+            }
+
     public boolean isActive() {
         return endDate == null;
     }

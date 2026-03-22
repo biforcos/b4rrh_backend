@@ -6,10 +6,13 @@ import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUseCase;
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
+import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
+import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
+import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +44,8 @@ class AddressBusinessKeyControllerTest {
     private GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     @Mock
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
+    @Mock
+    private UpdateAddressUseCase updateAddressUseCase;
 
     private AddressBusinessKeyController controller;
 
@@ -50,7 +55,8 @@ class AddressBusinessKeyControllerTest {
                 createAddressUseCase,
                 closeAddressUseCase,
                 getAddressByBusinessKeyUseCase,
-                listEmployeeAddressesUseCase
+                listEmployeeAddressesUseCase,
+                updateAddressUseCase
         );
     }
 
@@ -127,6 +133,33 @@ class AddressBusinessKeyControllerTest {
         assertEquals(1, captor.getValue().addressNumber());
     }
 
+    @Test
+    void updatesAddressUsingBusinessKeyAndAddressNumber() {
+        UpdateAddressRequest request = new UpdateAddressRequest(
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                "28009",
+                "MD"
+        );
+
+        when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
+
+        ResponseEntity<AddressResponse> response = controller.update("ESP", "INTERNAL", "EMP001", 1, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Calle de Alcala 100", response.getBody().street());
+
+        ArgumentCaptor<UpdateAddressCommand> captor = ArgumentCaptor.forClass(UpdateAddressCommand.class);
+        verify(updateAddressUseCase).update(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(1, captor.getValue().addressNumber());
+        assertEquals("Calle de Alcala 100", captor.getValue().street());
+    }
+
     private Address activeAddress() {
         return new Address(
                 20L,
@@ -158,6 +191,24 @@ class AddressBusinessKeyControllerTest {
                 "MD",
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 2, 1),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    private Address updatedAddress() {
+        return new Address(
+                20L,
+                10L,
+                1,
+                "HOME",
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                "28009",
+                "MD",
+                LocalDate.of(2026, 1, 10),
+                null,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
