@@ -2423,6 +2423,53 @@ paths:
         '400':
           description: Invalid resource code
 
+  /catalog-options/direct:
+    get:
+      operationId: getDirectCatalogOptions
+      summary: Get direct catalog options by rule system and entity type
+      description: |
+        Returns direct catalog options from `rulesystem.rule_entity` for the requested rule system and entity type.
+        `referenceDate` in the response is the effective date applied by the service:
+        - request `referenceDate` when provided
+        - current date when omitted
+        The `active` flag for each item is resolved against this effective date.
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: ruleEntityTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: referenceDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Optional date used as effective date for validity filtering and item active evaluation.
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Optional case-insensitive search by option code or name.
+      responses:
+        '200':
+          description: Direct catalog options
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectCatalogOptionsResponse'
+        '400':
+          description: Invalid request
+
   /rule-systems/{ruleSystemCode}:
     get:
       operationId: getRuleSystemByCode
@@ -3419,6 +3466,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CatalogFieldBindingResponse'
+    DirectCatalogOptionResponse:
+      type: object
+      required:
+        - code
+        - name
+        - active
+        - startDate
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        active:
+          type: boolean
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    DirectCatalogOptionsResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - ruleEntityTypeCode
+        - referenceDate
+        - items
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        ruleEntityTypeCode:
+          type: string
+          maxLength: 30
+        referenceDate:
+          type: string
+          format: date
+          description: Effective date applied by the service (request referenceDate when provided; otherwise current date).
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectCatalogOptionResponse'
     CreateRuleSystemRequest:
       type: object
       required:
