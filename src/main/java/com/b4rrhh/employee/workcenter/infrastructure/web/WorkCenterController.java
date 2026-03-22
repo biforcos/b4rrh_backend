@@ -6,15 +6,19 @@ import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CloseWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CreateWorkCenterRequest;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,17 +33,20 @@ public class WorkCenterController {
     private final CloseWorkCenterUseCase closeWorkCenterUseCase;
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+        private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
 
     public WorkCenterController(
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CloseWorkCenterUseCase closeWorkCenterUseCase,
             GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase,
-            ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase
+                        ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
+                        UpdateWorkCenterUseCase updateWorkCenterUseCase
     ) {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.closeWorkCenterUseCase = closeWorkCenterUseCase;
         this.getWorkCenterByBusinessKeyUseCase = getWorkCenterByBusinessKeyUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
+                this.updateWorkCenterUseCase = updateWorkCenterUseCase;
     }
 
     @PostMapping
@@ -86,13 +93,36 @@ public class WorkCenterController {
             @PathVariable Integer workCenterAssignmentNumber
     ) {
         return getWorkCenterByBusinessKeyUseCase.getByBusinessKey(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        workCenterAssignmentNumber
+                                ruleSystemCode,
+                                employeeTypeCode,
+                                employeeNumber,
+                                workCenterAssignmentNumber
                 )
                 .map(workCenter -> ResponseEntity.ok(toResponse(workCenter)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{workCenterAssignmentNumber}")
+    public ResponseEntity<WorkCenterResponse> update(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable Integer workCenterAssignmentNumber,
+            @RequestBody UpdateWorkCenterRequest request
+    ) {
+        WorkCenter updated = updateWorkCenterUseCase.update(
+                new UpdateWorkCenterCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        workCenterAssignmentNumber,
+                        request.workCenterCode(),
+                        request.startDate(),
+                        request.endDate()
+                )
+        );
+
+        return ResponseEntity.ok(toResponse(updated));
     }
 
     @PostMapping("/{workCenterAssignmentNumber}/close")

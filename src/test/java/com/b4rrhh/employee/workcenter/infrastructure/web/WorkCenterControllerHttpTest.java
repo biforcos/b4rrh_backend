@@ -6,6 +6,9 @@ import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,6 +45,8 @@ class WorkCenterControllerHttpTest {
     private GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     @Mock
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+        @Mock
+        private UpdateWorkCenterUseCase updateWorkCenterUseCase;
 
     private MockMvc mockMvc;
 
@@ -50,7 +56,8 @@ class WorkCenterControllerHttpTest {
                 createWorkCenterUseCase,
                 closeWorkCenterUseCase,
                 getWorkCenterByBusinessKeyUseCase,
-                listEmployeeWorkCentersUseCase
+                listEmployeeWorkCentersUseCase,
+                updateWorkCenterUseCase
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -120,6 +127,68 @@ class WorkCenterControllerHttpTest {
                                 {
                                   "workCenterCode": "MADRID_HQ",
                                   "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("Work center period overlaps")));
+    }
+
+    @Test
+    void updateMapsPathAndBodyToCommand() throws Exception {
+        when(updateWorkCenterUseCase.update(any(UpdateWorkCenterCommand.class)))
+                .thenReturn(workCenter(1, "BARCELONA_HQ", LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 20)));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/work-centers/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "BARCELONA_HQ",
+                                  "startDate": "2026-02-01",
+                                  "endDate": "2026-02-20"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workCenterAssignmentNumber").value(1))
+                .andExpect(jsonPath("$.workCenterCode").value("BARCELONA_HQ"));
+
+        ArgumentCaptor<UpdateWorkCenterCommand> captor = ArgumentCaptor.forClass(UpdateWorkCenterCommand.class);
+        verify(updateWorkCenterUseCase).update(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(1, captor.getValue().workCenterAssignmentNumber());
+    }
+
+    @Test
+    void updateMapsNotFoundToHttp404() throws Exception {
+        when(updateWorkCenterUseCase.update(any(UpdateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterNotFoundException("ESP", "INTERNAL", "EMP001", 99));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/work-centers/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "BARCELONA_HQ",
+                                  "startDate": "2026-02-01",
+                                  "endDate": "2026-02-20"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("Work center assignment not found")));
+    }
+
+    @Test
+    void updateMapsOverlapToHttp409() throws Exception {
+        when(updateWorkCenterUseCase.update(any(UpdateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterOverlapException("ESP", "INTERNAL", "EMP001"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/work-centers/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "BARCELONA_HQ",
+                                  "startDate": "2026-02-01",
+                                  "endDate": "2026-02-20"
                                 }
                                 """))
                 .andExpect(status().isConflict())

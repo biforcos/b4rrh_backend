@@ -14,6 +14,13 @@ public interface WorkCenterRepository {
 
     boolean existsOverlappingPeriod(Long employeeId, LocalDate startDate, LocalDate endDate);
 
+    boolean existsOverlappingPeriodExcludingAssignment(
+            Long employeeId,
+            Integer excludedWorkCenterAssignmentNumber,
+            LocalDate startDate,
+            LocalDate endDate
+    );
+
     Optional<Integer> findMaxWorkCenterAssignmentNumberByEmployeeId(Long employeeId);
 
     WorkCenter save(WorkCenter workCenter);

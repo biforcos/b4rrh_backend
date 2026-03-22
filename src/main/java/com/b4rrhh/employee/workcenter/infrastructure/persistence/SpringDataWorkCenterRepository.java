@@ -34,4 +34,20 @@ public interface SpringDataWorkCenterRepository extends JpaRepository<WorkCenter
             @Param("effectiveEndDate") LocalDate effectiveEndDate,
             @Param("maxDate") LocalDate maxDate
     );
+
+    @Query("""
+            select case when count(w) > 0 then true else false end
+            from WorkCenterEntity w
+            where w.employeeId = :employeeId
+              and w.workCenterAssignmentNumber <> :excludedWorkCenterAssignmentNumber
+              and w.startDate <= :effectiveEndDate
+              and :startDate <= coalesce(w.endDate, :maxDate)
+            """)
+    boolean existsOverlappingPeriodExcludingAssignment(
+            @Param("employeeId") Long employeeId,
+            @Param("excludedWorkCenterAssignmentNumber") Integer excludedWorkCenterAssignmentNumber,
+            @Param("startDate") LocalDate startDate,
+            @Param("effectiveEndDate") LocalDate effectiveEndDate,
+            @Param("maxDate") LocalDate maxDate
+    );
 }

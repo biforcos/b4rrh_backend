@@ -740,6 +740,61 @@ paths:
                 $ref: '#/components/schemas/WorkCenterResponse'
         '404':
           description: Rule system, employee, or work center assignment not found
+    put:
+      operationId: updateWorkCenterByBusinessKey
+      summary: Correct employee work center assignment by business key
+      description: >-
+        Administrative correction of an existing work center assignment occurrence.
+        This operation corrects assignment content and dates for the same occurrence
+        identified by business keys and does not represent a workflow transition.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: workCenterAssignmentNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkCenterRequest'
+      responses:
+        '200':
+          description: Work center assignment corrected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkCenterResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Rule system, employee, or work center assignment not found
+        '409':
+          description: >-
+            Work center assignment correction conflicts with temporal rules.
+            Resulting period overlaps another assignment for this employee,
+            is not fully contained within employee presence history,
+            or references an invalid catalog value.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close:
     post:
@@ -2779,6 +2834,31 @@ components:
           description: >-
             Optional end date (yyyy-MM-dd). When provided, must be >= startDate and the period
             [startDate, endDate] must be fully contained within a single employee presence period.
+    UpdateWorkCenterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - workCenterCode
+        - startDate
+      properties:
+        workCenterCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active WORK_CENTER rule entities for the employee ruleSystemCode.
+        startDate:
+          type: string
+          format: date
+          description: >-
+            Corrected start date (yyyy-MM-dd). The resulting period [startDate, endDate]
+            must be fully contained within an existing employee presence period.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Corrected optional end date (yyyy-MM-dd). When provided, must be >= startDate and the
+            resulting period [startDate, endDate] must be fully contained within an existing employee
+            presence period.
     CloseWorkCenterRequest:
       type: object
       additionalProperties: false

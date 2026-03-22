@@ -42,6 +42,23 @@ public class WorkCenterPersistenceAdapter implements WorkCenterRepository {
     }
 
     @Override
+    public boolean existsOverlappingPeriodExcludingAssignment(
+            Long employeeId,
+            Integer excludedWorkCenterAssignmentNumber,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
+        return springDataWorkCenterRepository.existsOverlappingPeriodExcludingAssignment(
+                employeeId,
+                excludedWorkCenterAssignmentNumber,
+                startDate,
+                effectiveEndDate,
+                MAX_DATE
+        );
+    }
+
+    @Override
     public Optional<Integer> findMaxWorkCenterAssignmentNumberByEmployeeId(Long employeeId) {
         return Optional.ofNullable(springDataWorkCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(employeeId));
     }
