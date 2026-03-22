@@ -91,7 +91,9 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
 
     @Override
     public RuleEntity save(RuleEntity ruleEntity) {
-        RuleEntityEntity entity = toEntity(ruleEntity);
+        RuleEntityEntity entity = ruleEntity.getId() == null
+                ? toNewEntity(ruleEntity)
+                : toExistingEntity(ruleEntity);
         RuleEntityEntity saved = springDataRuleEntityRepository.save(entity);
         return toDomain(saved);
     }
@@ -112,17 +114,43 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
         );
     }
 
-    private RuleEntityEntity toEntity(RuleEntity ruleEntity) {
+    private RuleEntityEntity toNewEntity(RuleEntity ruleEntity) {
         RuleEntityEntity entity = new RuleEntityEntity();
-        entity.setId(ruleEntity.getId());
         entity.setRuleSystemCode(ruleEntity.getRuleSystemCode());
         entity.setRuleEntityTypeCode(ruleEntity.getRuleEntityTypeCode());
         entity.setCode(ruleEntity.getCode());
+        entity.setStartDate(ruleEntity.getStartDate());
+        applyMutableFields(entity, ruleEntity);
+        return entity;
+    }
+
+    private RuleEntityEntity toExistingEntity(RuleEntity ruleEntity) {
+        RuleEntityEntity entity = springDataRuleEntityRepository
+                .findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                        ruleEntity.getRuleSystemCode(),
+                        ruleEntity.getRuleEntityTypeCode(),
+                        ruleEntity.getCode(),
+                        ruleEntity.getStartDate()
+                )
+                .orElseThrow(() -> new IllegalStateException(
+                        "Rule entity not found for update with business key: "
+                                + ruleEntity.getRuleSystemCode()
+                                + "/"
+                                + ruleEntity.getRuleEntityTypeCode()
+                                + "/"
+                                + ruleEntity.getCode()
+                                + "/"
+                                + ruleEntity.getStartDate()
+                ));
+
+        applyMutableFields(entity, ruleEntity);
+        return entity;
+    }
+
+    private void applyMutableFields(RuleEntityEntity entity, RuleEntity ruleEntity) {
         entity.setName(ruleEntity.getName());
         entity.setDescription(ruleEntity.getDescription());
         entity.setActive(ruleEntity.isActive());
-        entity.setStartDate(ruleEntity.getStartDate());
         entity.setEndDate(ruleEntity.getEndDate());
-        return entity;
     }
 }
