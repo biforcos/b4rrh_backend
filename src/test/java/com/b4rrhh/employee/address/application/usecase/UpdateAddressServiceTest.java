@@ -229,6 +229,94 @@ class UpdateAddressServiceTest {
         assertEquals(existing.getCity(), updated.getCity());
     }
 
+    @Test
+    void usesExistingPostalCodeAndRegionCodeWhenRequestValuesAreBlank() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                "  ",
+                ""
+        );
+
+        Address existing = existingAddress();
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity()));
+        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Address updated = service.update(command);
+
+        assertEquals(existing.getPostalCode(), updated.getPostalCode());
+        assertEquals(existing.getRegionCode(), updated.getRegionCode());
+    }
+
+    @Test
+    void usesExistingPostalCodeAndRegionCodeWhenRequestValuesAreNull() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                null,
+                null
+        );
+
+        Address existing = existingAddress();
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity()));
+        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Address updated = service.update(command);
+
+        assertEquals(existing.getPostalCode(), updated.getPostalCode());
+        assertEquals(existing.getRegionCode(), updated.getRegionCode());
+    }
+
+    @Test
+    void updatesPostalCodeAndRegionCodeWhenRequestValuesAreProvided() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                "28001",
+                "ca"
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity()));
+        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Address updated = service.update(command);
+
+        assertEquals("28001", updated.getPostalCode());
+        assertEquals("CA", updated.getRegionCode());
+    }
+
     private Address existingAddress() {
         return new Address(
                 20L,

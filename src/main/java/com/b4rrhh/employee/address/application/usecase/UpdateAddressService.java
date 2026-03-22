@@ -67,6 +67,8 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         String countryCode = normalizeCountryCodeForCorrection(command.countryCode(), existing.getCountryCode());
         String street = normalizeRequiredTextForCorrection("street", command.street(), existing.getStreet());
         String city = normalizeRequiredTextForCorrection("city", command.city(), existing.getCity());
+        String postalCode = normalizeOptionalTextForCorrection(command.postalCode(), existing.getPostalCode());
+        String regionCode = normalizeOptionalCodeForCorrection(command.regionCode(), existing.getRegionCode());
         addressCatalogValidator.validateCountryCode(
                 normalizedRuleSystemCode,
                 countryCode,
@@ -77,8 +79,8 @@ public class UpdateAddressService implements UpdateAddressUseCase {
             street,
             city,
                 countryCode,
-                command.postalCode(),
-                command.regionCode()
+            postalCode,
+            regionCode
         );
 
         return addressRepository.save(corrected);
@@ -142,5 +144,29 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         }
 
         throw new IllegalArgumentException(fieldName + " is required");
+    }
+
+    private String normalizeOptionalTextForCorrection(String requestedValue, String existingValue) {
+        if (requestedValue == null) {
+            return existingValue;
+        }
+
+        if (requestedValue.trim().isEmpty()) {
+            return existingValue;
+        }
+
+        return requestedValue.trim();
+    }
+
+    private String normalizeOptionalCodeForCorrection(String requestedValue, String existingValue) {
+        if (requestedValue == null) {
+            return existingValue;
+        }
+
+        if (requestedValue.trim().isEmpty()) {
+            return existingValue;
+        }
+
+        return requestedValue.trim().toUpperCase();
     }
 }
