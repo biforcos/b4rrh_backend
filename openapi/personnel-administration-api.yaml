@@ -2947,6 +2947,10 @@ components:
           format: int32
         addressTypeCode:
           type: string
+        addressTypeName:
+          type: string
+          nullable: true
+          description: Optional display name from EMPLOYEE_ADDRESS_TYPE rule entities in the employee ruleSystemCode catalog.
         street:
           type: string
         city:

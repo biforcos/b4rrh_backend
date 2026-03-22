@@ -8,7 +8,9 @@ import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUs
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
+import com.b4rrhh.employee.address.application.port.AddressCatalogReadPort;
 import com.b4rrhh.employee.address.domain.model.Address;
+import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
@@ -29,6 +31,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,6 +49,8 @@ class AddressBusinessKeyControllerTest {
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
+    @Mock
+    private AddressCatalogReadPort addressCatalogReadPort;
 
     private AddressBusinessKeyController controller;
 
@@ -56,7 +61,8 @@ class AddressBusinessKeyControllerTest {
                 closeAddressUseCase,
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
-                updateAddressUseCase
+                updateAddressUseCase,
+                new AddressResponseAssembler(addressCatalogReadPort)
         );
     }
 
@@ -73,6 +79,7 @@ class AddressBusinessKeyControllerTest {
                 null
         );
 
+        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME")).thenReturn(Optional.of("Domicilio"));
         when(createAddressUseCase.create(any(CreateAddressCommand.class))).thenReturn(activeAddress());
 
         ResponseEntity<AddressResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
@@ -80,6 +87,7 @@ class AddressBusinessKeyControllerTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().addressNumber());
+        assertEquals("Domicilio", response.getBody().addressTypeName());
 
         ArgumentCaptor<CreateAddressCommand> captor = ArgumentCaptor.forClass(CreateAddressCommand.class);
         verify(createAddressUseCase).create(captor.capture());
@@ -143,6 +151,7 @@ class AddressBusinessKeyControllerTest {
                 "MD"
         );
 
+        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME")).thenReturn(Optional.empty());
         when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
 
         ResponseEntity<AddressResponse> response = controller.update("ESP", "INTERNAL", "EMP001", 1, request);
@@ -150,6 +159,8 @@ class AddressBusinessKeyControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Calle de Alcala 100", response.getBody().street());
+        assertEquals("HOME", response.getBody().addressTypeCode());
+        assertNull(response.getBody().addressTypeName());
 
         ArgumentCaptor<UpdateAddressCommand> captor = ArgumentCaptor.forClass(UpdateAddressCommand.class);
         verify(updateAddressUseCase).update(captor.capture());

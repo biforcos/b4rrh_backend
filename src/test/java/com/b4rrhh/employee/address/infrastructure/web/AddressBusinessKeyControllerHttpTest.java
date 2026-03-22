@@ -7,10 +7,12 @@ import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUs
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
+import com.b4rrhh.employee.address.application.port.AddressCatalogReadPort;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
 import com.b4rrhh.employee.address.domain.model.Address;
+import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +47,8 @@ class AddressBusinessKeyControllerHttpTest {
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
+        @Mock
+        private AddressCatalogReadPort addressCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -54,7 +59,8 @@ class AddressBusinessKeyControllerHttpTest {
                 closeAddressUseCase,
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
-                updateAddressUseCase
+                updateAddressUseCase,
+                new AddressResponseAssembler(addressCatalogReadPort)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -64,6 +70,8 @@ class AddressBusinessKeyControllerHttpTest {
 
     @Test
     void putReturns200WhenUpdateSucceeds() throws Exception {
+        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+                .thenReturn(Optional.of("Domicilio"));
         when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
 
         mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/addresses/1")
@@ -79,7 +87,10 @@ class AddressBusinessKeyControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.addressNumber").value(1))
-                .andExpect(jsonPath("$.street").value("Calle de Alcala 100"));
+                .andExpect(jsonPath("$.addressTypeName").value("Domicilio"))
+                .andExpect(jsonPath("$.street").value("Calle de Alcala 100"))
+                .andExpect(jsonPath("$.employeeId").doesNotExist())
+                .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<UpdateAddressCommand> captor = ArgumentCaptor.forClass(UpdateAddressCommand.class);
         verify(updateAddressUseCase).update(captor.capture());
@@ -106,6 +117,28 @@ class AddressBusinessKeyControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void putReturnsCodeWithNullLabelWhenCatalogNameIsMissing() throws Exception {
+        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+                .thenReturn(Optional.empty());
+        when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/addresses/1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP",
+                                  "postalCode": "28009",
+                                  "regionCode": "MD"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addressTypeCode").value("HOME"))
+                .andExpect(jsonPath("$.addressTypeName").isEmpty());
     }
 
     @Test

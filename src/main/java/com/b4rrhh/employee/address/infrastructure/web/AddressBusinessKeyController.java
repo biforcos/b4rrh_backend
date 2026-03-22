@@ -9,6 +9,7 @@ import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseC
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.employee.address.domain.model.Address;
+import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
@@ -34,19 +35,22 @@ public class AddressBusinessKeyController {
     private final GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     private final ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
         private final UpdateAddressUseCase updateAddressUseCase;
+        private final AddressResponseAssembler addressResponseAssembler;
 
     public AddressBusinessKeyController(
             CreateAddressUseCase createAddressUseCase,
             CloseAddressUseCase closeAddressUseCase,
             GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase,
                         ListEmployeeAddressesUseCase listEmployeeAddressesUseCase,
-                        UpdateAddressUseCase updateAddressUseCase
+                        UpdateAddressUseCase updateAddressUseCase,
+                        AddressResponseAssembler addressResponseAssembler
     ) {
         this.createAddressUseCase = createAddressUseCase;
         this.closeAddressUseCase = closeAddressUseCase;
         this.getAddressByBusinessKeyUseCase = getAddressByBusinessKeyUseCase;
         this.listEmployeeAddressesUseCase = listEmployeeAddressesUseCase;
                 this.updateAddressUseCase = updateAddressUseCase;
+                this.addressResponseAssembler = addressResponseAssembler;
     }
 
     @PostMapping
@@ -72,7 +76,7 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(addressResponseAssembler.toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -84,7 +88,7 @@ public class AddressBusinessKeyController {
         List<AddressResponse> response = listEmployeeAddressesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(this::toResponse)
+                .map(address -> addressResponseAssembler.toResponse(ruleSystemCode, address))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -103,7 +107,7 @@ public class AddressBusinessKeyController {
                         employeeNumber,
                         addressNumber
                 )
-                .map(address -> ResponseEntity.ok(toResponse(address)))
+                .map(address -> ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, address)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -129,7 +133,7 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, updated));
     }
 
     @PostMapping("/{addressNumber}/close")
@@ -150,20 +154,6 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(closed));
-    }
-
-    private AddressResponse toResponse(Address address) {
-        return new AddressResponse(
-                address.getAddressNumber(),
-                address.getAddressTypeCode(),
-                address.getStreet(),
-                address.getCity(),
-                address.getCountryCode(),
-                address.getPostalCode(),
-                address.getRegionCode(),
-                address.getStartDate(),
-                address.getEndDate()
-        );
+        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, closed));
     }
 }

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public record AddressResponse(
         Integer addressNumber,
         String addressTypeCode,
+        String addressTypeName,
         String street,
         String city,
         String countryCode,
