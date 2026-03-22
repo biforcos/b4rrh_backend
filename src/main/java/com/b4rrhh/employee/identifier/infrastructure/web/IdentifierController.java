@@ -12,6 +12,7 @@ import com.b4rrhh.employee.identifier.domain.model.Identifier;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.CreateIdentifierRequest;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.IdentifierResponse;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.UpdateIdentifierRequest;
+import com.b4rrhh.employee.identifier.infrastructure.web.assembler.IdentifierResponseAssembler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,19 +35,22 @@ public class IdentifierController {
     private final GetIdentifierByBusinessKeyUseCase getIdentifierByBusinessKeyUseCase;
     private final ListEmployeeIdentifiersUseCase listEmployeeIdentifiersUseCase;
     private final DeleteIdentifierUseCase deleteIdentifierUseCase;
+        private final IdentifierResponseAssembler identifierResponseAssembler;
 
     public IdentifierController(
             CreateIdentifierUseCase createIdentifierUseCase,
             UpdateIdentifierUseCase updateIdentifierUseCase,
             GetIdentifierByBusinessKeyUseCase getIdentifierByBusinessKeyUseCase,
             ListEmployeeIdentifiersUseCase listEmployeeIdentifiersUseCase,
-            DeleteIdentifierUseCase deleteIdentifierUseCase
+                        DeleteIdentifierUseCase deleteIdentifierUseCase,
+                        IdentifierResponseAssembler identifierResponseAssembler
     ) {
         this.createIdentifierUseCase = createIdentifierUseCase;
         this.updateIdentifierUseCase = updateIdentifierUseCase;
         this.getIdentifierByBusinessKeyUseCase = getIdentifierByBusinessKeyUseCase;
         this.listEmployeeIdentifiersUseCase = listEmployeeIdentifiersUseCase;
         this.deleteIdentifierUseCase = deleteIdentifierUseCase;
+                this.identifierResponseAssembler = identifierResponseAssembler;
     }
 
     @PostMapping
@@ -69,7 +73,8 @@ public class IdentifierController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(identifierResponseAssembler.toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -81,7 +86,7 @@ public class IdentifierController {
         List<IdentifierResponse> response = listEmployeeIdentifiersUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(this::toResponse)
+                .map(identifier -> identifierResponseAssembler.toResponse(ruleSystemCode, identifier))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -100,7 +105,7 @@ public class IdentifierController {
                         employeeNumber,
                         identifierTypeCode
                 )
-                .map(identifier -> ResponseEntity.ok(toResponse(identifier)))
+                .map(identifier -> ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, identifier)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -125,7 +130,7 @@ public class IdentifierController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, updated));
     }
 
     @DeleteMapping("/{identifierTypeCode}")
@@ -139,15 +144,5 @@ public class IdentifierController {
                 new DeleteIdentifierCommand(ruleSystemCode, employeeTypeCode, employeeNumber, identifierTypeCode)
         );
         return ResponseEntity.noContent().build();
-    }
-
-    private IdentifierResponse toResponse(Identifier identifier) {
-        return new IdentifierResponse(
-                identifier.getIdentifierTypeCode(),
-                identifier.getIdentifierValue(),
-                identifier.getIssuingCountryCode(),
-                identifier.getExpirationDate(),
-                identifier.isPrimary()
-        );
     }
 }

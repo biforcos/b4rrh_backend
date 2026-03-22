@@ -9,6 +9,7 @@ import com.b4rrhh.employee.contact.application.usecase.ListEmployeeContactsUseCa
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactCommand;
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactUseCase;
 import com.b4rrhh.employee.contact.domain.model.Contact;
+import com.b4rrhh.employee.contact.infrastructure.web.assembler.ContactResponseAssembler;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.ContactResponse;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.CreateContactRequest;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.UpdateContactRequest;
@@ -34,19 +35,22 @@ public class ContactController {
     private final GetContactByBusinessKeyUseCase getContactByBusinessKeyUseCase;
     private final ListEmployeeContactsUseCase listEmployeeContactsUseCase;
     private final DeleteContactUseCase deleteContactUseCase;
+        private final ContactResponseAssembler contactResponseAssembler;
 
     public ContactController(
             CreateContactUseCase createContactUseCase,
             UpdateContactUseCase updateContactUseCase,
             GetContactByBusinessKeyUseCase getContactByBusinessKeyUseCase,
             ListEmployeeContactsUseCase listEmployeeContactsUseCase,
-            DeleteContactUseCase deleteContactUseCase
+                        DeleteContactUseCase deleteContactUseCase,
+                        ContactResponseAssembler contactResponseAssembler
     ) {
         this.createContactUseCase = createContactUseCase;
         this.updateContactUseCase = updateContactUseCase;
         this.getContactByBusinessKeyUseCase = getContactByBusinessKeyUseCase;
         this.listEmployeeContactsUseCase = listEmployeeContactsUseCase;
         this.deleteContactUseCase = deleteContactUseCase;
+                this.contactResponseAssembler = contactResponseAssembler;
     }
 
     @PostMapping
@@ -66,7 +70,7 @@ public class ContactController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(contactResponseAssembler.toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -78,7 +82,7 @@ public class ContactController {
         List<ContactResponse> response = listEmployeeContactsUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(this::toResponse)
+                .map(contact -> contactResponseAssembler.toResponse(ruleSystemCode, contact))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -97,7 +101,7 @@ public class ContactController {
                         employeeNumber,
                         contactTypeCode
                 )
-                .map(contact -> ResponseEntity.ok(toResponse(contact)))
+                .map(contact -> ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, contact)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -119,7 +123,7 @@ public class ContactController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, updated));
     }
 
     @DeleteMapping("/{contactTypeCode}")
@@ -133,12 +137,5 @@ public class ContactController {
                 new DeleteContactCommand(ruleSystemCode, employeeTypeCode, employeeNumber, contactTypeCode)
         );
         return ResponseEntity.noContent().build();
-    }
-
-    private ContactResponse toResponse(Contact contact) {
-        return new ContactResponse(
-                contact.getContactTypeCode(),
-                contact.getContactValue()
-        );
     }
 }

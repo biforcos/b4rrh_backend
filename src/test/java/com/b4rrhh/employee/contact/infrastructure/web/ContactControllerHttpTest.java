@@ -7,9 +7,11 @@ import com.b4rrhh.employee.contact.application.usecase.GetContactByBusinessKeyUs
 import com.b4rrhh.employee.contact.application.usecase.ListEmployeeContactsUseCase;
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactCommand;
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactUseCase;
+import com.b4rrhh.employee.contact.application.port.ContactCatalogReadPort;
 import com.b4rrhh.employee.contact.domain.exception.ContactAlreadyExistsException;
 import com.b4rrhh.employee.contact.domain.exception.ContactNotFoundException;
 import com.b4rrhh.employee.contact.domain.model.Contact;
+import com.b4rrhh.employee.contact.infrastructure.web.assembler.ContactResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +50,8 @@ class ContactControllerHttpTest {
     private ListEmployeeContactsUseCase listEmployeeContactsUseCase;
     @Mock
     private DeleteContactUseCase deleteContactUseCase;
+        @Mock
+        private ContactCatalogReadPort contactCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -57,7 +62,8 @@ class ContactControllerHttpTest {
                 updateContactUseCase,
                 getContactByBusinessKeyUseCase,
                 listEmployeeContactsUseCase,
-                deleteContactUseCase
+                deleteContactUseCase,
+                new ContactResponseAssembler(contactCatalogReadPort)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -67,6 +73,8 @@ class ContactControllerHttpTest {
 
     @Test
     void createMapsPathAndBodyToCommand() throws Exception {
+        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+                .thenReturn(Optional.of("Correo electronico"));
         when(createContactUseCase.create(any(CreateContactCommand.class)))
                 .thenReturn(contact(10L, "EMAIL", "john.doe@example.com"));
 
@@ -80,6 +88,7 @@ class ContactControllerHttpTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.contactTypeCode").value("EMAIL"))
+                .andExpect(jsonPath("$.contactTypeName").value("Correo electronico"))
                 .andExpect(jsonPath("$.contactValue").value("john.doe@example.com"));
 
         ArgumentCaptor<CreateContactCommand> captor = ArgumentCaptor.forClass(CreateContactCommand.class);
@@ -93,6 +102,8 @@ class ContactControllerHttpTest {
 
     @Test
     void updateMapsPathAndBodyToCommand() throws Exception {
+        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+                .thenReturn(Optional.empty());
         when(updateContactUseCase.update(any(UpdateContactCommand.class)))
                 .thenReturn(contact(10L, "EMAIL", "updated@example.com"));
 
@@ -105,6 +116,7 @@ class ContactControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contactTypeCode").value("EMAIL"))
+                .andExpect(jsonPath("$.contactTypeName").isEmpty())
                 .andExpect(jsonPath("$.contactValue").value("updated@example.com"));
 
         ArgumentCaptor<UpdateContactCommand> captor = ArgumentCaptor.forClass(UpdateContactCommand.class);

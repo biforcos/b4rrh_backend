@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public record IdentifierResponse(
         String identifierTypeCode,
+        String identifierTypeName,
         String identifierValue,
         String issuingCountryCode,
         LocalDate expirationDate,

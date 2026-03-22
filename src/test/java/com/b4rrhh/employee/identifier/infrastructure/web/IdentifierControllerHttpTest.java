@@ -7,9 +7,11 @@ import com.b4rrhh.employee.identifier.application.usecase.GetIdentifierByBusines
 import com.b4rrhh.employee.identifier.application.usecase.ListEmployeeIdentifiersUseCase;
 import com.b4rrhh.employee.identifier.application.usecase.UpdateIdentifierCommand;
 import com.b4rrhh.employee.identifier.application.usecase.UpdateIdentifierUseCase;
+import com.b4rrhh.employee.identifier.application.port.IdentifierCatalogReadPort;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierAlreadyExistsException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierNotFoundException;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
+import com.b4rrhh.employee.identifier.infrastructure.web.assembler.IdentifierResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +50,8 @@ class IdentifierControllerHttpTest {
     private ListEmployeeIdentifiersUseCase listEmployeeIdentifiersUseCase;
     @Mock
     private DeleteIdentifierUseCase deleteIdentifierUseCase;
+        @Mock
+        private IdentifierCatalogReadPort identifierCatalogReadPort;
 
     private MockMvc mockMvc;
 
@@ -57,7 +62,8 @@ class IdentifierControllerHttpTest {
                 updateIdentifierUseCase,
                 getIdentifierByBusinessKeyUseCase,
                 listEmployeeIdentifiersUseCase,
-                deleteIdentifierUseCase
+                deleteIdentifierUseCase,
+                new IdentifierResponseAssembler(identifierCatalogReadPort)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -67,6 +73,8 @@ class IdentifierControllerHttpTest {
 
     @Test
     void createMapsPathAndBodyToCommand() throws Exception {
+        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+                .thenReturn(Optional.of("Documento nacional"));
         when(createIdentifierUseCase.create(any(CreateIdentifierCommand.class)))
                 .thenReturn(identifier(10L, "NATIONAL_ID", "12345678A", true));
 
@@ -82,6 +90,7 @@ class IdentifierControllerHttpTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.identifierTypeCode").value("NATIONAL_ID"))
+                .andExpect(jsonPath("$.identifierTypeName").value("Documento nacional"))
                 .andExpect(jsonPath("$.identifierValue").value("12345678A"))
                 .andExpect(jsonPath("$.isPrimary").value(true));
 
@@ -95,6 +104,8 @@ class IdentifierControllerHttpTest {
 
     @Test
     void updateMapsPathAndBodyToCommand() throws Exception {
+        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+                .thenReturn(Optional.empty());
         when(updateIdentifierUseCase.update(any(UpdateIdentifierCommand.class)))
                 .thenReturn(identifier(10L, "NATIONAL_ID", "87654321Z", true));
 
@@ -109,6 +120,7 @@ class IdentifierControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.identifierTypeCode").value("NATIONAL_ID"))
+                .andExpect(jsonPath("$.identifierTypeName").isEmpty())
                 .andExpect(jsonPath("$.identifierValue").value("87654321Z"))
                 .andExpect(jsonPath("$.isPrimary").value(true));
 
