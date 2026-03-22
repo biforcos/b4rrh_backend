@@ -31,10 +31,13 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,12 +76,21 @@ class LaborClassificationControllerHttpTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new LaborClassificationExceptionHandler())
                 .build();
+
+        lenient().when(laborClassificationCatalogReadPort.findAgreementName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        lenient().when(laborClassificationCatalogReadPort.findAgreementCategoryName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
     }
 
     @Test
     void createMapsPathAndBodyToCommandAndHidesTechnicalIds() throws Exception {
         when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class)))
                 .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+                .thenReturn(Optional.of("Office Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -91,7 +103,9 @@ class LaborClassificationControllerHttpTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"))
+                .andExpect(jsonPath("$.agreementName").value("Office Agreement"))
                 .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_ADMIN"))
+                .andExpect(jsonPath("$.agreementCategoryName").value("Administrative Category"))
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.employeeId").doesNotExist());
 
@@ -113,6 +127,10 @@ class LaborClassificationControllerHttpTest {
                         LocalDate.of(2026, 1, 1),
                         LocalDate.of(2026, 1, 31)
                 ));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+                .thenReturn(Optional.of("Office Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01/close")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -122,7 +140,10 @@ class LaborClassificationControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"));
+                .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"))
+                .andExpect(jsonPath("$.agreementName").value("Office Agreement"))
+                .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_ADMIN"))
+                .andExpect(jsonPath("$.agreementCategoryName").value("Administrative Category"));
 
         ArgumentCaptor<CloseLaborClassificationCommand> captor =
                 ArgumentCaptor.forClass(CloseLaborClassificationCommand.class);
@@ -135,6 +156,10 @@ class LaborClassificationControllerHttpTest {
     void replaceFromDateMapsPathAndBodyToCommandAndReturns200() throws Exception {
         when(replaceLaborClassificationFromDateUseCase.replaceFromDate(any(ReplaceLaborClassificationFromDateCommand.class)))
                 .thenReturn(laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 3, 1), null));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_TECH"))
+                .thenReturn(Optional.of("Technical Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_TECH_1"))
+                .thenReturn(Optional.empty());
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/replace-from-date")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -147,7 +172,9 @@ class LaborClassificationControllerHttpTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agreementCode").value("AGR_TECH"))
+                .andExpect(jsonPath("$.agreementName").value("Technical Agreement"))
                 .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_TECH_1"))
+                .andExpect(jsonPath("$.agreementCategoryName").isEmpty())
                 .andExpect(jsonPath("$.startDate[0]").value(2026))
                 .andExpect(jsonPath("$.startDate[1]").value(3))
                 .andExpect(jsonPath("$.startDate[2]").value(1))
@@ -161,6 +188,32 @@ class LaborClassificationControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(LocalDate.of(2026, 3, 1), captor.getValue().effectiveDate());
+    }
+
+    @Test
+    void updateReturnsEnrichedLabels() throws Exception {
+        when(updateLaborClassificationUseCase.update(any()))
+                .thenReturn(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+                .thenReturn(Optional.of("Office Agreement"));
+        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.of("Administrative Category"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreementCode": "AGR_OFFICE",
+                                  "agreementCategoryCode": "CAT_ADMIN"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"))
+                .andExpect(jsonPath("$.agreementName").value("Office Agreement"))
+                .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_ADMIN"))
+                .andExpect(jsonPath("$.agreementCategoryName").value("Administrative Category"))
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.employeeId").doesNotExist());
     }
 
     @Test

@@ -82,7 +82,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created));
     }
 
     @GetMapping
@@ -142,7 +142,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, updated));
     }
 
     @PostMapping("/{startDate}/close")
@@ -163,7 +163,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(closed));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, closed));
     }
 
     @PostMapping("/replace-from-date")
@@ -184,18 +184,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(replaced));
-    }
-
-    private LaborClassificationResponse toResponse(LaborClassification laborClassification) {
-        return new LaborClassificationResponse(
-                laborClassification.getAgreementCode(),
-                null,
-                laborClassification.getAgreementCategoryCode(),
-                null,
-                laborClassification.getStartDate(),
-                laborClassification.getEndDate()
-        );
+                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced));
     }
 
     private LaborClassificationResponse toResponse(String ruleSystemCode, LaborClassification laborClassification) {
