@@ -2847,6 +2847,10 @@ components:
           format: int32
         companyCode:
           type: string
+        companyName:
+          type: string
+          nullable: true
+          description: Optional display name from COMPANY rule entities in the employee ruleSystemCode catalog.
         entryReasonCode:
           type: string
         exitReasonCode:

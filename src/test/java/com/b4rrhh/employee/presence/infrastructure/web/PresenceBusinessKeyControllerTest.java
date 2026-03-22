@@ -6,7 +6,9 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.GetPresenceByBusinessKeyUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
+import com.b4rrhh.employee.presence.application.port.PresenceCatalogReadPort;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.presence.infrastructure.web.assembler.PresenceResponseAssembler;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.ClosePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.CreatePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.PresenceResponse;
@@ -26,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,6 +44,8 @@ class PresenceBusinessKeyControllerTest {
     private GetPresenceByBusinessKeyUseCase getPresenceByBusinessKeyUseCase;
     @Mock
     private ListEmployeePresencesUseCase listEmployeePresencesUseCase;
+    @Mock
+    private PresenceCatalogReadPort presenceCatalogReadPort;
 
     private PresenceBusinessKeyController controller;
 
@@ -50,7 +55,8 @@ class PresenceBusinessKeyControllerTest {
                 createPresenceUseCase,
                 closePresenceUseCase,
                 getPresenceByBusinessKeyUseCase,
-                listEmployeePresencesUseCase
+                listEmployeePresencesUseCase,
+                new PresenceResponseAssembler(presenceCatalogReadPort)
         );
     }
 
@@ -64,6 +70,8 @@ class PresenceBusinessKeyControllerTest {
                 null
         );
 
+        when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+                .thenReturn(Optional.of("Empresa Activa"));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(activePresence());
 
         ResponseEntity<PresenceResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
@@ -71,6 +79,7 @@ class PresenceBusinessKeyControllerTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().presenceNumber());
+        assertEquals("Empresa Activa", response.getBody().companyName());
 
         ArgumentCaptor<CreatePresenceCommand> captor = ArgumentCaptor.forClass(CreatePresenceCommand.class);
         verify(createPresenceUseCase).create(captor.capture());
@@ -82,6 +91,8 @@ class PresenceBusinessKeyControllerTest {
 
     @Test
     void listsPresencesUsingEmployeeBusinessKey() {
+        when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+                .thenReturn(Optional.empty());
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activePresence()));
 
@@ -91,6 +102,8 @@ class PresenceBusinessKeyControllerTest {
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
         assertEquals(1, response.getBody().get(0).presenceNumber());
+        assertEquals("AC01", response.getBody().get(0).companyCode());
+        assertNull(response.getBody().get(0).companyName());
     }
 
     @Test

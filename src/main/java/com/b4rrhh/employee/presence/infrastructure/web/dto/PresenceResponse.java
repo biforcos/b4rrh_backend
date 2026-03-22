@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public record PresenceResponse(
         Integer presenceNumber,
         String companyCode,
+        String companyName,
         String entryReasonCode,
         String exitReasonCode,
         LocalDate startDate,
