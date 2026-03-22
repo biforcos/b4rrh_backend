@@ -2168,6 +2168,13 @@ paths:
           required: false
           schema:
             type: boolean
+        - in: query
+          name: referenceDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Optional date used to return only occurrences valid on that day.
       responses:
         '200':
           description: Rule entities list
@@ -2358,6 +2365,42 @@ paths:
           description: Rule entity occurrence not found
         '409':
           description: Domain conflict while closing the occurrence
+
+  /labor-classification-catalog/agreement-categories:
+    get:
+      operationId: listLaborClassificationAgreementCategories
+      summary: List agreement categories valid for an agreement
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: agreementCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: referenceDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Optional date used to return only categories valid for that day.
+      responses:
+        '200':
+          description: Agreement category catalog list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgreementCategoryCatalogItemResponse'
+        '400':
+          description: Invalid request
 
   /rule-systems/{ruleSystemCode}:
     get:
@@ -3292,6 +3335,26 @@ components:
           type: string
         contactValue:
           type: string
+    AgreementCategoryCatalogItemResponse:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
     CreateRuleSystemRequest:
       type: object
       required:

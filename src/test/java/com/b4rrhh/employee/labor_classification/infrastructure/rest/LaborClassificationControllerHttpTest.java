@@ -178,7 +178,7 @@ class LaborClassificationControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("overlaps")));
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_OVERLAP"));
     }
 
     @Test
@@ -202,7 +202,7 @@ class LaborClassificationControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("overlaps")));
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_OVERLAP"));
     }
 
     @Test
@@ -219,8 +219,9 @@ class LaborClassificationControllerHttpTest {
                                   "startDate": "2026-01-01"
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("agreementCode")));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("AGREEMENT_NOT_FOUND"))
+                .andExpect(jsonPath("$.details.field").value("agreementCode"));
     }
 
     @Test
@@ -234,7 +235,8 @@ class LaborClassificationControllerHttpTest {
                 ));
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_NOT_FOUND"));
     }
 
     @Test

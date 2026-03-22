@@ -19,13 +19,17 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
           and (:ruleEntityTypeCode is null or re.ruleEntityTypeCode = :ruleEntityTypeCode)
           and (:code is null or re.code = :code)
           and (:active is null or re.active = :active)
+          and (:referenceDate is null or re.startDate <= :referenceDate)
+          and (:referenceDate is null or :referenceDate <= coalesce(re.endDate, :maxDate))
         order by re.ruleSystemCode, re.ruleEntityTypeCode, re.code
         """)
     List<RuleEntityEntity> findByFilters(
         @Param("ruleSystemCode") String ruleSystemCode,
         @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
         @Param("code") String code,
-        @Param("active") Boolean active
+        @Param("active") Boolean active,
+        @Param("referenceDate") LocalDate referenceDate,
+        @Param("maxDate") LocalDate maxDate
     );
 
     Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCode(

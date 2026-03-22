@@ -32,25 +32,25 @@ class ListRuleEntitiesServiceTest {
     @Test
     void listsByRuleSystemCode() {
         List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
-        when(ruleEntityRepository.findByFilters("ESP", null, null, null)).thenReturn(expected);
+        when(ruleEntityRepository.findByFilters("ESP", null, null, null, null)).thenReturn(expected);
 
-        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("esp", null, null, null));
+        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("esp", null, null, null, null));
 
         assertEquals(1, result.size());
         assertEquals("ESP", result.get(0).getRuleSystemCode());
-        verify(ruleEntityRepository).findByFilters("ESP", null, null, null);
+        verify(ruleEntityRepository).findByFilters("ESP", null, null, null, null);
     }
 
     @Test
     void listsByRuleSystemCodeAndRuleEntityTypeCode() {
         List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null)).thenReturn(expected);
+        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null, null)).thenReturn(expected);
 
-        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("ESP", "employee_presence_company", null, null));
+        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("ESP", "employee_presence_company", null, null, null));
 
         assertEquals(1, result.size());
         assertEquals("EMPLOYEE_PRESENCE_COMPANY", result.get(0).getRuleEntityTypeCode());
-        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null);
+        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null, null);
     }
 
     @Test
@@ -60,7 +60,7 @@ class ListRuleEntitiesServiceTest {
             .thenReturn(expected.stream().findFirst());
 
         List<RuleEntity> result = service.list(
-                new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "es01", null)
+            new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "es01", null, null)
         );
 
         assertEquals(1, result.size());
@@ -74,7 +74,7 @@ class ListRuleEntitiesServiceTest {
             .thenReturn(java.util.Optional.empty());
 
         List<RuleEntity> result = service.list(
-                new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99", null)
+            new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99", null, null)
         );
 
         assertEquals(0, result.size());
@@ -82,12 +82,23 @@ class ListRuleEntitiesServiceTest {
 
     @Test
     void normalizesFiltersBeforeSearching() {
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true))
+        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true, null))
                 .thenReturn(List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01")));
 
-        service.list(new ListRuleEntitiesQuery(" esp ", " employee_presence_company ", " es01 ", true));
+        service.list(new ListRuleEntitiesQuery(" esp ", " employee_presence_company ", " es01 ", true, null));
 
-        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true);
+        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true, null);
+        }
+
+        @Test
+        void forwardsReferenceDateWhenProvided() {
+        LocalDate referenceDate = LocalDate.of(2026, 3, 1);
+        when(ruleEntityRepository.findByFilters("ESP", "AGREEMENT", null, true, referenceDate))
+            .thenReturn(List.of(ruleEntity("ESP", "AGREEMENT", "AGR01")));
+
+        service.list(new ListRuleEntitiesQuery("esp", "agreement", null, true, referenceDate));
+
+        verify(ruleEntityRepository).findByFilters("ESP", "AGREEMENT", null, true, referenceDate);
     }
 
     private RuleEntity ruleEntity(String ruleSystemCode, String ruleEntityTypeCode, String code) {

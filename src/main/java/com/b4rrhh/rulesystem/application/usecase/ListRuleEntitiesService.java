@@ -34,7 +34,8 @@ public class ListRuleEntitiesService implements ListRuleEntitiesUseCase {
                 normalizedRuleSystemCode,
                 normalizedRuleEntityTypeCode,
                 normalizedCode,
-                query.active()
+            query.active(),
+            query.referenceDate()
         );
     }
 

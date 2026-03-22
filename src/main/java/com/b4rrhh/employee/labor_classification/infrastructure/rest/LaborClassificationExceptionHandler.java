@@ -16,7 +16,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = LaborClassificationController.class)
+import java.util.Map;
+
+@RestControllerAdvice(assignableTypes = {
+        LaborClassificationController.class,
+        LaborClassificationCatalogController.class
+})
 public class LaborClassificationExceptionHandler {
 
     @ExceptionHandler({
@@ -24,8 +29,19 @@ public class LaborClassificationExceptionHandler {
             LaborClassificationNotFoundException.class
     })
     public ResponseEntity<LaborClassificationErrorResponse> handleNotFound(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new LaborClassificationErrorResponse(ex.getMessage()));
+        if (ex instanceof LaborClassificationNotFoundException) {
+            return notFound(
+                    "LABOR_CLASSIFICATION_NOT_FOUND",
+                    "No existe la clasificación laboral indicada para el empleado.",
+                    null
+            );
+        }
+
+        return notFound(
+                "LABOR_CLASSIFICATION_NOT_FOUND",
+                "No se ha encontrado el empleado solicitado para clasificación laboral.",
+                null
+        );
     }
 
     @ExceptionHandler({
@@ -36,8 +52,33 @@ public class LaborClassificationExceptionHandler {
             IllegalArgumentException.class
     })
     public ResponseEntity<LaborClassificationErrorResponse> handleBadRequest(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new LaborClassificationErrorResponse(ex.getMessage()));
+        if (ex instanceof LaborClassificationAgreementInvalidException) {
+            return notFound(
+                    "AGREEMENT_NOT_FOUND",
+                    "El convenio indicado no existe o no está activo para la fecha informada.",
+                    Map.of("field", "agreementCode")
+            );
+        }
+        if (ex instanceof LaborClassificationCategoryInvalidException) {
+            return notFound(
+                    "AGREEMENT_CATEGORY_NOT_FOUND",
+                    "La categoría de convenio indicada no existe o no está activa para la fecha informada.",
+                    Map.of("field", "agreementCategoryCode")
+            );
+        }
+        if (ex instanceof LaborClassificationAgreementCategoryRelationInvalidException) {
+            return conflict(
+                    "AGREEMENT_CATEGORY_RELATION_INVALID",
+                    "La categoría de convenio no pertenece al convenio indicado para la fecha informada.",
+                    null
+            );
+        }
+
+        return conflict(
+                "LABOR_CLASSIFICATION_INVALID_PERIOD",
+                "La clasificación laboral es inválida por fechas o datos inconsistentes.",
+                null
+        );
     }
 
     @ExceptionHandler({
@@ -47,7 +88,50 @@ public class LaborClassificationExceptionHandler {
             LaborClassificationAlreadyClosedException.class
     })
     public ResponseEntity<LaborClassificationErrorResponse> handleConflict(RuntimeException ex) {
+        if (ex instanceof LaborClassificationOverlapException) {
+            return conflict(
+                    "LABOR_CLASSIFICATION_OVERLAP",
+                    "El periodo informado se solapa con otra clasificación laboral del empleado.",
+                    null
+            );
+        }
+        if (ex instanceof LaborClassificationOutsidePresencePeriodException) {
+            return conflict(
+                    "LABOR_CLASSIFICATION_OUTSIDE_PRESENCE",
+                    "El periodo informado queda fuera de cualquier presencia válida del empleado.",
+                    null
+            );
+        }
+        if (ex instanceof LaborClassificationCoverageIncompleteException) {
+            return conflict(
+                    "LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE",
+                    "La operación dejaría huecos en la cobertura de clasificación laboral frente a presence.",
+                    null
+            );
+        }
+
+        return conflict(
+                "LABOR_CLASSIFICATION_ALREADY_CLOSED",
+                "La clasificación laboral ya estaba cerrada y no puede cerrarse nuevamente.",
+                null
+        );
+    }
+
+    private ResponseEntity<LaborClassificationErrorResponse> notFound(
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new LaborClassificationErrorResponse(code, message, details));
+    }
+
+    private ResponseEntity<LaborClassificationErrorResponse> conflict(
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new LaborClassificationErrorResponse(ex.getMessage()));
+                .body(new LaborClassificationErrorResponse(code, message, details));
     }
 }

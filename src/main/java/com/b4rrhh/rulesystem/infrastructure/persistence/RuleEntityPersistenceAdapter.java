@@ -23,8 +23,21 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
     }
 
     @Override
-    public List<RuleEntity> findByFilters(String ruleSystemCode, String ruleEntityTypeCode, String code, Boolean active) {
-        return springDataRuleEntityRepository.findByFilters(ruleSystemCode, ruleEntityTypeCode, code, active)
+    public List<RuleEntity> findByFilters(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            Boolean active,
+            LocalDate referenceDate
+    ) {
+        return springDataRuleEntityRepository.findByFilters(
+                        ruleSystemCode,
+                        ruleEntityTypeCode,
+                        code,
+                        active,
+                        referenceDate,
+                        SpringDataRuleEntityRepository.MAX_DATE
+                )
                 .stream()
                 .map(this::toDomain)
                 .toList();

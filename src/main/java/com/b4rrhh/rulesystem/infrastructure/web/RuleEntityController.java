@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -55,10 +56,11 @@ public class RuleEntityController {
             @RequestParam(required = false) String ruleSystemCode,
             @RequestParam(required = false) String ruleEntityTypeCode,
             @RequestParam(required = false) String code,
-            @RequestParam(required = false) Boolean active
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) LocalDate referenceDate
     ) {
         List<RuleEntityResponse> response = listRuleEntitiesUseCase
-                .list(new ListRuleEntitiesQuery(ruleSystemCode, ruleEntityTypeCode, code, active))
+                .list(new ListRuleEntitiesQuery(ruleSystemCode, ruleEntityTypeCode, code, active, referenceDate))
                 .stream()
                 .map(this::toResponse)
                 .toList();

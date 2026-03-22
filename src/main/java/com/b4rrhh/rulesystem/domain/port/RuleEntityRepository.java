@@ -8,7 +8,13 @@ import java.util.Optional;
 
 public interface RuleEntityRepository {
     List<RuleEntity> findAll();
-    List<RuleEntity> findByFilters(String ruleSystemCode, String ruleEntityTypeCode, String code, Boolean active);
+    List<RuleEntity> findByFilters(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            Boolean active,
+            LocalDate referenceDate
+    );
     Optional<RuleEntity> findByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code);
     Optional<RuleEntity> findByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate);
     boolean existsOverlapExcludingStartDate(
