@@ -3,6 +3,7 @@ package com.b4rrhh.employee.workcenter.infrastructure.web;
 import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
@@ -64,6 +65,7 @@ public class WorkCenterExceptionHandler {
 
     @ExceptionHandler({
             WorkCenterAlreadyClosedException.class,
+            WorkCenterDeleteForbiddenAtPresenceStartException.class,
             WorkCenterOverlapException.class,
             WorkCenterOutsidePresencePeriodException.class,
             WorkCenterPresenceCoverageGapException.class
@@ -87,6 +89,13 @@ public class WorkCenterExceptionHandler {
             return conflict(
                     "WORK_CENTER_ALREADY_CLOSED",
                     "La asignacion de centro de trabajo ya estaba cerrada y no puede cerrarse nuevamente.",
+                    null
+            );
+        }
+        if (ex instanceof WorkCenterDeleteForbiddenAtPresenceStartException) {
+            return conflict(
+                    "WORK_CENTER_DELETE_FORBIDDEN_AT_PRESENCE_START",
+                                        "La asignación no puede eliminarse porque inicia una presence del empleado. Corrígela si necesitas cambiarla.",
                     null
             );
         }

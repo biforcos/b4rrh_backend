@@ -70,6 +70,11 @@ public class WorkCenterPersistenceAdapter implements WorkCenterRepository {
         return toDomain(saved);
     }
 
+    @Override
+    public void delete(WorkCenter workCenter) {
+        springDataWorkCenterRepository.delete(toEntity(workCenter));
+    }
+
     private WorkCenter toDomain(WorkCenterEntity entity) {
         return new WorkCenter(
                 entity.getId(),

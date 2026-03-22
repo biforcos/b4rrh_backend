@@ -11,5 +11,7 @@ public interface WorkCenterPresenceConsistencyPort {
             LocalDate endDate
     );
 
+    boolean existsPresenceStartingAt(Long employeeId, LocalDate startDate);
+
     List<PresencePeriod> findPresencePeriodsByEmployeeIdOrderByStartDate(Long employeeId);
 }

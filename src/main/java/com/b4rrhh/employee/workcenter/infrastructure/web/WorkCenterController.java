@@ -4,6 +4,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
@@ -15,6 +17,7 @@ import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterReq
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +34,7 @@ public class WorkCenterController {
 
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CloseWorkCenterUseCase closeWorkCenterUseCase;
+        private final DeleteWorkCenterUseCase deleteWorkCenterUseCase;
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
         private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
@@ -38,15 +42,17 @@ public class WorkCenterController {
     public WorkCenterController(
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CloseWorkCenterUseCase closeWorkCenterUseCase,
+            DeleteWorkCenterUseCase deleteWorkCenterUseCase,
             GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase,
-                        ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
-                        UpdateWorkCenterUseCase updateWorkCenterUseCase
+            ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
+            UpdateWorkCenterUseCase updateWorkCenterUseCase
     ) {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.closeWorkCenterUseCase = closeWorkCenterUseCase;
+        this.deleteWorkCenterUseCase = deleteWorkCenterUseCase;
         this.getWorkCenterByBusinessKeyUseCase = getWorkCenterByBusinessKeyUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
-                this.updateWorkCenterUseCase = updateWorkCenterUseCase;
+        this.updateWorkCenterUseCase = updateWorkCenterUseCase;
     }
 
     @PostMapping
@@ -93,10 +99,10 @@ public class WorkCenterController {
             @PathVariable Integer workCenterAssignmentNumber
     ) {
         return getWorkCenterByBusinessKeyUseCase.getByBusinessKey(
-                                ruleSystemCode,
-                                employeeTypeCode,
-                                employeeNumber,
-                                workCenterAssignmentNumber
+                                                ruleSystemCode,
+                                                employeeTypeCode,
+                                                employeeNumber,
+                                                workCenterAssignmentNumber
                 )
                 .map(workCenter -> ResponseEntity.ok(toResponse(workCenter)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -144,6 +150,25 @@ public class WorkCenterController {
         );
 
         return ResponseEntity.ok(toResponse(closed));
+    }
+
+    @DeleteMapping("/{workCenterAssignmentNumber}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable Integer workCenterAssignmentNumber
+    ) {
+        deleteWorkCenterUseCase.delete(
+                new DeleteWorkCenterCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        workCenterAssignmentNumber
+                )
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
     private WorkCenterResponse toResponse(WorkCenter workCenter) {

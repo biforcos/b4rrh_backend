@@ -24,4 +24,6 @@ public interface WorkCenterRepository {
     Optional<Integer> findMaxWorkCenterAssignmentNumberByEmployeeId(Long employeeId);
 
     WorkCenter save(WorkCenter workCenter);
+
+    void delete(WorkCenter workCenter);
 }

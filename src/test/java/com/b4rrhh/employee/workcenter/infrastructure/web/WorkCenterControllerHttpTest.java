@@ -4,6 +4,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
@@ -11,6 +13,7 @@ import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCas
 import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
@@ -31,8 +34,11 @@ import java.time.LocalDateTime;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +52,8 @@ class WorkCenterControllerHttpTest {
     @Mock
     private CloseWorkCenterUseCase closeWorkCenterUseCase;
     @Mock
+        private DeleteWorkCenterUseCase deleteWorkCenterUseCase;
+        @Mock
     private GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     @Mock
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
@@ -59,6 +67,7 @@ class WorkCenterControllerHttpTest {
         WorkCenterController controller = new WorkCenterController(
                 createWorkCenterUseCase,
                 closeWorkCenterUseCase,
+                deleteWorkCenterUseCase,
                 getWorkCenterByBusinessKeyUseCase,
                 listEmployeeWorkCentersUseCase,
                 updateWorkCenterUseCase
@@ -273,6 +282,48 @@ class WorkCenterControllerHttpTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_OVERLAP"));
+    }
+
+    @Test
+    void deleteMapsPathToCommandAndReturnsHttp204() throws Exception {
+        doNothing().when(deleteWorkCenterUseCase).delete(any(DeleteWorkCenterCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteWorkCenterCommand> captor = ArgumentCaptor.forClass(DeleteWorkCenterCommand.class);
+        verify(deleteWorkCenterUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(1, captor.getValue().workCenterAssignmentNumber());
+    }
+
+    @Test
+    void deleteMapsNotFoundToHttp404() throws Exception {
+        doThrow(new WorkCenterNotFoundException("ESP", "INTERNAL", "EMP001", 99))
+                .when(deleteWorkCenterUseCase)
+                .delete(any(DeleteWorkCenterCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/work-centers/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_NOT_FOUND"));
+    }
+
+    @Test
+    void deleteMapsPresenceStartConflictToHttp409() throws Exception {
+        doThrow(new WorkCenterDeleteForbiddenAtPresenceStartException(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                1,
+                LocalDate.of(2026, 1, 10)
+        )).when(deleteWorkCenterUseCase).delete(any(DeleteWorkCenterCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_DELETE_FORBIDDEN_AT_PRESENCE_START"))
+                .andExpect(jsonPath("$.message").value("La asignación no puede eliminarse porque inicia una presence del empleado. Corrígela si necesitas cambiarla."));
     }
 
     private WorkCenter workCenter(
