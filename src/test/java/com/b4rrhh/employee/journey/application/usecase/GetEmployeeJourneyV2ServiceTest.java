@@ -8,6 +8,8 @@ import com.b4rrhh.employee.journey.application.port.JourneyLaborClassificationRe
 import com.b4rrhh.employee.journey.application.port.JourneyLaborClassificationRecord;
 import com.b4rrhh.employee.journey.application.port.JourneyPresenceTimelineReadPort;
 import com.b4rrhh.employee.journey.application.port.JourneyPresenceTimelineRecord;
+import com.b4rrhh.employee.journey.application.port.JourneyWorkCenterReadPort;
+import com.b4rrhh.employee.journey.application.port.JourneyWorkCenterRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,8 @@ class GetEmployeeJourneyV2ServiceTest {
     private JourneyContractReadPort journeyContractReadPort;
     @Mock
     private JourneyLaborClassificationReadPort journeyLaborClassificationReadPort;
+        @Mock
+        private JourneyWorkCenterReadPort journeyWorkCenterReadPort;
 
     private GetEmployeeJourneyV2Service service;
 
@@ -46,7 +50,8 @@ class GetEmployeeJourneyV2ServiceTest {
                 employeeJourneyLookupPort,
                 journeyPresenceTimelineReadPort,
                 journeyContractReadPort,
-                journeyLaborClassificationReadPort
+                journeyLaborClassificationReadPort,
+                journeyWorkCenterReadPort
         );
     }
 
@@ -131,6 +136,7 @@ class GetEmployeeJourneyV2ServiceTest {
                 new JourneyContractRecord("TMP", "PT1", LocalDate.of(2021, 1, 1), null)
         ));
         when(journeyLaborClassificationReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
 
         EmployeeJourneyTimelineView result = service.get(command());
 
@@ -146,6 +152,7 @@ class GetEmployeeJourneyV2ServiceTest {
                 new JourneyLaborClassificationRecord("AGR_A", "CAT_A", LocalDate.of(2020, 1, 10), LocalDate.of(2020, 12, 31)),
                 new JourneyLaborClassificationRecord("AGR_B", "CAT_B", LocalDate.of(2021, 1, 1), null)
         ));
+        when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
 
         EmployeeJourneyTimelineView result = service.get(command());
 
@@ -160,6 +167,7 @@ class GetEmployeeJourneyV2ServiceTest {
         when(journeyPresenceTimelineReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
         when(journeyContractReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
         when(journeyLaborClassificationReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
 
         EmployeeJourneyTimelineView result = service.get(command());
 
@@ -181,6 +189,7 @@ class GetEmployeeJourneyV2ServiceTest {
         when(journeyLaborClassificationReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(
                 new JourneyLaborClassificationRecord("AGR_A", "CAT_A", sameDate, null)
         ));
+        when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
 
         EmployeeJourneyTimelineView result = service.get(command());
 
@@ -189,6 +198,34 @@ class GetEmployeeJourneyV2ServiceTest {
         assertEquals(JourneyTrackCode.CONTRACT, result.events().get(1).trackCode());
         assertEquals(JourneyTrackCode.LABOR_CLASSIFICATION, result.events().get(2).trackCode());
     }
+
+        @Test
+        void emitsWorkCenterStartAndEndEventsWithDetails() {
+                mockEmployeeFound();
+                when(journeyPresenceTimelineReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+                when(journeyContractReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+                when(journeyLaborClassificationReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+                when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(
+                                new JourneyWorkCenterRecord(3, "MADRID_HQ", LocalDate.of(2024, 1, 10), LocalDate.of(2024, 12, 31))
+                ));
+
+                EmployeeJourneyTimelineView result = service.get(command());
+
+                assertEquals(2, result.events().size());
+                JourneyEventView start = result.events().get(0);
+                JourneyEventView end = result.events().get(1);
+
+                assertEquals(JourneyEventType.WORK_CENTER_START, start.eventType());
+                assertEquals(JourneyTrackCode.WORK_CENTER, start.trackCode());
+                assertEquals("MADRID_HQ", start.details().get("workCenterCode"));
+                assertEquals(3, start.details().get("workCenterAssignmentNumber"));
+                assertEquals(LocalDate.of(2024, 1, 10), start.details().get("startDate"));
+
+                assertEquals(JourneyEventType.WORK_CENTER_END, end.eventType());
+                assertEquals(JourneyTrackCode.WORK_CENTER, end.trackCode());
+                assertEquals(false, end.isCurrent());
+                assertEquals(LocalDate.of(2024, 12, 31), end.details().get("endDate"));
+        }
 
     private void mockEmployeeFound() {
         when(employeeJourneyLookupPort.findByBusinessKey(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
@@ -204,6 +241,7 @@ class GetEmployeeJourneyV2ServiceTest {
     private void mockNoContractOrLaborRecords() {
         when(journeyContractReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
         when(journeyLaborClassificationReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+                when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
     }
 
     private GetEmployeeJourneyV2Command command() {

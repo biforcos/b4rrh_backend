@@ -165,6 +165,11 @@ public class GetEmployeeJourneyService implements GetEmployeeJourneyUseCase {
     private JourneyItemView toWorkCenterItem(JourneyWorkCenterRecord workCenter) {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("workCenterCode", workCenter.workCenterCode());
+        details.put("workCenterAssignmentNumber", workCenter.workCenterAssignmentNumber());
+        details.put("startDate", workCenter.startDate());
+        if (workCenter.endDate() != null) {
+            details.put("endDate", workCenter.endDate());
+        }
 
         return new JourneyItemView(
                 workCenter.startDate(),

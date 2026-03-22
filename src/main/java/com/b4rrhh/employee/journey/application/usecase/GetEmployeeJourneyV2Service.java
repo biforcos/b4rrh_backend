@@ -8,6 +8,8 @@ import com.b4rrhh.employee.journey.application.port.JourneyLaborClassificationRe
 import com.b4rrhh.employee.journey.application.port.JourneyLaborClassificationRecord;
 import com.b4rrhh.employee.journey.application.port.JourneyPresenceTimelineReadPort;
 import com.b4rrhh.employee.journey.application.port.JourneyPresenceTimelineRecord;
+import com.b4rrhh.employee.journey.application.port.JourneyWorkCenterReadPort;
+import com.b4rrhh.employee.journey.application.port.JourneyWorkCenterRecord;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -24,17 +26,20 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
     private final JourneyPresenceTimelineReadPort journeyPresenceTimelineReadPort;
     private final JourneyContractReadPort journeyContractReadPort;
     private final JourneyLaborClassificationReadPort journeyLaborClassificationReadPort;
+    private final JourneyWorkCenterReadPort journeyWorkCenterReadPort;
 
     public GetEmployeeJourneyV2Service(
             EmployeeJourneyLookupPort employeeJourneyLookupPort,
             JourneyPresenceTimelineReadPort journeyPresenceTimelineReadPort,
             JourneyContractReadPort journeyContractReadPort,
-            JourneyLaborClassificationReadPort journeyLaborClassificationReadPort
+            JourneyLaborClassificationReadPort journeyLaborClassificationReadPort,
+            JourneyWorkCenterReadPort journeyWorkCenterReadPort
     ) {
         this.employeeJourneyLookupPort = employeeJourneyLookupPort;
         this.journeyPresenceTimelineReadPort = journeyPresenceTimelineReadPort;
         this.journeyContractReadPort = journeyContractReadPort;
         this.journeyLaborClassificationReadPort = journeyLaborClassificationReadPort;
+        this.journeyWorkCenterReadPort = journeyWorkCenterReadPort;
     }
 
     @Override
@@ -65,7 +70,11 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
 
         List<JourneyLaborClassificationRecord> laborClassifications = journeyLaborClassificationReadPort
                 .findByEmployeeIdOrderByStartDate(employee.employeeId());
-        appendLaborClassificationEvents(candidates, stableOrder, laborClassifications, today);
+        stableOrder = appendLaborClassificationEvents(candidates, stableOrder, laborClassifications, today);
+
+        List<JourneyWorkCenterRecord> workCenters = journeyWorkCenterReadPort
+                .findByEmployeeIdOrderByStartDate(employee.employeeId());
+        stableOrder = appendWorkCenterEvents(candidates, stableOrder, workCenters, today);
 
         List<JourneyEventView> orderedEvents = candidates.stream()
                 .sorted(Comparator
@@ -248,6 +257,51 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
         return stableOrder;
     }
 
+    private long appendWorkCenterEvents(
+            List<EventCandidate> target,
+            long stableOrder,
+            List<JourneyWorkCenterRecord> workCenters,
+            LocalDate today
+    ) {
+        for (JourneyWorkCenterRecord workCenter : workCenters) {
+            boolean isCurrent = isPeriodCurrent(workCenter.startDate(), workCenter.endDate(), today);
+
+            target.add(new EventCandidate(
+                    new JourneyEventView(
+                            workCenter.startDate(),
+                            JourneyEventType.WORK_CENTER_START,
+                            JourneyTrackCode.WORK_CENTER,
+                            titleFor(JourneyEventType.WORK_CENTER_START),
+                            subtitleForWorkCenter(workCenter),
+                            statusFor(workCenter.startDate(), isCurrent, today),
+                            isCurrent,
+                            workCenterDetails(workCenter)
+                    ),
+                    trackPriority(JourneyTrackCode.WORK_CENTER),
+                    stableOrder++
+            ));
+
+            if (workCenter.endDate() != null) {
+                target.add(new EventCandidate(
+                        new JourneyEventView(
+                                workCenter.endDate(),
+                                JourneyEventType.WORK_CENTER_END,
+                                JourneyTrackCode.WORK_CENTER,
+                                titleFor(JourneyEventType.WORK_CENTER_END),
+                                subtitleForWorkCenter(workCenter),
+                                statusFor(workCenter.endDate(), false, today),
+                                false,
+                                workCenterDetails(workCenter)
+                        ),
+                        trackPriority(JourneyTrackCode.WORK_CENTER),
+                        stableOrder++
+                ));
+            }
+        }
+
+        return stableOrder;
+    }
+
     private Map<String, Object> presenceDetails(JourneyPresenceTimelineRecord presence, int periodNumber) {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("companyCode", presence.companyCode());
@@ -271,6 +325,21 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
         return details;
     }
 
+    private Map<String, Object> workCenterDetails(JourneyWorkCenterRecord workCenter) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("workCenterCode", workCenter.workCenterCode());
+        details.put("workCenterAssignmentNumber", workCenter.workCenterAssignmentNumber());
+        details.put("startDate", workCenter.startDate());
+        if (workCenter.endDate() != null) {
+            details.put("endDate", workCenter.endDate());
+        }
+        return details;
+    }
+
+    private String subtitleForWorkCenter(JourneyWorkCenterRecord workCenter) {
+        return workCenter.workCenterCode() + " · assignment #" + workCenter.workCenterAssignmentNumber();
+    }
+
     private String titleFor(JourneyEventType eventType) {
         return switch (eventType) {
             case HIRE -> "Employee hired";
@@ -284,6 +353,8 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
             case LABOR_CLASSIFICATION_START -> "Labor classification started";
             case LABOR_CLASSIFICATION_CHANGE -> "Labor classification changed";
             case LABOR_CLASSIFICATION_END -> "Labor classification ended";
+            case WORK_CENTER_START -> "Work center assignment started";
+            case WORK_CENTER_END -> "Work center assignment ended";
         };
     }
 
@@ -306,6 +377,7 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
             case PRESENCE -> 0;
             case CONTRACT -> 1;
             case LABOR_CLASSIFICATION -> 2;
+            case WORK_CENTER -> 3;
         };
     }
 

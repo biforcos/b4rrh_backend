@@ -134,7 +134,7 @@ class GetEmployeeJourneyServiceTest {
         ));
 
         when(journeyWorkCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(
-                new JourneyWorkCenterRecord("MADRID_HQ", LocalDate.of(2026, 1, 1), null)
+                new JourneyWorkCenterRecord(7, "MADRID_HQ", LocalDate.of(2026, 1, 1), null)
         ));
 
         when(journeyCostCenterReadPort.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(
@@ -166,7 +166,9 @@ class GetEmployeeJourneyServiceTest {
 
         JourneyItemView workCenterItem = findTrack(result, "WORK_CENTER").items().get(0);
         assertEquals("MADRID_HQ", workCenterItem.label());
-        assertEquals(Map.of("workCenterCode", "MADRID_HQ"), workCenterItem.details());
+        assertEquals("MADRID_HQ", workCenterItem.details().get("workCenterCode"));
+        assertEquals(7, workCenterItem.details().get("workCenterAssignmentNumber"));
+        assertEquals(LocalDate.of(2026, 1, 1), workCenterItem.details().get("startDate"));
 
         List<JourneyItemView> costCenterItems = findTrack(result, "COST_CENTER").items();
         assertEquals(2, costCenterItems.size());

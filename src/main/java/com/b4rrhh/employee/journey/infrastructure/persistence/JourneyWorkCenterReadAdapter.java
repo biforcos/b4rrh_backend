@@ -22,7 +22,8 @@ public class JourneyWorkCenterReadAdapter implements JourneyWorkCenterReadPort {
     @Override
     public List<JourneyWorkCenterRecord> findByEmployeeIdOrderByStartDate(Long employeeId) {
         List<?> rows = entityManager.createNativeQuery("""
-                select work_center_code,
+                select work_center_assignment_number,
+                       work_center_code,
                        start_date,
                        end_date
                 from employee.work_center
@@ -38,12 +39,13 @@ public class JourneyWorkCenterReadAdapter implements JourneyWorkCenterReadPort {
     }
 
     private JourneyWorkCenterRecord toWorkCenterRecord(Object row) {
-        Object[] columns = requireColumns(row, 3, "journey work center query");
+        Object[] columns = requireColumns(row, 4, "journey work center query");
 
         return new JourneyWorkCenterRecord(
-                (String) columns[0],
-                toLocalDate(columns[1]),
-                toLocalDate(columns[2])
+                ((Number) columns[0]).intValue(),
+                (String) columns[1],
+                toLocalDate(columns[2]),
+                toLocalDate(columns[3])
         );
     }
 }
