@@ -50,6 +50,51 @@
           "response": []
         },
         {
+          "name": "Hire Employee (Lifecycle V1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('No technical id exposed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body).to.not.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleSystemCode\": \"{{ruleSystemCode}}\",\n  \"employeeTypeCode\": \"{{employeeTypeCode}}\",\n  \"employeeNumber\": \"{{employeeNumber}}\",\n  \"firstName\": \"Juan\",\n  \"lastName1\": \"Perez\",\n  \"lastName2\": \"Garcia\",\n  \"preferredName\": \"Juan Perez\",\n  \"hireDate\": \"2026-01-10\",\n  \"presence\": {\n    \"companyCode\": \"ES01\",\n    \"entryReasonCode\": \"HIRING\",\n    \"exitReasonCode\": null\n  },\n  \"laborClassification\": {\n    \"agreementCode\": \"AGR_MAIN\",\n    \"agreementCategoryCode\": \"CAT_A\"\n  },\n  \"contract\": {\n    \"contractCode\": \"IND\",\n    \"contractSubtypeCode\": \"FT1\"\n  },\n  \"workCenter\": {\n    \"workCenterCode\": \"WC01\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/hire",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "hire"
+              ]
+            },
+            "description": "POST /employees/hire"
+          },
+          "response": []
+        },
+        {
           "name": "List Employees (Directory)",
           "event": [
             {

@@ -79,6 +79,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
 
+  /employees/hire:
+    post:
+      operationId: hireEmployee
+      summary: Hire employee lifecycle workflow
+      description: |
+        Creates employee core and initial presence, labor classification, contract, and work center
+        in a single transaction using a single hireDate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HireEmployeeRequest'
+      responses:
+        '201':
+          description: Employee hired successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeErrorResponse'
+        '404':
+          description: Required rule system or employee dependency not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeErrorResponse'
+        '409':
+          description: Employee already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeErrorResponse'
+        '422':
+          description: Business validation failed (invalid catalog value or dependent relation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeErrorResponse'
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}:
     get:
       operationId: getEmployeeByBusinessKey
@@ -2563,6 +2608,243 @@ paths:
 
 components:
   schemas:
+    HireEmployeeRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - firstName
+        - lastName1
+        - hireDate
+        - presence
+        - laborClassification
+        - contract
+        - workCenter
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        firstName:
+          type: string
+          maxLength: 100
+        lastName1:
+          type: string
+          maxLength: 100
+        lastName2:
+          type: string
+          maxLength: 100
+          nullable: true
+        preferredName:
+          type: string
+          maxLength: 300
+          nullable: true
+        hireDate:
+          type: string
+          format: date
+        presence:
+          $ref: '#/components/schemas/HirePresenceRequest'
+        laborClassification:
+          $ref: '#/components/schemas/HireLaborClassificationRequest'
+        contract:
+          $ref: '#/components/schemas/HireContractRequest'
+        workCenter:
+          $ref: '#/components/schemas/HireWorkCenterRequest'
+
+    HirePresenceRequest:
+      type: object
+      required:
+        - companyCode
+        - entryReasonCode
+      properties:
+        companyCode:
+          type: string
+          maxLength: 30
+        entryReasonCode:
+          type: string
+          maxLength: 30
+
+    HireLaborClassificationRequest:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+
+    HireContractRequest:
+      type: object
+      required:
+        - contractTypeCode
+        - contractSubtypeCode
+      properties:
+        contractTypeCode:
+          type: string
+          maxLength: 30
+        contractSubtypeCode:
+          type: string
+          maxLength: 30
+
+    HireWorkCenterRequest:
+      type: object
+      required:
+        - workCenterCode
+      properties:
+        workCenterCode:
+          type: string
+          maxLength: 30
+
+    HireEmployeeResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - firstName
+        - lastName1
+        - status
+        - hireDate
+        - initialPresence
+        - initialLaborClassification
+        - initialContract
+        - initialWorkCenter
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        firstName:
+          type: string
+          maxLength: 100
+        lastName1:
+          type: string
+          maxLength: 100
+        lastName2:
+          type: string
+          maxLength: 100
+          nullable: true
+        preferredName:
+          type: string
+          maxLength: 300
+          nullable: true
+        status:
+          type: string
+          maxLength: 30
+        hireDate:
+          type: string
+          format: date
+        initialPresence:
+          $ref: '#/components/schemas/HiredPresenceResponse'
+        initialLaborClassification:
+          $ref: '#/components/schemas/HiredLaborClassificationResponse'
+        initialContract:
+          $ref: '#/components/schemas/HiredContractResponse'
+        initialWorkCenter:
+          $ref: '#/components/schemas/HiredWorkCenterResponse'
+
+    HiredPresenceResponse:
+      type: object
+      required:
+        - presenceNumber
+        - companyCode
+        - entryReasonCode
+        - startDate
+      properties:
+        presenceNumber:
+          type: integer
+          format: int32
+        companyCode:
+          type: string
+          maxLength: 30
+        entryReasonCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    HiredLaborClassificationResponse:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+        - startDate
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    HiredContractResponse:
+      type: object
+      required:
+        - contractTypeCode
+        - contractSubtypeCode
+        - startDate
+      properties:
+        contractTypeCode:
+          type: string
+          maxLength: 30
+        contractSubtypeCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    HiredWorkCenterResponse:
+      type: object
+      required:
+        - workCenterAssignmentNumber
+        - workCenterCode
+        - startDate
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+        workCenterCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    HireEmployeeErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
     CreateEmployeeRequest:
       type: object
       required:
