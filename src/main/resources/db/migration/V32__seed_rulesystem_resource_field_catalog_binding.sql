@@ -26,7 +26,9 @@ values
     ('employee.identifier', 'identifierTypeCode', 'EMPLOYEE_IDENTIFIER_TYPE', 'DIRECT', null, null, true),
     ('employee.address', 'addressTypeCode', 'EMPLOYEE_ADDRESS_TYPE', 'DIRECT', null, null, true),
     ('employee.labor_classification', 'agreementCode', 'AGREEMENT', 'DIRECT', null, null, true),
-    ('employee.labor_classification', 'agreementCategoryCode', 'AGREEMENT_CATEGORY', 'DEPENDENT', 'agreementCode', null, true)
+    ('employee.labor_classification', 'agreementCategoryCode', 'AGREEMENT_CATEGORY', 'DEPENDENT', 'agreementCode', null, true),
+    ('employee.presence', 'entryReasonCode', 'EMPLOYEE_PRESENCE_ENTRY_REASON', 'DIRECT', null, null, true),
+    ('employee.presence', 'exitReasonCode', 'EMPLOYEE_PRESENCE_EXIT_REASON', 'DIRECT', null, null, true)
 on conflict (resource_code, field_code) do update
 set
     rule_entity_type_code = excluded.rule_entity_type_code,
