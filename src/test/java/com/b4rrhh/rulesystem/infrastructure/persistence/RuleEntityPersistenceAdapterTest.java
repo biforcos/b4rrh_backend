@@ -228,4 +228,71 @@ class RuleEntityPersistenceAdapterTest {
                 exception.getMessage()
         );
     }
+
+    @Test
+    void overlapCheckUsesMaxDateWhenProjectedEndDateIsNull() {
+        when(springDataRuleEntityRepository.existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE,
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE
+        )).thenReturn(false);
+
+        boolean overlap = adapter.existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                null,
+                LocalDate.of(2026, 1, 1)
+        );
+
+        assertEquals(false, overlap);
+        verify(springDataRuleEntityRepository).existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE,
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE
+        );
+    }
+
+    @Test
+    void overlapCheckUsesProjectedEndDateWhenProvided() {
+        LocalDate projectedEndDate = LocalDate.of(2026, 12, 31);
+        when(springDataRuleEntityRepository.existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                projectedEndDate,
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE
+        )).thenReturn(true);
+
+        boolean overlap = adapter.existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                projectedEndDate,
+                LocalDate.of(2026, 1, 1)
+        );
+
+        assertEquals(true, overlap);
+        verify(springDataRuleEntityRepository).existsOverlapExcludingStartDate(
+                "ESP",
+                "WORK_CENTER",
+                "MADRID",
+                LocalDate.of(2026, 1, 1),
+                projectedEndDate,
+                LocalDate.of(2026, 1, 1),
+                SpringDataRuleEntityRepository.MAX_DATE
+        );
+    }
 }

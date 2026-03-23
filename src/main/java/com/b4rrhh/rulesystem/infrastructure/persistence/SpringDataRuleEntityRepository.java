@@ -75,7 +75,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
           and re.ruleEntityTypeCode = :ruleEntityTypeCode
           and re.code = :code
           and re.startDate <> :excludedStartDate
-          and re.startDate <= coalesce(:projectedEndDate, :maxDate)
+          and re.startDate <= :effectiveProjectedEndDate
           and :projectedStartDate <= coalesce(re.endDate, :maxDate)
         """)
     boolean existsOverlapExcludingStartDate(
@@ -83,7 +83,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
             @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
             @Param("code") String code,
             @Param("projectedStartDate") LocalDate projectedStartDate,
-            @Param("projectedEndDate") LocalDate projectedEndDate,
+            @Param("effectiveProjectedEndDate") LocalDate effectiveProjectedEndDate,
             @Param("excludedStartDate") LocalDate excludedStartDate,
             @Param("maxDate") LocalDate maxDate
     );

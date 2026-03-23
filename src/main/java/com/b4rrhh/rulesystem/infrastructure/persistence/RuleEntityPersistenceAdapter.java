@@ -76,12 +76,16 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
             LocalDate projectedEndDate,
             LocalDate excludedStartDate
     ) {
+        LocalDate effectiveProjectedEndDate = projectedEndDate == null
+                ? SpringDataRuleEntityRepository.MAX_DATE
+                : projectedEndDate;
+
         return springDataRuleEntityRepository.existsOverlapExcludingStartDate(
                 ruleSystemCode,
                 ruleEntityTypeCode,
                 code,
                 projectedStartDate,
-                projectedEndDate,
+                effectiveProjectedEndDate,
                 excludedStartDate,
                 SpringDataRuleEntityRepository.MAX_DATE
         );

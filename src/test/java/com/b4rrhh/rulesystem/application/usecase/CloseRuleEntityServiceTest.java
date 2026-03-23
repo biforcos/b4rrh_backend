@@ -51,6 +51,14 @@ class CloseRuleEntityServiceTest {
 
         assertEquals(endDate, result.getEndDate());
         assertEquals(false, result.isActive());
+        verify(ruleEntityRepository).existsOverlapExcludingStartDate(
+                "ESP",
+                "EMPLOYEE_PRESENCE_COMPANY",
+                "ES01",
+                startDate,
+                endDate,
+                startDate
+        );
         verify(ruleEntityRepository).save(existing);
     }
 
