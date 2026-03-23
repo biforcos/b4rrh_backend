@@ -124,6 +124,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/HireEmployeeErrorResponse'
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/terminate:
+    post:
+      operationId: terminateEmployee
+      summary: Terminate employee lifecycle workflow
+      description: |
+        Closes active presence, contract, labor classification, and work center in a single transaction
+        using a single mandatory terminationDate.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateEmployeeRequest'
+      responses:
+        '200':
+          description: Employee terminated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateEmployeeResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
+        '404':
+          description: Rule system, employee, or required dependency not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
+        '409':
+          description: Functional conflict (inconsistent active occurrences or invalid temporal coherence)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
+        '422':
+          description: Business validation failed (for example invalid exitReasonCode)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}:
     get:
       operationId: getEmployeeByBusinessKey
@@ -2831,6 +2895,167 @@ components:
           format: date
 
     HireEmployeeErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    TerminateEmployeeRequest:
+      type: object
+      required:
+        - terminationDate
+        - exitReasonCode
+      properties:
+        terminationDate:
+          type: string
+          format: date
+        exitReasonCode:
+          type: string
+          maxLength: 30
+
+    TerminateEmployeeResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - terminationDate
+        - exitReasonCode
+        - status
+        - closedPresence
+        - closedContract
+        - closedLaborClassification
+        - closedWorkCenter
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        terminationDate:
+          type: string
+          format: date
+        exitReasonCode:
+          type: string
+          maxLength: 30
+        status:
+          type: string
+          maxLength: 30
+        closedPresence:
+          $ref: '#/components/schemas/ClosedPresenceResponse'
+        closedContract:
+          $ref: '#/components/schemas/ClosedContractResponse'
+        closedLaborClassification:
+          $ref: '#/components/schemas/ClosedLaborClassificationResponse'
+        closedWorkCenter:
+          $ref: '#/components/schemas/ClosedWorkCenterResponse'
+
+    ClosedPresenceResponse:
+      type: object
+      required:
+        - presenceNumber
+        - companyCode
+        - entryReasonCode
+        - exitReasonCode
+        - startDate
+        - endDate
+      properties:
+        presenceNumber:
+          type: integer
+          format: int32
+        companyCode:
+          type: string
+          maxLength: 30
+        entryReasonCode:
+          type: string
+          maxLength: 30
+        exitReasonCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ClosedContractResponse:
+      type: object
+      required:
+        - contractTypeCode
+        - contractSubtypeCode
+        - startDate
+        - endDate
+      properties:
+        contractTypeCode:
+          type: string
+          maxLength: 30
+        contractSubtypeCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ClosedLaborClassificationResponse:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+        - startDate
+        - endDate
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ClosedWorkCenterResponse:
+      type: object
+      required:
+        - workCenterAssignmentNumber
+        - workCenterCode
+        - startDate
+        - endDate
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+        workCenterCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    TerminateEmployeeErrorResponse:
       type: object
       required:
         - code
