@@ -2402,6 +2402,42 @@ paths:
         '400':
           description: Invalid request
 
+  /contract-catalog/contract-subtypes:
+    get:
+      operationId: listContractCatalogSubtypes
+      summary: List contract subtypes valid for a contract type
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: contractTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: referenceDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Optional date used to return only subtypes valid for that day.
+      responses:
+        '200':
+          description: Contract subtype catalog list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContractSubtypeCatalogItemResponse'
+        '400':
+          description: Invalid request
+
   /catalog-bindings/{resourceCode}:
     get:
       operationId: getCatalogBindingsByResourceCode
@@ -3446,6 +3482,26 @@ components:
         contactValue:
           type: string
     AgreementCategoryCatalogItemResponse:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    ContractSubtypeCatalogItemResponse:
       type: object
       required:
         - code

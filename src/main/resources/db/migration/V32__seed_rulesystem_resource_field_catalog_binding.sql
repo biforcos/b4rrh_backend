@@ -25,6 +25,8 @@ values
     ('employee.contact', 'contactTypeCode', 'EMPLOYEE_CONTACT_TYPE', 'DIRECT', null, null, true),
     ('employee.identifier', 'identifierTypeCode', 'EMPLOYEE_IDENTIFIER_TYPE', 'DIRECT', null, null, true),
     ('employee.address', 'addressTypeCode', 'EMPLOYEE_ADDRESS_TYPE', 'DIRECT', null, null, true),
+    ('employee.contract', 'contractTypeCode', 'CONTRACT', 'DIRECT', null, null, true),
+    ('employee.contract', 'contractSubtypeCode', 'CONTRACT_SUBTYPE', 'DEPENDENT', 'contractTypeCode', null, true),
     ('employee.labor_classification', 'agreementCode', 'AGREEMENT', 'DIRECT', null, null, true),
     ('employee.labor_classification', 'agreementCategoryCode', 'AGREEMENT_CATEGORY', 'DEPENDENT', 'agreementCode', null, true),
     ('employee.presence', 'entryReasonCode', 'EMPLOYEE_PRESENCE_ENTRY_REASON', 'DIRECT', null, null, true),

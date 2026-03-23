@@ -78,4 +78,42 @@ class CatalogBindingControllerHttpTest {
                 .andExpect(jsonPath("$.fields").isArray())
                 .andExpect(jsonPath("$.fields").isEmpty());
     }
+
+    @Test
+    void returnsEmployeeContractBindingsWithDirectAndDependentFields() throws Exception {
+        when(getCatalogBindingsByResourceUseCase.getByResourceCode(any(GetCatalogBindingsByResourceQuery.class)))
+                .thenReturn(List.of(
+                        new CatalogFieldBinding(
+                                "employee.contract",
+                                "contractTypeCode",
+                                CatalogKind.DIRECT,
+                                "CONTRACT",
+                                null,
+                                null,
+                                true
+                        ),
+                        new CatalogFieldBinding(
+                                "employee.contract",
+                                "contractSubtypeCode",
+                                CatalogKind.DEPENDENT,
+                                "CONTRACT_SUBTYPE",
+                                "contractTypeCode",
+                                null,
+                                true
+                        )
+                ));
+
+        mockMvc.perform(get("/catalog-bindings/employee.contract"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resourceCode").value("employee.contract"))
+                .andExpect(jsonPath("$.fields[0].fieldCode").value("contractTypeCode"))
+                .andExpect(jsonPath("$.fields[0].catalogKind").value("DIRECT"))
+                .andExpect(jsonPath("$.fields[0].ruleEntityTypeCode").value("CONTRACT"))
+                .andExpect(jsonPath("$.fields[0].id").doesNotExist())
+                .andExpect(jsonPath("$.fields[1].fieldCode").value("contractSubtypeCode"))
+                .andExpect(jsonPath("$.fields[1].catalogKind").value("DEPENDENT"))
+                .andExpect(jsonPath("$.fields[1].ruleEntityTypeCode").value("CONTRACT_SUBTYPE"))
+                .andExpect(jsonPath("$.fields[1].dependsOnFieldCode").value("contractTypeCode"))
+                .andExpect(jsonPath("$.fields[1].id").doesNotExist());
+    }
 }

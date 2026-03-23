@@ -65,6 +65,43 @@ class GetCatalogBindingsByResourceServiceTest {
     }
 
     @Test
+    void returnsContractTypeAndSubtypeBindingsForEmployeeContractResource() {
+        when(catalogBindingRepository.findActiveByResourceCode("employee.contract"))
+                .thenReturn(List.of(
+                        new CatalogFieldBinding(
+                                "employee.contract",
+                                "contractTypeCode",
+                                CatalogKind.DIRECT,
+                                "CONTRACT",
+                                null,
+                                null,
+                                true
+                        ),
+                        new CatalogFieldBinding(
+                                "employee.contract",
+                                "contractSubtypeCode",
+                                CatalogKind.DEPENDENT,
+                                "CONTRACT_SUBTYPE",
+                                "contractTypeCode",
+                                null,
+                                true
+                        )
+                ));
+
+        List<CatalogFieldBinding> result = service.getByResourceCode(
+                new GetCatalogBindingsByResourceQuery("employee.contract")
+        );
+
+        assertEquals(2, result.size());
+        assertEquals("contractTypeCode", result.get(0).fieldCode());
+        assertEquals(CatalogKind.DIRECT, result.get(0).catalogKind());
+        assertEquals("contractSubtypeCode", result.get(1).fieldCode());
+        assertEquals(CatalogKind.DEPENDENT, result.get(1).catalogKind());
+        assertEquals("contractTypeCode", result.get(1).dependsOnFieldCode());
+        verify(catalogBindingRepository).findActiveByResourceCode("employee.contract");
+    }
+
+    @Test
     void rejectsBlankResourceCode() {
         assertThrows(
                 IllegalArgumentException.class,
