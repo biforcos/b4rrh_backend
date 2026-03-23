@@ -9,6 +9,7 @@ import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CloseAddressService implements CloseAddressUseCase {
@@ -28,6 +29,7 @@ public class CloseAddressService implements CloseAddressUseCase {
     }
 
     @Override
+    @Transactional
     public Address close(CloseAddressCommand command) {
         String normalizedRuleSystemCode = normalizeRuleSystemCode(command.ruleSystemCode());
         String normalizedEmployeeTypeCode = normalizeEmployeeTypeCode(command.employeeTypeCode());
