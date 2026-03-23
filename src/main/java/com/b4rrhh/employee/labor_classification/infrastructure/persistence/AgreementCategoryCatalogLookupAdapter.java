@@ -12,6 +12,42 @@ import java.util.List;
 public class AgreementCategoryCatalogLookupAdapter implements AgreementCategoryCatalogLookupPort {
 
     private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
+    private static final String BASE_QUERY = """
+            select distinct
+                upper(trim(cat.code)) as category_code,
+                cat.name as category_name,
+                cat.start_date as category_start_date,
+                cat.end_date as category_end_date
+            from rulesystem.agreement_category_relation r
+            join rulesystem.rule_system rs
+              on rs.id = r.rule_system_id
+            join rulesystem.rule_entity agr
+              on agr.id = r.agreement_rule_entity_id
+            join rulesystem.rule_entity cat
+              on cat.id = r.category_rule_entity_id
+            where upper(trim(rs.code)) = :ruleSystemCode
+              and upper(trim(agr.code)) = :agreementCode
+              and agr.rule_entity_type_code = 'AGREEMENT'
+              and cat.rule_entity_type_code = 'AGREEMENT_CATEGORY'
+              and agr.rule_system_code = rs.code
+              and cat.rule_system_code = rs.code
+              and agr.active = true
+              and cat.active = true
+              and r.is_active = true
+            """;
+
+    private static final String TEMPORAL_FILTERS = """
+              and agr.start_date <= :referenceDate
+              and :referenceDate <= coalesce(agr.end_date, :maxDate)
+              and cat.start_date <= :referenceDate
+              and :referenceDate <= coalesce(cat.end_date, :maxDate)
+              and r.start_date <= :referenceDate
+              and :referenceDate <= coalesce(r.end_date, :maxDate)
+            """;
+
+    private static final String ORDER_BY = """
+            order by category_code
+            """;
 
     private final EntityManager entityManager;
 
@@ -22,40 +58,27 @@ public class AgreementCategoryCatalogLookupAdapter implements AgreementCategoryC
     @Override
     public List<AgreementCategoryCatalogItem> listActiveCategoriesByAgreement(
             String ruleSystemCode,
+            String agreementCode
+    ) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery(BASE_QUERY + ORDER_BY)
+                .setParameter("ruleSystemCode", ruleSystemCode)
+                .setParameter("agreementCode", agreementCode)
+                .getResultList();
+
+        return rows.stream()
+                .map(this::toCatalogItem)
+                .toList();
+    }
+
+    @Override
+    public List<AgreementCategoryCatalogItem> listActiveCategoriesByAgreementOnDate(
+            String ruleSystemCode,
             String agreementCode,
             LocalDate referenceDate
     ) {
         @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery("""
-                select distinct
-                    upper(trim(cat.code)) as category_code,
-                    cat.name as category_name,
-                    cat.start_date as category_start_date,
-                    cat.end_date as category_end_date
-                from rulesystem.agreement_category_relation r
-                join rulesystem.rule_system rs
-                  on rs.id = r.rule_system_id
-                join rulesystem.rule_entity agr
-                  on agr.id = r.agreement_rule_entity_id
-                join rulesystem.rule_entity cat
-                  on cat.id = r.category_rule_entity_id
-                where upper(trim(rs.code)) = :ruleSystemCode
-                  and upper(trim(agr.code)) = :agreementCode
-                  and agr.rule_entity_type_code = 'AGREEMENT'
-                  and cat.rule_entity_type_code = 'AGREEMENT_CATEGORY'
-                  and agr.rule_system_code = rs.code
-                  and cat.rule_system_code = rs.code
-                  and agr.active = true
-                  and cat.active = true
-                  and r.is_active = true
-                  and (:referenceDate is null or agr.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(agr.end_date, :maxDate))
-                  and (:referenceDate is null or cat.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(cat.end_date, :maxDate))
-                  and (:referenceDate is null or r.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(r.end_date, :maxDate))
-                order by category_code
-                """)
+        List<Object[]> rows = entityManager.createNativeQuery(BASE_QUERY + TEMPORAL_FILTERS + ORDER_BY)
                 .setParameter("ruleSystemCode", ruleSystemCode)
                 .setParameter("agreementCode", agreementCode)
                 .setParameter("referenceDate", referenceDate)

@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,5 +65,26 @@ class LaborClassificationCatalogControllerHttpTest {
         assertEquals("esp", captor.getValue().ruleSystemCode());
         assertEquals("agr_01", captor.getValue().agreementCode());
         assertEquals(LocalDate.of(2026, 3, 1), captor.getValue().referenceDate());
+    }
+
+    @Test
+    void listsAgreementCategoriesWithoutReferenceDate() throws Exception {
+        when(listAgreementCategoryCatalogUseCase.list(any(ListAgreementCategoryCatalogCommand.class)))
+                .thenReturn(List.of(
+                        new AgreementCategoryCatalogItem("CAT_A", "Category A", LocalDate.of(2020, 1, 1), null)
+                ));
+
+        mockMvc.perform(get("/labor-classification-catalog/agreement-categories")
+                        .queryParam("ruleSystemCode", "esp")
+                        .queryParam("agreementCode", "agr_01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("CAT_A"));
+
+        ArgumentCaptor<ListAgreementCategoryCatalogCommand> captor =
+                ArgumentCaptor.forClass(ListAgreementCategoryCatalogCommand.class);
+        verify(listAgreementCategoryCatalogUseCase).list(captor.capture());
+        assertEquals("esp", captor.getValue().ruleSystemCode());
+        assertEquals("agr_01", captor.getValue().agreementCode());
+        assertNull(captor.getValue().referenceDate());
     }
 }

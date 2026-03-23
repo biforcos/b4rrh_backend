@@ -5,6 +5,7 @@ import com.b4rrhh.employee.labor_classification.application.model.AgreementCateg
 import com.b4rrhh.employee.labor_classification.application.port.AgreementCategoryCatalogLookupPort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -18,10 +19,21 @@ public class ListAgreementCategoryCatalogService implements ListAgreementCategor
 
     @Override
     public List<AgreementCategoryCatalogItem> list(ListAgreementCategoryCatalogCommand command) {
-        return agreementCategoryCatalogLookupPort.listActiveCategoriesByAgreement(
-                normalizeRequiredCode(command.ruleSystemCode()),
-                normalizeRequiredCode(command.agreementCode()),
-                command.referenceDate()
+        String normalizedRuleSystemCode = normalizeRequiredCode(command.ruleSystemCode());
+        String normalizedAgreementCode = normalizeRequiredCode(command.agreementCode());
+        LocalDate referenceDate = command.referenceDate();
+
+        if (referenceDate == null) {
+            return agreementCategoryCatalogLookupPort.listActiveCategoriesByAgreement(
+                normalizedRuleSystemCode,
+                normalizedAgreementCode
+            );
+        }
+
+        return agreementCategoryCatalogLookupPort.listActiveCategoriesByAgreementOnDate(
+            normalizedRuleSystemCode,
+            normalizedAgreementCode,
+            referenceDate
         );
     }
 

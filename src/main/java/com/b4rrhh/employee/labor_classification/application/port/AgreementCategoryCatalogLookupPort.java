@@ -9,7 +9,12 @@ public interface AgreementCategoryCatalogLookupPort {
 
     List<AgreementCategoryCatalogItem> listActiveCategoriesByAgreement(
             String ruleSystemCode,
-            String agreementCode,
+        String agreementCode
+    );
+
+    List<AgreementCategoryCatalogItem> listActiveCategoriesByAgreementOnDate(
+        String ruleSystemCode,
+        String agreementCode,
             LocalDate referenceDate
     );
 }
