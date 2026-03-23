@@ -194,6 +194,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/rehire:
+    post:
+      operationId: rehireEmployee
+      summary: Rehire employee lifecycle workflow
+      description: |
+        Reopens employee lifecycle by creating a new active presence, contract,
+        labor classification, and work center assignment with a single mandatory rehireDate.
+        rehireDate must be strictly later than the endDate of the latest closed presence.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RehireEmployeeRequest'
+      responses:
+        '201':
+          description: Employee rehired and new active cycle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeResponse'
+        '200':
+          description: Idempotent replay resolved to existing equivalent active cycle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
+        '404':
+          description: Rule system, employee, or required dependency not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
+        '409':
+          description: Functional conflict (active lifecycle not equivalent or invalid temporal coherence)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
+        '422':
+          description: Business validation failed (invalid catalog value or dependent relation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}:
     get:
       operationId: getEmployeeByBusinessKey
@@ -2901,6 +2972,191 @@ components:
           format: date
 
     HireEmployeeErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    RehireEmployeeRequest:
+      type: object
+      required:
+        - rehireDate
+        - entryReasonCode
+        - companyCode
+        - laborClassification
+        - contract
+        - workCenter
+      properties:
+        rehireDate:
+          type: string
+          format: date
+        entryReasonCode:
+          type: string
+          maxLength: 30
+        companyCode:
+          type: string
+          maxLength: 30
+        laborClassification:
+          $ref: '#/components/schemas/RehireLaborClassificationRequest'
+        contract:
+          $ref: '#/components/schemas/RehireContractRequest'
+        workCenter:
+          $ref: '#/components/schemas/RehireWorkCenterRequest'
+
+    RehireLaborClassificationRequest:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+
+    RehireContractRequest:
+      type: object
+      required:
+        - contractTypeCode
+        - contractSubtypeCode
+      properties:
+        contractTypeCode:
+          type: string
+          maxLength: 30
+        contractSubtypeCode:
+          type: string
+          maxLength: 30
+
+    RehireWorkCenterRequest:
+      type: object
+      required:
+        - workCenterCode
+      properties:
+        workCenterCode:
+          type: string
+          maxLength: 30
+
+    RehireEmployeeResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - rehireDate
+        - status
+        - newPresence
+        - newContract
+        - newLaborClassification
+        - newWorkCenter
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        rehireDate:
+          type: string
+          format: date
+        status:
+          type: string
+          maxLength: 30
+        newPresence:
+          $ref: '#/components/schemas/RehiredPresenceResponse'
+        newContract:
+          $ref: '#/components/schemas/RehiredContractResponse'
+        newLaborClassification:
+          $ref: '#/components/schemas/RehiredLaborClassificationResponse'
+        newWorkCenter:
+          $ref: '#/components/schemas/RehiredWorkCenterResponse'
+
+    RehiredPresenceResponse:
+      type: object
+      required:
+        - presenceNumber
+        - companyCode
+        - entryReasonCode
+        - startDate
+      properties:
+        presenceNumber:
+          type: integer
+          format: int32
+        companyCode:
+          type: string
+          maxLength: 30
+        entryReasonCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    RehiredContractResponse:
+      type: object
+      required:
+        - contractTypeCode
+        - contractSubtypeCode
+        - startDate
+      properties:
+        contractTypeCode:
+          type: string
+          maxLength: 30
+        contractSubtypeCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    RehiredLaborClassificationResponse:
+      type: object
+      required:
+        - agreementCode
+        - agreementCategoryCode
+        - startDate
+      properties:
+        agreementCode:
+          type: string
+          maxLength: 30
+        agreementCategoryCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    RehiredWorkCenterResponse:
+      type: object
+      required:
+        - workCenterAssignmentNumber
+        - workCenterCode
+        - startDate
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+        workCenterCode:
+          type: string
+          maxLength: 30
+        startDate:
+          type: string
+          format: date
+
+    RehireEmployeeErrorResponse:
       type: object
       required:
         - code
