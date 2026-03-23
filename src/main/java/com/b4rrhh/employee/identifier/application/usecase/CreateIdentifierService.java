@@ -3,6 +3,7 @@ package com.b4rrhh.employee.identifier.application.usecase;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierLookupPort;
 import com.b4rrhh.employee.identifier.application.service.IdentifierCatalogValidator;
+import com.b4rrhh.employee.identifier.application.service.SpanishNationalIdValidator;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierAlreadyExistsException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierEmployeeNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierPrimaryAlreadyExistsException;
@@ -22,17 +23,20 @@ public class CreateIdentifierService implements CreateIdentifierUseCase {
     private final EmployeeIdentifierLookupPort employeeIdentifierLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
     private final IdentifierCatalogValidator identifierCatalogValidator;
+    private final SpanishNationalIdValidator spanishNationalIdValidator;
 
     public CreateIdentifierService(
             IdentifierRepository identifierRepository,
             EmployeeIdentifierLookupPort employeeIdentifierLookupPort,
             RuleSystemRepository ruleSystemRepository,
-            IdentifierCatalogValidator identifierCatalogValidator
+            IdentifierCatalogValidator identifierCatalogValidator,
+            SpanishNationalIdValidator spanishNationalIdValidator
     ) {
         this.identifierRepository = identifierRepository;
         this.employeeIdentifierLookupPort = employeeIdentifierLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.identifierCatalogValidator = identifierCatalogValidator;
+        this.spanishNationalIdValidator = spanishNationalIdValidator;
     }
 
     @Override
@@ -72,6 +76,12 @@ public class CreateIdentifierService implements CreateIdentifierUseCase {
             );
         }
 
+        String normalizedIdentifierValue = spanishNationalIdValidator.normalizeAndValidateIfApplicable(
+                identifierTypeCode,
+                normalizedIssuingCountryCode,
+                command.identifierValue()
+        );
+
         identifierRepository.findByEmployeeIdAndIdentifierTypeCode(employee.employeeId(), identifierTypeCode)
                 .ifPresent(existing -> {
                     throw new IdentifierAlreadyExistsException(
@@ -86,7 +96,7 @@ public class CreateIdentifierService implements CreateIdentifierUseCase {
                 null,
                 employee.employeeId(),
                 identifierTypeCode,
-                command.identifierValue(),
+            normalizedIdentifierValue,
                 normalizedIssuingCountryCode,
                 command.expirationDate(),
                 command.isPrimary(),

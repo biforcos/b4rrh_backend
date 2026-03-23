@@ -3,9 +3,11 @@ package com.b4rrhh.employee.identifier.application.usecase;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierLookupPort;
 import com.b4rrhh.employee.identifier.application.service.IdentifierCatalogValidator;
+import com.b4rrhh.employee.identifier.application.service.SpanishNationalIdValidator;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierAlreadyExistsException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierCatalogValueInvalidException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierPrimaryAlreadyExistsException;
+import com.b4rrhh.employee.identifier.domain.exception.IdentifierSpanishNationalIdInvalidException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierValueInvalidException;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
 import com.b4rrhh.employee.identifier.domain.port.IdentifierRepository;
@@ -51,11 +53,13 @@ class CreateIdentifierServiceTest {
     @BeforeEach
     void setUp() {
         IdentifierCatalogValidator identifierCatalogValidator = new IdentifierCatalogValidator(ruleEntityRepository);
+        SpanishNationalIdValidator spanishNationalIdValidator = new SpanishNationalIdValidator();
         service = new CreateIdentifierService(
                 identifierRepository,
                 employeeIdentifierLookupPort,
                 ruleSystemRepository,
-                identifierCatalogValidator
+                identifierCatalogValidator,
+                spanishNationalIdValidator
         );
     }
 
@@ -66,7 +70,7 @@ class CreateIdentifierServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 "EMP001",
                 "national_id",
-                "12345678A",
+                "12345678Z",
                 "esp",
                 LocalDate.of(2030, 12, 31),
                 true
@@ -100,7 +104,7 @@ class CreateIdentifierServiceTest {
 
         assertEquals(99L, created.getId());
         assertEquals("NATIONAL_ID", created.getIdentifierTypeCode());
-        assertEquals("12345678A", created.getIdentifierValue());
+        assertEquals("12345678Z", created.getIdentifierValue());
         assertEquals("ESP", created.getIssuingCountryCode());
         assertEquals(true, created.isPrimary());
 
@@ -257,6 +261,113 @@ class CreateIdentifierServiceTest {
 
         assertEquals("PASSPORT", created.getIdentifierTypeCode());
         assertEquals(false, created.isPrimary());
+    }
+
+    @Test
+    void rejectsCreateWhenSpanishNationalIdLetterIsInvalid() {
+        CreateIdentifierCommand command = new CreateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                "EMP001",
+                "NATIONAL_ID",
+                "12345678A",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
+                .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+        IdentifierSpanishNationalIdInvalidException ex =
+                assertThrows(IdentifierSpanishNationalIdInvalidException.class, () -> service.create(command));
+
+                assertEquals(true, ex.getMessage().startsWith("INVALID_SPANISH_NATIONAL_ID"));
+        verify(identifierRepository, never()).save(any(Identifier.class));
+    }
+
+    @Test
+    void rejectsCreateWhenSpanishNationalIdFormatIsInvalid() {
+        CreateIdentifierCommand command = new CreateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                "EMP001",
+                "NATIONAL_ID",
+                "1234567L",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
+                .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+        assertThrows(IdentifierSpanishNationalIdInvalidException.class, () -> service.create(command));
+        verify(identifierRepository, never()).save(any(Identifier.class));
+    }
+
+    @Test
+    void normalizesCreateWhenSpanishNationalIdHasSpacesAndLowercase() {
+        CreateIdentifierCommand command = new CreateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                "EMP001",
+                "NATIONAL_ID",
+                " 12345678z ",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
+                .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID")).thenReturn(Optional.empty());
+        when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Identifier created = service.create(command);
+
+        assertEquals("12345678Z", created.getIdentifierValue());
+    }
+
+    @Test
+    void doesNotApplySpanishNationalIdValidationWhenCountryIsNotSpain() {
+        CreateIdentifierCommand command = new CreateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                "EMP001",
+                "NATIONAL_ID",
+                "12345678A",
+                "PRT",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
+                .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "PRT"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "PRT")));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID")).thenReturn(Optional.empty());
+        when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Identifier created = service.create(command);
+
+        assertEquals("12345678A", created.getIdentifierValue());
     }
 
     private EmployeeIdentifierContext employeeContext(Long employeeId, String employeeNumber) {

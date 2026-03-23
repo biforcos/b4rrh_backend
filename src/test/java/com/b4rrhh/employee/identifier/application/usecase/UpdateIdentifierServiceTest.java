@@ -3,10 +3,12 @@ package com.b4rrhh.employee.identifier.application.usecase;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierLookupPort;
 import com.b4rrhh.employee.identifier.application.service.IdentifierCatalogValidator;
+import com.b4rrhh.employee.identifier.application.service.SpanishNationalIdValidator;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierEmployeeNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierCatalogValueInvalidException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierPrimaryAlreadyExistsException;
+import com.b4rrhh.employee.identifier.domain.exception.IdentifierSpanishNationalIdInvalidException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierValueInvalidException;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
 import com.b4rrhh.employee.identifier.domain.port.IdentifierRepository;
@@ -50,11 +52,13 @@ class UpdateIdentifierServiceTest {
     @BeforeEach
     void setUp() {
         IdentifierCatalogValidator identifierCatalogValidator = new IdentifierCatalogValidator(ruleEntityRepository);
+        SpanishNationalIdValidator spanishNationalIdValidator = new SpanishNationalIdValidator();
         service = new UpdateIdentifierService(
                 identifierRepository,
                 employeeIdentifierLookupPort,
                 ruleSystemRepository,
-                identifierCatalogValidator
+                identifierCatalogValidator,
+                spanishNationalIdValidator
         );
     }
 
@@ -65,7 +69,7 @@ class UpdateIdentifierServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "national_id",
-                "87654321Z",
+                "87654321X",
                 "esp",
                 LocalDate.of(2035, 1, 1),
                 true
@@ -87,7 +91,7 @@ class UpdateIdentifierServiceTest {
         Identifier updated = service.update(command);
 
         assertEquals("NATIONAL_ID", updated.getIdentifierTypeCode());
-        assertEquals("87654321Z", updated.getIdentifierValue());
+        assertEquals("87654321X", updated.getIdentifierValue());
         assertEquals("ESP", updated.getIssuingCountryCode());
         assertEquals(true, updated.isPrimary());
     }
@@ -207,6 +211,90 @@ class UpdateIdentifierServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IdentifierEmployeeNotFoundException.class, () -> service.update(command));
+    }
+
+    @Test
+    void rejectsUpdateWhenSpanishNationalIdLetterIsInvalid() {
+        UpdateIdentifierCommand command = new UpdateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                "NATIONAL_ID",
+                "87654321A",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID"))
+                .thenReturn(Optional.of(existingIdentifier(10L, "NATIONAL_ID", false)));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+
+        assertThrows(IdentifierSpanishNationalIdInvalidException.class, () -> service.update(command));
+    }
+
+    @Test
+    void normalizesUpdateWhenSpanishNationalIdHasSpacesAndLowercase() {
+        UpdateIdentifierCommand command = new UpdateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                "NATIONAL_ID",
+                " 87654321x ",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "NATIONAL_ID"))
+                .thenReturn(Optional.of(existingIdentifier(10L, "NATIONAL_ID", false)));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "NATIONAL_ID")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+        when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Identifier updated = service.update(command);
+
+        assertEquals("87654321X", updated.getIdentifierValue());
+    }
+
+    @Test
+    void doesNotApplySpanishNationalIdValidationOnOtherIdentifierType() {
+        UpdateIdentifierCommand command = new UpdateIdentifierCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                "PASSPORT",
+                "ABC0001",
+                "ESP",
+                null,
+                false
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeIdentifierLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
+        when(identifierRepository.findByEmployeeIdAndIdentifierTypeCode(10L, "PASSPORT"))
+                .thenReturn(Optional.of(existingIdentifier(10L, "PASSPORT", false)));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_IDENTIFIER_TYPE", "PASSPORT"))
+                .thenReturn(Optional.of(activeIdentifierTypeRuleEntity(RULE_SYSTEM_CODE, "PASSPORT")));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "COUNTRY", "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity(RULE_SYSTEM_CODE, "ESP")));
+        when(identifierRepository.save(any(Identifier.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Identifier updated = service.update(command);
+
+        assertEquals("ABC0001", updated.getIdentifierValue());
     }
 
     private EmployeeIdentifierContext employeeContext(Long employeeId, String employeeNumber) {

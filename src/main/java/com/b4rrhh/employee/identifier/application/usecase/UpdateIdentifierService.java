@@ -3,6 +3,7 @@ package com.b4rrhh.employee.identifier.application.usecase;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierContext;
 import com.b4rrhh.employee.identifier.application.port.EmployeeIdentifierLookupPort;
 import com.b4rrhh.employee.identifier.application.service.IdentifierCatalogValidator;
+import com.b4rrhh.employee.identifier.application.service.SpanishNationalIdValidator;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierEmployeeNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierNotFoundException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierPrimaryAlreadyExistsException;
@@ -22,17 +23,20 @@ public class UpdateIdentifierService implements UpdateIdentifierUseCase {
     private final EmployeeIdentifierLookupPort employeeIdentifierLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
     private final IdentifierCatalogValidator identifierCatalogValidator;
+    private final SpanishNationalIdValidator spanishNationalIdValidator;
 
     public UpdateIdentifierService(
             IdentifierRepository identifierRepository,
             EmployeeIdentifierLookupPort employeeIdentifierLookupPort,
             RuleSystemRepository ruleSystemRepository,
-            IdentifierCatalogValidator identifierCatalogValidator
+            IdentifierCatalogValidator identifierCatalogValidator,
+            SpanishNationalIdValidator spanishNationalIdValidator
     ) {
         this.identifierRepository = identifierRepository;
         this.employeeIdentifierLookupPort = employeeIdentifierLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.identifierCatalogValidator = identifierCatalogValidator;
+        this.spanishNationalIdValidator = spanishNationalIdValidator;
     }
 
     @Override
@@ -82,8 +86,14 @@ public class UpdateIdentifierService implements UpdateIdentifierUseCase {
             );
         }
 
+        String normalizedIdentifierValue = spanishNationalIdValidator.normalizeAndValidateIfApplicable(
+                normalizedIdentifierTypeCode,
+                normalizedIssuingCountryCode,
+                command.identifierValue()
+        );
+
         Identifier updated = existing.update(
-                command.identifierValue(),
+            normalizedIdentifierValue,
             normalizedIssuingCountryCode,
                 command.expirationDate(),
                 command.isPrimary()
