@@ -93,6 +93,12 @@ paths:
             schema:
               $ref: '#/components/schemas/HireEmployeeRequest'
       responses:
+        '200':
+          description: Idempotent retry resolved to existing equivalent hire state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HireEmployeeResponse'
         '201':
           description: Employee hired successfully
           content:
@@ -112,7 +118,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HireEmployeeErrorResponse'
         '409':
-          description: Employee already exists
+          description: Functional conflict (existing employee state is not equivalent or is inconsistent)
           content:
             application/json:
               schema:
