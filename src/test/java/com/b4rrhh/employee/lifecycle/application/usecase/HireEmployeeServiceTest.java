@@ -1,26 +1,34 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
+import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
+import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
+import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
+import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
+import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,6 +64,14 @@ class HireEmployeeServiceTest {
     private CreateContractUseCase createContractUseCase;
     @Mock
     private CreateWorkCenterUseCase createWorkCenterUseCase;
+        @Mock
+        private ListEmployeePresencesUseCase listEmployeePresencesUseCase;
+        @Mock
+        private ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
+        @Mock
+        private ListEmployeeContractsUseCase listEmployeeContractsUseCase;
+        @Mock
+        private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
 
     private HireEmployeeService service;
 
@@ -66,7 +83,14 @@ class HireEmployeeServiceTest {
                 createPresenceUseCase,
                 createLaborClassificationUseCase,
                 createContractUseCase,
-                createWorkCenterUseCase
+                                createWorkCenterUseCase,
+                new HireEmployeeCurrentStateReader(
+                        listEmployeePresencesUseCase,
+                        listEmployeeLaborClassificationsUseCase,
+                        listEmployeeContractsUseCase,
+                        listEmployeeWorkCentersUseCase
+                ),
+                new HireEmployeeIdempotencyEvaluator()
         );
     }
 
@@ -123,6 +147,7 @@ class HireEmployeeServiceTest {
         assertEquals(1, result.presenceNumber());
         assertEquals("CON", result.contractTypeCode());
         assertEquals(1, result.workCenterAssignmentNumber());
+        assertEquals(true, result.created());
 
         ArgumentCaptor<CreatePresenceCommand> presenceCaptor = ArgumentCaptor.forClass(CreatePresenceCommand.class);
         verify(createPresenceUseCase).create(presenceCaptor.capture());
@@ -142,24 +167,44 @@ class HireEmployeeServiceTest {
     }
 
     @Test
-    void rejectsWhenEmployeeAlreadyExists() {
+    void returnsIdempotentResultWhenEmployeeAlreadyExistsWithEquivalentInitialState() {
         HireEmployeeCommand command = validCommand();
+        Employee existingEmployee = existingEmployee();
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(new Employee(
-                        1L,
-                        "ESP",
-                        "INTERNAL",
-                        "EMP001",
-                        "Ana",
-                        "Lopez",
-                        null,
-                        null,
-                        "ACTIVE",
-                        LocalDateTime.now(),
-                        LocalDateTime.now()
-                )));
+                .thenReturn(Optional.of(existingEmployee));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence()));
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of(activeLaborClassification()));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of(activeContract()));
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activeWorkCenter()));
 
-        assertThrows(HireEmployeeAlreadyExistsException.class, () -> service.hire(command));
+        HireEmployeeResult result = service.hire(command);
+
+        assertEquals(false, result.created());
+        verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
+        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+    }
+
+    @Test
+    void failsWithConflictWhenEmployeeAlreadyExistsWithNonEquivalentState() {
+        HireEmployeeCommand command = validCommand();
+        Employee existingEmployee = existingEmployee();
+
+        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(existingEmployee));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence()));
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of(activeLaborClassification()));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activeWorkCenter()));
+
+        assertThrows(HireEmployeeConflictException.class, () -> service.hire(command));
         verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
     }
 
@@ -270,4 +315,68 @@ class HireEmployeeServiceTest {
                 "wc1"
         );
     }
+
+        private Employee existingEmployee() {
+                return new Employee(
+                                1L,
+                                "ESP",
+                                "INTERNAL",
+                                "EMP001",
+                                "Ana",
+                                "Lopez",
+                                null,
+                                "Ani",
+                                "ACTIVE",
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
+
+        private Presence activePresence() {
+                return new Presence(
+                                10L,
+                                1L,
+                                1,
+                                "COMP",
+                                "HIRE",
+                                null,
+                                LocalDate.of(2026, 3, 23),
+                                null,
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
+
+        private LaborClassification activeLaborClassification() {
+                return new LaborClassification(
+                                1L,
+                                "AGR",
+                                "CAT",
+                                LocalDate.of(2026, 3, 23),
+                                null
+                );
+        }
+
+        private Contract activeContract() {
+                return new Contract(
+                                1L,
+                                "CON",
+                                "SUB",
+                                LocalDate.of(2026, 3, 23),
+                                null
+                );
+        }
+
+        private WorkCenter activeWorkCenter() {
+                return new WorkCenter(
+                                20L,
+                                1L,
+                                1,
+                                "WC1",
+                                LocalDate.of(2026, 3, 23),
+                                null,
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
 }

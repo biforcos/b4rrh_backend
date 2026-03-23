@@ -3,8 +3,8 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,7 +62,8 @@ class HireEmployeeControllerHttpTest {
                         "CON",
                         "SUB",
                         1,
-                        "WC1"
+                        "WC1",
+                        true
                 ));
 
         mockMvc.perform(post("/employees/hire")
@@ -123,9 +124,65 @@ class HireEmployeeControllerHttpTest {
     }
 
     @Test
-    void hireReturnsConflictWhenEmployeeAlreadyExists() throws Exception {
+        void hireReturnsOkWhenIdempotentRetry() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenThrow(new HireEmployeeAlreadyExistsException("ESP", "INTERNAL", "EMP001"));
+        .thenReturn(new HireEmployeeResult(
+          "ESP",
+          "INTERNAL",
+          "EMP001",
+          "Ana",
+          "Lopez",
+          null,
+          "Ani",
+          "ACTIVE",
+          LocalDate.of(2026, 3, 23),
+          1,
+          "COMP",
+          "HIRE",
+          "AGR",
+          "CAT",
+          "CON",
+          "SUB",
+          1,
+          "WC1",
+          false
+        ));
+
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "presence": {
+                                    "companyCode": "COMP",
+                                    "entryReasonCode": "HIRE"
+                                  },
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "WC1"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employeeNumber").value("EMP001"));
+    }
+
+    @Test
+    void hireReturnsConflictWhenStateIsNotEquivalent() throws Exception {
+        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
+                .thenThrow(new HireEmployeeConflictException("existing hire state is not equivalent"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -155,7 +212,7 @@ class HireEmployeeControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("EMPLOYEE_ALREADY_EXISTS"));
+                .andExpect(jsonPath("$.code").value("HIRE_CONFLICT"));
     }
 
     @Test

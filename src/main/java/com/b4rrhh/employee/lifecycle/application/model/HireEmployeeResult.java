@@ -20,6 +20,7 @@ public record HireEmployeeResult(
         String contractTypeCode,
         String contractSubtypeCode,
         Integer workCenterAssignmentNumber,
-        String workCenterCode
+        String workCenterCode,
+        boolean created
 ) {
 }

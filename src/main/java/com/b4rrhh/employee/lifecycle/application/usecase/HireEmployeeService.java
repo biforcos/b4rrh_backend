@@ -16,7 +16,6 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCategoryInvalidException;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
@@ -42,6 +41,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     private final CreateLaborClassificationUseCase createLaborClassificationUseCase;
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
+    private final HireEmployeeCurrentStateReader currentStateReader;
+    private final HireEmployeeIdempotencyEvaluator idempotencyEvaluator;
 
     public HireEmployeeService(
             EmployeeRepository employeeRepository,
@@ -49,7 +50,9 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             CreatePresenceUseCase createPresenceUseCase,
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             CreateContractUseCase createContractUseCase,
-            CreateWorkCenterUseCase createWorkCenterUseCase
+            CreateWorkCenterUseCase createWorkCenterUseCase,
+            HireEmployeeCurrentStateReader currentStateReader,
+            HireEmployeeIdempotencyEvaluator idempotencyEvaluator
     ) {
         this.employeeRepository = employeeRepository;
         this.createEmployeeUseCase = createEmployeeUseCase;
@@ -57,6 +60,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
+        this.currentStateReader = currentStateReader;
+        this.idempotencyEvaluator = idempotencyEvaluator;
     }
 
     @Override
@@ -83,13 +88,41 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         String contractSubtypeCode = normalizeRequiredCode("contractSubtypeCode", command.contractSubtypeCode(), false);
         String workCenterCode = normalizeRequiredCode("workCenterCode", command.workCenterCode(), false);
 
-        employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
+        Employee existingEmployee = employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
                 ruleSystemCode,
                 employeeTypeCode,
                 employeeNumber
-        ).ifPresent(existing -> {
-            throw new HireEmployeeAlreadyExistsException(ruleSystemCode, employeeTypeCode, employeeNumber);
-        });
+        ).orElse(null);
+
+        if (existingEmployee != null) {
+            HireEmployeeCurrentState currentState = currentStateReader.read(
+                existingEmployee,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber
+            );
+
+            return idempotencyEvaluator.evaluateOrThrow(
+                new HireEmployeeIdempotencyEvaluator.HireEmployeeIdempotencyInput(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    firstName,
+                    lastName1,
+                    lastName2,
+                    preferredName,
+                    hireDate,
+                    companyCode,
+                    entryReasonCode,
+                    agreementCode,
+                    agreementCategoryCode,
+                    contractTypeCode,
+                    contractSubtypeCode,
+                    workCenterCode
+                ),
+                currentState
+            );
+        }
 
         Employee createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
                 ruleSystemCode,
@@ -174,7 +207,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                 contractTypeCode,
                 contractSubtypeCode,
                 createdWorkCenter.getWorkCenterAssignmentNumber(),
-                workCenterCode
+                workCenterCode,
+                true
         );
     }
 

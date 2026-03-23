@@ -2,6 +2,7 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeErrorResponse;
@@ -25,6 +26,12 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleAlreadyExists(HireEmployeeAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new HireEmployeeErrorResponse("EMPLOYEE_ALREADY_EXISTS", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(HireEmployeeConflictException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleConflict(HireEmployeeConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new HireEmployeeErrorResponse("HIRE_CONFLICT", ex.getMessage(), null));
     }
 
     @ExceptionHandler(HireEmployeeCatalogValueInvalidException.class)
