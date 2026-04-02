@@ -70,6 +70,8 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
         entity.setLastName2(employee.getLastName2());
         entity.setPreferredName(employee.getPreferredName());
         entity.setStatus(employee.getStatus());
+        entity.setCreatedAt(employee.getCreatedAt());
+        entity.setUpdatedAt(employee.getUpdatedAt());
         return entity;
     }
 }
