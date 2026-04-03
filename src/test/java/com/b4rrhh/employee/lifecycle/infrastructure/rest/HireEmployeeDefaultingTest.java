@@ -2,7 +2,7 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeDefaultValues;
+
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

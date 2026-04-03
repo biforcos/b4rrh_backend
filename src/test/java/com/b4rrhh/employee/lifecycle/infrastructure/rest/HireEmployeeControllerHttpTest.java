@@ -4,7 +4,7 @@ import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

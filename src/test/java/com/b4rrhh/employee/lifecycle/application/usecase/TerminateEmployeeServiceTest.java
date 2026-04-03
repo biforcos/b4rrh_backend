@@ -148,7 +148,7 @@ class TerminateEmployeeServiceTest {
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(existing));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(List.of(activePresence), List.of(closedPresence));
+                .thenReturn(List.of(activePresence, closedPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
                 .thenReturn(List.of(activeContract));
         when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
@@ -383,7 +383,7 @@ class TerminateEmployeeServiceTest {
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("ACTIVE")));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(List.of(activePresence), List.of(closedPresence));
+                .thenReturn(List.of(activePresence, closedPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
                 .thenReturn(List.of(futureContract));
         when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
