@@ -1077,9 +1077,88 @@ paths:
             is not fully contained within any of the employee's active presence periods.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers:
+    get:
+      operationId: listCostCenterDistributionHistory
+      summary: List full cost center distribution history grouped by window
+      description: |
+        Returns all distribution windows for the employee ordered chronologically.
+        Each window groups the allocation lines that share the same startDate.
+        Cost center names are enriched from the COST_CENTER catalog.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Distribution history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterDistributionHistoryResponse'
+        '404':
+          description: Employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/current:
+    get:
+      operationId: getCurrentCostCenterDistribution
+      summary: Get the current active cost center distribution
+      description: |
+        Returns the distribution window active today for the employee.
+        currentDistribution is null if no active distribution exists.
+        Cost center names are enriched from the COST_CENTER catalog.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        '200':
+          description: Current distribution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterCurrentDistributionResponse'
+        '404':
+          description: Employee not found
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions:
     post:
-      operationId: createCostCenterByBusinessKey
-      summary: Create employee cost center allocation by business key
+      operationId: createCostCenterDistribution
+      summary: Create a new cost center distribution window
+      description: |
+        Creates a new distribution window starting at startDate.
+        Rejected if an active distribution already exists at startDate.
+        To replace an existing active distribution, use replace-from-date instead.
+        All items share the same startDate. Sum of allocationPercentage must be <= 100.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1104,160 +1183,76 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCostCenterRequest'
+              $ref: '#/components/schemas/CreateCostCenterDistributionRequest'
       responses:
         '201':
-          description: Cost center allocation created
+          description: Distribution window created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterResponse'
+                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
         '400':
-          description: Invalid request
+          description: Invalid request (invalid item, sum > 100, missing fields)
         '404':
-          description: Rule system, employee, or catalog not found
+          description: Employee or catalog value not found
         '409':
-          description: >-
-            Cost center overlap exists for the same employee and cost center code,
-            or the requested period is not fully contained within employee presence history.
-    get:
-      operationId: listEmployeeCostCentersByBusinessKey
-      summary: List employee cost center allocations by business key
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-      responses:
-        '200':
-          description: Cost center allocation list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CostCenterResponse'
-        '404':
-          description: Rule system or employee not found
+          description: An active distribution window already exists at startDate, or period is outside presence
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}:
-    get:
-      operationId: getCostCenterByBusinessKey
-      summary: Get employee cost center allocation by business key
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: costCenterCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: startDate
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Cost center allocation found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CostCenterResponse'
-        '404':
-          description: Rule system, employee, or cost center allocation not found
-    put:
-      operationId: updateCostCenterByBusinessKey
-      summary: Update employee cost center allocation by business key
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: costCenterCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: startDate
-          required: true
-          schema:
-            type: string
-            format: date
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateCostCenterRequest'
-      responses:
-        '200':
-          description: Cost center allocation updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CostCenterResponse'
-        '400':
-          description: Invalid request
-        '404':
-          description: Rule system, employee, or cost center allocation not found
-        '409':
-          description: >-
-            Cost center allocation is already closed,
-            or the resulting period is outside employee presence history.
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/{costCenterCode}/{startDate}/close:
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/replace-from-date:
     post:
-      operationId: closeCostCenterByBusinessKey
-      summary: Close employee cost center allocation by business key
+      operationId: replaceCostCenterDistributionFromDate
+      summary: Replace the active cost center distribution from an effective date
+      description: |
+        Finds the active distribution window at effectiveDate - 1 day,
+        closes all its lines at effectiveDate - 1 day,
+        and creates a new window starting at effectiveDate with the provided items.
+        Atomic operation. Rejected if no active window exists before effectiveDate.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceCostCenterDistributionFromDateRequest'
+      responses:
+        '200':
+          description: New distribution window created, previous window closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Employee, catalog value, or active window not found
+        '409':
+          description: Period is outside presence
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close:
+    post:
+      operationId: closeCostCenterDistribution
+      summary: Close the cost center distribution window identified by startDate
+      description: |
+        Closes all allocation lines in the window that shares the given startDate.
+        All lines in the window receive the same endDate.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1278,38 +1273,31 @@ paths:
             type: string
             maxLength: 15
         - in: path
-          name: costCenterCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
           name: startDate
           required: true
           schema:
             type: string
             format: date
+          description: The startDate that identifies the distribution window to close.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseCostCenterRequest'
+              $ref: '#/components/schemas/CloseCostCenterDistributionRequest'
       responses:
         '200':
-          description: Cost center allocation closed
+          description: Distribution window closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterResponse'
+                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
         '400':
           description: Invalid request
         '404':
-          description: Rule system, employee, or cost center allocation not found
+          description: Employee or distribution window not found
         '409':
-          description: >-
-            Cost center allocation is already closed,
-            or the resulting period is outside employee presence history.
+          description: Resulting period is outside employee presence history
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
     post:
@@ -3874,13 +3862,12 @@ components:
           type: string
           format: date
           nullable: true
-    CreateCostCenterRequest:
+    CostCenterDistributionItemRequest:
       type: object
       additionalProperties: false
       required:
         - costCenterCode
         - allocationPercentage
-        - startDate
       properties:
         costCenterCode:
           type: string
@@ -3889,27 +3876,42 @@ components:
         allocationPercentage:
           type: number
           format: double
-          description: Allocation percentage greater than 0 and less than or equal to 100.
-        startDate:
-          type: string
-          format: date
-          description: Start date of the cost center allocation (yyyy-MM-dd).
-        endDate:
-          type: string
-          format: date
-          nullable: true
-          description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
-    UpdateCostCenterRequest:
+          description: Allocation percentage. Must be > 0 and <= 100. Sum of all items in a window must be <= 100.
+    CreateCostCenterDistributionRequest:
       type: object
       additionalProperties: false
       required:
-        - allocationPercentage
+        - startDate
+        - items
       properties:
-        allocationPercentage:
-          type: number
-          format: double
-          description: Allocation percentage greater than 0 and less than or equal to 100.
-    CloseCostCenterRequest:
+        startDate:
+          type: string
+          format: date
+          description: Start date of the new distribution window (yyyy-MM-dd).
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CostCenterDistributionItemRequest'
+    ReplaceCostCenterDistributionFromDateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - effectiveDate
+        - items
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: >-
+            The date from which the replacement takes effect.
+            The active window ending at effectiveDate - 1 day is closed.
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CostCenterDistributionItemRequest'
+    CloseCostCenterDistributionRequest:
       type: object
       additionalProperties: false
       required:
@@ -3918,20 +3920,29 @@ components:
         endDate:
           type: string
           format: date
-          description: Date on which the allocation ends (yyyy-MM-dd). Must be greater than or equal to startDate.
-    CostCenterResponse:
+          description: Date on which all lines in the window end (yyyy-MM-dd). Must be >= window startDate.
+    CostCenterDistributionItemResponse:
       type: object
       required:
         - costCenterCode
         - allocationPercentage
-        - startDate
       properties:
         costCenterCode:
           type: string
-          description: Code from active COST_CENTER rule entities in the employee ruleSystemCode catalog.
+        costCenterName:
+          type: string
+          nullable: true
+          description: Name resolved from COST_CENTER catalog. Null if not resolvable.
         allocationPercentage:
           type: number
           format: double
+    CostCenterDistributionWindowResponse:
+      type: object
+      required:
+        - startDate
+        - totalAllocationPercentage
+        - items
+      properties:
         startDate:
           type: string
           format: date
@@ -3939,6 +3950,50 @@ components:
           type: string
           format: date
           nullable: true
+        totalAllocationPercentage:
+          type: number
+          format: double
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostCenterDistributionItemResponse'
+    CostCenterEmployeeKeyResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+      properties:
+        ruleSystemCode:
+          type: string
+        employeeTypeCode:
+          type: string
+        employeeNumber:
+          type: string
+    CostCenterCurrentDistributionResponse:
+      type: object
+      required:
+        - employee
+      properties:
+        employee:
+          $ref: '#/components/schemas/CostCenterEmployeeKeyResponse'
+        currentDistribution:
+          $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
+          nullable: true
+          description: Null if no active distribution exists today.
+    CostCenterDistributionHistoryResponse:
+      type: object
+      required:
+        - employee
+        - windows
+      properties:
+        employee:
+          $ref: '#/components/schemas/CostCenterEmployeeKeyResponse'
+        windows:
+          type: array
+          description: Distribution windows ordered by startDate ascending.
+          items:
+            $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
     CreateContractRequest:
       type: object
       additionalProperties: false

@@ -23,6 +23,7 @@ import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -251,6 +252,11 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
                     LocalDateTime.now(),
                     LocalDateTime.now()
             );
+        }
+
+        @Bean
+        CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionAtTerminationUseCase() {
+            return (ruleSystemCode, employeeTypeCode, employeeNumber, terminationDate) -> {};
         }
     }
 }

@@ -3,31 +3,18 @@ package com.b4rrhh.employee.cost_center.infrastructure.persistence;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class CostCenterPersistenceAdapter implements CostCenterRepository {
-
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final SpringDataCostCenterRepository springDataCostCenterRepository;
 
     public CostCenterPersistenceAdapter(SpringDataCostCenterRepository springDataCostCenterRepository) {
         this.springDataCostCenterRepository = springDataCostCenterRepository;
-    }
-
-    @Override
-    public Optional<CostCenterAllocation> findByEmployeeIdAndCostCenterCodeAndStartDate(
-            Long employeeId,
-            String costCenterCode,
-            LocalDate startDate
-    ) {
-        return springDataCostCenterRepository
-                .findByEmployeeIdAndCostCenterCodeAndStartDate(employeeId, costCenterCode, startDate)
-                .map(this::toDomain);
     }
 
     @Override
@@ -40,42 +27,34 @@ public class CostCenterPersistenceAdapter implements CostCenterRepository {
     }
 
     @Override
-    public boolean existsOverlappingPeriodByCostCenterCode(
-            Long employeeId,
-            String costCenterCode,
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataCostCenterRepository.existsOverlappingPeriodByCostCenterCode(
-                employeeId,
-                costCenterCode,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE
+    public List<CostCenterAllocation> findActiveAtDate(Long employeeId, LocalDate date) {
+        return springDataCostCenterRepository
+                .findActiveAtDate(employeeId, date)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<CostCenterAllocation> findByEmployeeIdAndStartDate(Long employeeId, LocalDate startDate) {
+        return springDataCostCenterRepository
+                .findByEmployeeIdAndStartDate(employeeId, startDate)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void saveAll(List<CostCenterAllocation> allocations) {
+        springDataCostCenterRepository.saveAll(
+                allocations.stream().map(this::toEntity).toList()
         );
     }
 
     @Override
-    public void save(CostCenterAllocation costCenterAllocation) {
-        springDataCostCenterRepository.save(toEntity(costCenterAllocation));
-    }
-
-    @Override
-    public void update(CostCenterAllocation costCenterAllocation) {
-        CostCenterEntity entity = springDataCostCenterRepository
-                .findByEmployeeIdAndCostCenterCodeAndStartDate(
-                        costCenterAllocation.getEmployeeId(),
-                        costCenterAllocation.getCostCenterCode(),
-                        costCenterAllocation.getStartDate()
-                )
-                .orElseThrow(() -> new IllegalStateException(
-                        "Cost center allocation not found for update by functional identity"
-                ));
-
-        entity.setAllocationPercentage(costCenterAllocation.getAllocationPercentage());
-        entity.setEndDate(costCenterAllocation.getEndDate());
-        springDataCostCenterRepository.save(entity);
+    @Transactional
+    public void closeAllForWindow(Long employeeId, LocalDate windowStartDate, LocalDate closeDate) {
+        springDataCostCenterRepository.closeAllOpenForWindow(employeeId, windowStartDate, closeDate);
     }
 
     private CostCenterAllocation toDomain(CostCenterEntity entity) {

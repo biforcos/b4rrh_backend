@@ -26,6 +26,7 @@ import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,6 +71,8 @@ class TerminateEmployeeServiceTest {
     private CloseContractUseCase closeContractUseCase;
     @Mock
     private ClosePresenceUseCase closePresenceUseCase;
+    @Mock
+    private CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase;
 
     private TerminateEmployeeService service;
 
@@ -85,7 +88,8 @@ class TerminateEmployeeServiceTest {
                 closeWorkCenterUseCase,
                 closeLaborClassificationUseCase,
                 closeContractUseCase,
-                closePresenceUseCase
+                closePresenceUseCase,
+                closeActiveCostCenterDistributionUseCase
         );
     }
 
@@ -174,6 +178,7 @@ class TerminateEmployeeServiceTest {
                 closeWorkCenterUseCase,
                 closeLaborClassificationUseCase,
                 closeContractUseCase,
+                closeActiveCostCenterDistributionUseCase,
                 closePresenceUseCase,
                 employeeRepository,
                 listEmployeePresencesUseCase

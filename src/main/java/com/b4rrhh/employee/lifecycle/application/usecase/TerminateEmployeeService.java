@@ -37,6 +37,7 @@ import com.b4rrhh.employee.presence.domain.exception.PresenceAlreadyClosedExcept
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceNotFoundException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -71,6 +72,7 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
     private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
     private final CloseContractUseCase closeContractUseCase;
     private final ClosePresenceUseCase closePresenceUseCase;
+    private final CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase;
 
     public TerminateEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
@@ -82,7 +84,8 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
             CloseWorkCenterUseCase closeWorkCenterUseCase,
             CloseLaborClassificationUseCase closeLaborClassificationUseCase,
             CloseContractUseCase closeContractUseCase,
-            ClosePresenceUseCase closePresenceUseCase
+            ClosePresenceUseCase closePresenceUseCase,
+            CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -94,6 +97,7 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
         this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
         this.closeContractUseCase = closeContractUseCase;
         this.closePresenceUseCase = closePresenceUseCase;
+        this.closeActiveCostCenterDistributionUseCase = closeActiveCostCenterDistributionUseCase;
     }
 
     @Override
@@ -235,6 +239,13 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                         terminationDate
                 ));
             }
+
+            closeActiveCostCenterDistributionUseCase.closeIfPresent(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    terminationDate
+            );
 
             closedPresence = closePresenceUseCase.close(new ClosePresenceCommand(
                     ruleSystemCode,

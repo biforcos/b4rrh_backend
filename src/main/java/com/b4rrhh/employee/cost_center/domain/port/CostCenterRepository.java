@@ -4,26 +4,19 @@ import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface CostCenterRepository {
 
-    Optional<CostCenterAllocation> findByEmployeeIdAndCostCenterCodeAndStartDate(
-            Long employeeId,
-            String costCenterCode,
-            LocalDate startDate
-    );
-
     List<CostCenterAllocation> findByEmployeeIdOrderByStartDate(Long employeeId);
 
-    boolean existsOverlappingPeriodByCostCenterCode(
-            Long employeeId,
-            String costCenterCode,
-            LocalDate startDate,
-            LocalDate endDate
-    );
+    /** Returns all allocations for the employee whose period includes the given date. */
+    List<CostCenterAllocation> findActiveAtDate(Long employeeId, LocalDate date);
 
-    void save(CostCenterAllocation costCenterAllocation);
+    /** Returns all allocations belonging to the window identified by (employeeId, startDate). */
+    List<CostCenterAllocation> findByEmployeeIdAndStartDate(Long employeeId, LocalDate startDate);
 
-    void update(CostCenterAllocation costCenterAllocation);
+    void saveAll(List<CostCenterAllocation> allocations);
+
+    /** Closes all open allocations in a window (identified by employeeId + startDate) with the given endDate. */
+    void closeAllForWindow(Long employeeId, LocalDate windowStartDate, LocalDate closeDate);
 }
