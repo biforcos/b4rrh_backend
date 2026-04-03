@@ -5,6 +5,7 @@ import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCom
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
@@ -105,7 +106,8 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                 "OFICIAL_1",
                 "CON",
                 "SUB",
-                "MADRID_01"
+                "MADRID_01",
+                null
         );
 
         assertThrows(RehireEmployeeConflictException.class, () -> service.rehire(command));
@@ -236,6 +238,13 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                     LocalDateTime.now(),
                     LocalDateTime.now()
             );
+        }
+
+        @Bean
+        CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase() {
+            return command -> {
+                throw new UnsupportedOperationException("Not expected in this rollback test");
+            };
         }
     }
 }

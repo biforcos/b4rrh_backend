@@ -1,5 +1,7 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionItemResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException;
@@ -10,6 +12,9 @@ import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredLaborClassif
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredPresenceResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredWorkCenterResponse;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
 
 @Component
 public class RehireEmployeeWebMapper {
@@ -23,6 +28,15 @@ public class RehireEmployeeWebMapper {
         if (request == null) {
             throw new RehireEmployeeRequestInvalidException("request body is required");
         }
+        if (request.laborClassification() == null) {
+            throw new RehireEmployeeRequestInvalidException("laborClassification is required");
+        }
+        if (request.contract() == null) {
+            throw new RehireEmployeeRequestInvalidException("contract is required");
+        }
+        if (request.workCenter() == null) {
+            throw new RehireEmployeeRequestInvalidException("workCenter is required");
+        }
 
         return new RehireEmployeeCommand(
                 ruleSystemCode,
@@ -31,11 +45,21 @@ public class RehireEmployeeWebMapper {
                 request.rehireDate(),
                 request.entryReasonCode(),
                 request.companyCode(),
-                request.laborClassification() != null ? request.laborClassification().agreementCode() : null,
-                request.laborClassification() != null ? request.laborClassification().agreementCategoryCode() : null,
-                request.contract() != null ? request.contract().contractTypeCode() : null,
-                request.contract() != null ? request.contract().contractSubtypeCode() : null,
-                request.workCenter() != null ? request.workCenter().workCenterCode() : null
+                request.laborClassification().agreementCode(),
+                request.laborClassification().agreementCategoryCode(),
+                request.contract().contractTypeCode(),
+                request.contract().contractSubtypeCode(),
+                request.workCenter().workCenterCode(),
+                request.costCenterDistribution() != null
+                        ? new RehireEmployeeCommand.RehireEmployeeCostCenterDistributionCommand(
+                                request.costCenterDistribution().items().stream()
+                                        .map(item -> new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand(
+                                                item.costCenterCode(),
+                                                item.allocationPercentage()
+                                        ))
+                                        .collect(Collectors.toList())
+                          )
+                        : null
         );
     }
 
@@ -66,7 +90,21 @@ public class RehireEmployeeWebMapper {
                         result.newWorkCenterAssignmentNumber(),
                         result.newWorkCenterCode(),
                         result.newWorkCenterStartDate()
-                )
+                ),
+                result.newCostCenter() != null
+                        ? new CostCenterDistributionWindowResponse(
+                                result.newCostCenter().startDate(),
+                                null,
+                                BigDecimal.valueOf(result.newCostCenter().totalAllocationPercentage()),
+                                result.newCostCenter().items().stream()
+                                        .map(item -> new CostCenterDistributionItemResponse(
+                                                item.costCenterCode(),
+                                                item.costCenterName(),
+                                                BigDecimal.valueOf(item.allocationPercentage())
+                                        ))
+                                        .collect(Collectors.toList())
+                          )
+                        : null
         );
     }
 }

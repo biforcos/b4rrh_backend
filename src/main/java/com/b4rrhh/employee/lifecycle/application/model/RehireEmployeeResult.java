@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.application.model;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record RehireEmployeeResult(
         String ruleSystemCode,
@@ -21,6 +22,18 @@ public record RehireEmployeeResult(
         Integer newWorkCenterAssignmentNumber,
         String newWorkCenterCode,
         LocalDate newWorkCenterStartDate,
+        CostCenterSummary newCostCenter,
         boolean created
 ) {
+    public record CostCenterSummary(
+            LocalDate startDate,
+            Double totalAllocationPercentage,
+            List<CostCenterItemSummary> items
+    ) {}
+
+    public record CostCenterItemSummary(
+            String costCenterCode,
+            String costCenterName,
+            Double allocationPercentage
+    ) {}
 }

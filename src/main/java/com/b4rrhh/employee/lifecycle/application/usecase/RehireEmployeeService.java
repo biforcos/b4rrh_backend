@@ -12,8 +12,15 @@ import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidExcep
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionItem;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.employee.domain.model.EmployeeStatus;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
@@ -32,6 +39,7 @@ import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeEmployeeNotFoundException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
@@ -55,16 +63,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 public class RehireEmployeeService implements RehireEmployeeUseCase {
-
-    private static final String ACTIVE_STATUS = "ACTIVE";
-    private static final String TERMINATED_STATUS = "TERMINATED";
 
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
     private final EmployeeRepository employeeRepository;
@@ -76,6 +81,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final CreateLaborClassificationUseCase createLaborClassificationUseCase;
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
+    private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
 
     public RehireEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
@@ -87,7 +93,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             CreatePresenceUseCase createPresenceUseCase,
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             CreateContractUseCase createContractUseCase,
-            CreateWorkCenterUseCase createWorkCenterUseCase
+            CreateWorkCenterUseCase createWorkCenterUseCase,
+            CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -99,6 +106,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
+        this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
     }
 
     @Override
@@ -158,7 +166,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             );
         }
 
-        if (!TERMINATED_STATUS.equalsIgnoreCase(employee.getStatus())) {
+        if (!employee.isTerminated()) {
             throw new RehireEmployeeConflictException(
                     "Employee has no active presence but status is not TERMINATED"
             );
@@ -186,6 +194,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         LaborClassification createdLaborClassification;
         Contract createdContract;
         WorkCenter createdWorkCenter;
+        CostCenterDistributionWindow createdCostCenter = null;
 
         try {
             createdPresence = createPresenceUseCase.create(new CreatePresenceCommand(
@@ -227,13 +236,32 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     rehireDate,
                     null
             ));
+
+            if (command.costCenterDistribution() != null) {
+                validateCostCenterDistributionItems(command.costCenterDistribution());
+                createdCostCenter = createCostCenterDistributionUseCase.create(new CreateCostCenterDistributionCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        rehireDate,
+                        command.costCenterDistribution().items().stream()
+                                .map(item -> new CostCenterDistributionItem(
+                                        item.costCenterCode(),
+                                        item.allocationPercentage()
+                                ))
+                                .collect(Collectors.toList())
+                ));
+            }
         } catch (PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
                  | LaborClassificationCategoryInvalidException
                  | ContractInvalidException
                  | ContractSubtypeInvalidException
-                 | WorkCenterCatalogValueInvalidException ex) {
+                 | WorkCenterCatalogValueInvalidException
+                 | CostCenterCatalogValueInvalidException ex) {
             throw new RehireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
+        } catch (CostCenterDistributionInvalidException ex) {
+            throw new RehireEmployeeDistributionInvalidException(ex.getMessage(), ex);
         } catch (LaborClassificationAgreementCategoryRelationInvalidException
                  | ContractSubtypeRelationInvalidException ex) {
             throw new RehireEmployeeDependentRelationInvalidException(ex.getMessage(), ex);
@@ -255,19 +283,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             throw new RehireEmployeeConflictException(ex.getMessage(), ex);
         }
 
-        Employee activeEmployee = employeeRepository.save(new Employee(
-                employee.getId(),
-                employee.getRuleSystemCode(),
-                employee.getEmployeeTypeCode(),
-                employee.getEmployeeNumber(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName(),
-                ACTIVE_STATUS,
-                employee.getCreatedAt(),
-                LocalDateTime.now()
-        ));
+        Employee activeEmployee = employeeRepository.save(employee.activate());
 
         long activePresenceCountAfterRehire = listEmployeePresencesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
@@ -300,6 +316,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 createdWorkCenter.getWorkCenterAssignmentNumber(),
                 createdWorkCenter.getWorkCenterCode(),
                 createdWorkCenter.getStartDate(),
+                buildCostCenterSummary(createdCostCenter),
                 true
         );
     }
@@ -319,7 +336,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             List<LaborClassification> laborHistory,
             List<WorkCenter> workCenterHistory
     ) {
-        if (!ACTIVE_STATUS.equalsIgnoreCase(employee.getStatus())) {
+        if (!employee.isActive()) {
             throw new RehireEmployeeConflictException("Active presence exists but employee status is not ACTIVE");
         }
 
@@ -387,7 +404,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
                 rehireDate,
-                ACTIVE_STATUS,
+                EmployeeStatus.ACTIVE.name(),
                 activePresence.getPresenceNumber(),
                 activePresence.getCompanyCode(),
                 activePresence.getEntryReasonCode(),
@@ -401,25 +418,26 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 activeWorkCenter.getWorkCenterAssignmentNumber(),
                 activeWorkCenter.getWorkCenterCode(),
                 activeWorkCenter.getStartDate(),
+                null,
                 false
         );
     }
 
-            private boolean isEquivalentActiveCycle(
-                LocalDate rehireDate,
-                String entryReasonCode,
-                String companyCode,
-                String agreementCode,
-                String agreementCategoryCode,
-                String contractTypeCode,
-                String contractSubtypeCode,
-                String workCenterCode,
-                Presence activePresence,
-                Contract activeContract,
-                LaborClassification activeLaborClassification,
-                WorkCenter activeWorkCenter
-            ) {
-            return rehireDate.equals(activePresence.getStartDate())
+    private boolean isEquivalentActiveCycle(
+            LocalDate rehireDate,
+            String entryReasonCode,
+            String companyCode,
+            String agreementCode,
+            String agreementCategoryCode,
+            String contractTypeCode,
+            String contractSubtypeCode,
+            String workCenterCode,
+            Presence activePresence,
+            Contract activeContract,
+            LaborClassification activeLaborClassification,
+            WorkCenter activeWorkCenter
+    ) {
+        return rehireDate.equals(activePresence.getStartDate())
                 && entryReasonCode.equals(activePresence.getEntryReasonCode())
                 && companyCode.equals(activePresence.getCompanyCode())
                 && rehireDate.equals(activeContract.getStartDate())
@@ -430,7 +448,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 && agreementCategoryCode.equals(activeLaborClassification.getAgreementCategoryCode())
                 && rehireDate.equals(activeWorkCenter.getStartDate())
                 && workCenterCode.equals(activeWorkCenter.getWorkCenterCode());
-            }
+    }
 
     private <T> T requireExactlyOneActive(String label, List<T> occurrences, Predicate<T> isActive) {
         List<T> active = occurrences.stream().filter(isActive).toList();
@@ -442,6 +460,41 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         }
 
         return active.get(0);
+    }
+
+    private RehireEmployeeResult.CostCenterSummary buildCostCenterSummary(CostCenterDistributionWindow window) {
+        if (window == null) {
+            return null;
+        }
+
+        return new RehireEmployeeResult.CostCenterSummary(
+                window.getStartDate(),
+                window.getTotalAllocationPercentage().doubleValue(),
+                window.getItems().stream()
+                        .map(item -> new RehireEmployeeResult.CostCenterItemSummary(
+                                item.getCostCenterCode(),
+                                item.getCostCenterCode(),
+                                item.getAllocationPercentage().doubleValue()
+                        ))
+                        .collect(Collectors.toList())
+        );
+    }
+
+    private void validateCostCenterDistributionItems(
+            RehireEmployeeCommand.RehireEmployeeCostCenterDistributionCommand distribution
+    ) {
+        if (distribution.items() == null || distribution.items().isEmpty()) {
+            throw new RehireEmployeeDistributionInvalidException(
+                    "cost center distribution must contain at least one item"
+            );
+        }
+        for (RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand item : distribution.items()) {
+            if (item.allocationPercentage() == null) {
+                throw new RehireEmployeeDistributionInvalidException(
+                        "allocationPercentage is required for cost center item: " + item.costCenterCode()
+                );
+            }
+        }
     }
 
     private String normalizeRequiredText(String fieldName, String value) {

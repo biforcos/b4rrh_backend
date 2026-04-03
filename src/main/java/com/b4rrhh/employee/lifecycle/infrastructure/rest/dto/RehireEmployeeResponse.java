@@ -1,5 +1,7 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest.dto;
 
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
+
 import java.time.LocalDate;
 
 public record RehireEmployeeResponse(
@@ -11,6 +13,7 @@ public record RehireEmployeeResponse(
         RehiredPresenceResponse newPresence,
         RehiredContractResponse newContract,
         RehiredLaborClassificationResponse newLaborClassification,
-        RehiredWorkCenterResponse newWorkCenter
+        RehiredWorkCenterResponse newWorkCenter,
+        CostCenterDistributionWindowResponse newCostCenter
 ) {
 }

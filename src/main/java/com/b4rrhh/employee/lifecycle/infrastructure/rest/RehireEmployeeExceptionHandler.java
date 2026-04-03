@@ -6,6 +6,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeEmployeeNotFoundException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeErrorResponse;
@@ -38,6 +39,12 @@ public class RehireEmployeeExceptionHandler {
     public ResponseEntity<RehireEmployeeErrorResponse> handleDependentInvalid(RehireEmployeeDependentRelationInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new RehireEmployeeErrorResponse("INVALID_DEPENDENT_RELATION", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(RehireEmployeeDistributionInvalidException.class)
+    public ResponseEntity<RehireEmployeeErrorResponse> handleDistributionInvalid(RehireEmployeeDistributionInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new RehireEmployeeErrorResponse("INVALID_DISTRIBUTION", ex.getMessage(), null));
     }
 
     @ExceptionHandler(RehireEmployeeConflictException.class)

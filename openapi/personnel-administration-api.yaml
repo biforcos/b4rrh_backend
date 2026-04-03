@@ -3021,6 +3021,8 @@ components:
           $ref: "#/components/schemas/RehireContractRequest"
         workCenter:
           $ref: "#/components/schemas/RehireWorkCenterRequest"
+        costCenterDistribution:
+          $ref: "#/components/schemas/CreateCostCenterDistributionInWorkflowRequest"
 
     RehireLaborClassificationRequest:
       type: object
@@ -3093,6 +3095,9 @@ components:
           $ref: "#/components/schemas/RehiredLaborClassificationResponse"
         newWorkCenter:
           $ref: "#/components/schemas/RehiredWorkCenterResponse"
+        newCostCenter:
+          $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
+          nullable: true
 
     RehiredPresenceResponse:
       type: object

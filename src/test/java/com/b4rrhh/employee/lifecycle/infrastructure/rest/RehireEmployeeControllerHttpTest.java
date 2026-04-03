@@ -5,6 +5,8 @@ import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.RehireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,6 +68,7 @@ class RehireEmployeeControllerHttpTest {
                         2,
                         "MADRID_01",
                         LocalDate.of(2026, 4, 15),
+                        null,
                         true
                 ));
 
@@ -100,7 +103,8 @@ class RehireEmployeeControllerHttpTest {
                 .andExpect(jsonPath("$.newPresence.presenceNumber").value(2))
                 .andExpect(jsonPath("$.newContract.contractTypeCode").value("PERMANENT"))
                 .andExpect(jsonPath("$.newLaborClassification.agreementCode").value("METAL"))
-                .andExpect(jsonPath("$.newWorkCenter.workCenterAssignmentNumber").value(2));
+                .andExpect(jsonPath("$.newWorkCenter.workCenterAssignmentNumber").value(2))
+                .andExpect(jsonPath("$.newCostCenter").doesNotExist());
 
         ArgumentCaptor<RehireEmployeeCommand> captor = ArgumentCaptor.forClass(RehireEmployeeCommand.class);
         verify(rehireEmployeeUseCase).rehire(captor.capture());
@@ -131,6 +135,7 @@ class RehireEmployeeControllerHttpTest {
                         2,
                         "MADRID_01",
                         LocalDate.of(2026, 4, 15),
+                        null,
                         false
                 ));
 
@@ -214,5 +219,140 @@ class RehireEmployeeControllerHttpTest {
                                 """))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("INVALID_CATALOG_VALUE"));
+    }
+
+    @Test
+    void rehireReturnsUnprocessableEntityOnInvalidDependentRelation() throws Exception {
+        when(rehireEmployeeUseCase.rehire(any(RehireEmployeeCommand.class)))
+                .thenThrow(new RehireEmployeeDependentRelationInvalidException(
+                        "agreementCategory OFICIAL_1 does not belong to agreement METAL", null));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "INVALID_CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("INVALID_DEPENDENT_RELATION"));
+    }
+
+    @Test
+    void rehireReturnsUnprocessableEntityOnInvalidDistribution() throws Exception {
+        when(rehireEmployeeUseCase.rehire(any(RehireEmployeeCommand.class)))
+                .thenThrow(new RehireEmployeeDistributionInvalidException("total allocation percentage exceeds 100"));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  },
+                                  "costCenterDistribution": {
+                                    "items": [
+                                      { "costCenterCode": "CC1", "allocationPercentage": 80.0 },
+                                      { "costCenterCode": "CC2", "allocationPercentage": 80.0 }
+                                    ]
+                                  }
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("INVALID_DISTRIBUTION"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenLaborClassificationBlockIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("laborClassification is required"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenContractBlockIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("contract is required"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenWorkCenterBlockIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("workCenter is required"));
     }
 }

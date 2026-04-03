@@ -54,6 +54,30 @@ public class Employee {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
+    public boolean isActive() {
+        return EmployeeStatus.ACTIVE.matches(status);
+    }
+
+    public boolean isTerminated() {
+        return EmployeeStatus.TERMINATED.matches(status);
+    }
+
+    public Employee activate() {
+        return new Employee(
+                id,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                firstName,
+                lastName1,
+                lastName2,
+                preferredName,
+                EmployeeStatus.ACTIVE.name(),
+                createdAt,
+                LocalDateTime.now()
+        );
+    }
+
     public Employee updateIdentityFields(
             String firstName,
             String lastName1,

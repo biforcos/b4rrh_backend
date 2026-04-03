@@ -292,11 +292,30 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 LocalDateTime.now()
         ));
 
-        long activePresenceCountAfterClose = listEmployeePresencesUseCase
-                .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
-                .stream()
-                .filter(Presence::isActive)
-                .count();
+        List<Presence> presencesAfterClose = listEmployeePresencesUseCase
+                .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
+
+        // Deduplicate by presenceNumber, preferring closed occurrences when duplicates exist
+        java.util.Map<Integer, Presence> dedup = new java.util.HashMap<>();
+        for (Presence p : presencesAfterClose) {
+            Integer num = p.getPresenceNumber();
+            Presence existing = dedup.get(num);
+            if (existing == null) {
+                dedup.put(num, p);
+            } else {
+                // prefer a closed occurrence over an active one
+                if (existing.getEndDate() == null && p.getEndDate() != null) {
+                    dedup.put(num, p);
+                } else if (existing.getEndDate() != null && p.getEndDate() != null) {
+                    if (p.getEndDate().isAfter(existing.getEndDate())) {
+                        dedup.put(num, p);
+                    }
+                }
+                // otherwise keep existing (either both active or existing already closed)
+            }
+        }
+
+        long activePresenceCountAfterClose = dedup.values().stream().filter(Presence::isActive).count();
 
         if (activePresenceCountAfterClose != 0) {
             throw new TerminateEmployeeConflictException(
