@@ -1,23 +1,18 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
-import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeService;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
-import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
-import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
-import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,8 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Import({
         EmployeePersistenceAdapter.class,
         HireEmployeeService.class,
-    HireEmployeeCurrentStateReader.class,
-    HireEmployeeIdempotencyEvaluator.class,
         HireEmployeeServiceRollbackIntegrationTest.HireEmployeeRollbackTestConfig.class
 })
 class HireEmployeeServiceRollbackIntegrationTest {
@@ -89,13 +82,12 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 null,
                 "Ani",
                 LocalDate.of(2026, 3, 23),
-                "BAD",
                 "HIRE",
-                "AGR",
-                "CAT",
-                "CON",
-                "SUB",
-                "WC1"
+                "COMP",
+                "BAD_WC",
+                new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
+                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
+                null
         );
 
         assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
@@ -153,28 +145,16 @@ class HireEmployeeServiceRollbackIntegrationTest {
         @Bean
         CreateWorkCenterUseCase createWorkCenterUseCase() {
             return command -> {
-                throw new WorkCenterCatalogValueInvalidException("workCenterCode", command.workCenterCode());
+                if ("BAD_WC".equals(command.workCenterCode())) {
+                    throw new WorkCenterCatalogValueInvalidException("workCenterCode", command.workCenterCode());
+                }
+                return null;
             };
         }
 
         @Bean
-        ListEmployeePresencesUseCase listEmployeePresencesUseCase() {
-            return (ruleSystemCode, employeeTypeCode, employeeNumber) -> java.util.List.of();
-        }
-
-        @Bean
-        ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase() {
-            return (ListEmployeeLaborClassificationsCommand command) -> java.util.List.of();
-        }
-
-        @Bean
-        ListEmployeeContractsUseCase listEmployeeContractsUseCase() {
-            return command -> java.util.List.of();
-        }
-
-        @Bean
-        ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase() {
-            return (ruleSystemCode, employeeTypeCode, employeeNumber) -> java.util.List.of();
+        CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase() {
+            return command -> null;
         }
     }
 }

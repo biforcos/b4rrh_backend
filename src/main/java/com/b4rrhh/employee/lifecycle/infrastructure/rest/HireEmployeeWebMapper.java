@@ -1,15 +1,17 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionItemResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeDefaultValues;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeRequest;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeResponse;
-import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HiredContractResponse;
-import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HiredLaborClassificationResponse;
-import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HiredPresenceResponse;
-import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HiredWorkCenterResponse;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
 
 @Component
 public class HireEmployeeWebMapper {
@@ -20,55 +22,90 @@ public class HireEmployeeWebMapper {
         }
 
         return new HireEmployeeCommand(
-                request.ruleSystemCode(),
-                request.employeeTypeCode(),
+                normalizeCode(request.ruleSystemCode()),
+                normalizeEmployeeTypeCode(request.employeeTypeCode()),
                 request.employeeNumber(),
                 request.firstName(),
                 request.lastName1(),
                 request.lastName2(),
                 request.preferredName(),
                 request.hireDate(),
-                request.presence() != null ? request.presence().companyCode() : null,
-                request.presence() != null ? request.presence().entryReasonCode() : null,
-                request.laborClassification() != null ? request.laborClassification().agreementCode() : null,
-                request.laborClassification() != null ? request.laborClassification().agreementCategoryCode() : null,
-                request.contract() != null ? request.contract().contractTypeCode() : null,
-                request.contract() != null ? request.contract().contractSubtypeCode() : null,
-                request.workCenter() != null ? request.workCenter().workCenterCode() : null
+                request.entryReasonCode(),
+                request.companyCode(),
+                request.workCenterCode(),
+                request.contract() != null ? new HireEmployeeCommand.HireEmployeeContractCommand(
+                        request.contract().contractTypeCode(),
+                        request.contract().contractSubtypeCode()
+                ) : null,
+                request.laborClassification() != null ? new HireEmployeeCommand.HireEmployeeLaborClassificationCommand(
+                        request.laborClassification().agreementCode(),
+                        request.laborClassification().agreementCategoryCode()
+                ) : null,
+                request.costCenterDistribution() != null ? new HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand(
+                        request.costCenterDistribution().items().stream()
+                                .map(item -> new HireEmployeeCommand.HireEmployeeCostCenterItemCommand(
+                                         item.costCenterCode(),
+                                         item.allocationPercentage()
+                                ))
+                                .collect(Collectors.toList())
+                ) : null
         );
+    }
+
+    private String normalizeCode(String value) {
+        return value != null ? value.trim().toUpperCase() : null;
+    }
+
+    private String normalizeEmployeeTypeCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return HireEmployeeDefaultValues.DEFAULT_EMPLOYEE_TYPE_CODE;
+        }
+        return value.trim().toUpperCase();
     }
 
     public HireEmployeeResponse toResponse(HireEmployeeResult result) {
         return new HireEmployeeResponse(
-                result.ruleSystemCode(),
-                result.employeeTypeCode(),
-                result.employeeNumber(),
-                result.firstName(),
-                result.lastName1(),
-                result.lastName2(),
-                result.preferredName(),
-                result.status(),
-                result.hireDate(),
-                new HiredPresenceResponse(
-                        result.presenceNumber(),
-                        result.companyCode(),
-                        result.entryReasonCode(),
-                        result.hireDate()
+                result.employee().ruleSystemCode(),
+                result.employee().employeeTypeCode(),
+                result.employee().employeeNumber(),
+                result.employee().firstName(),
+                result.employee().lastName1(),
+                result.employee().lastName2(),
+                result.employee().preferredName(),
+                result.employee().status(),
+                result.employee().hireDate(),
+                new HireEmployeeResponse.PresenceSummary(
+                        result.presence().presenceNumber(),
+                        result.presence().startDate(),
+                        result.presence().companyCode(),
+                        result.presence().entryReasonCode()
                 ),
-                new HiredLaborClassificationResponse(
-                        result.agreementCode(),
-                        result.agreementCategoryCode(),
-                        result.hireDate()
+                new HireEmployeeResponse.WorkCenterSummary(
+                         result.workCenter().startDate(),
+                         result.workCenter().workCenterCode(),
+                         result.workCenter().workCenterName()
                 ),
-                new HiredContractResponse(
-                        result.contractTypeCode(),
-                        result.contractSubtypeCode(),
-                        result.hireDate()
+                result.costCenter() != null ? new CostCenterDistributionWindowResponse(
+                        result.costCenter().startDate(),
+                        null,
+                        BigDecimal.valueOf(result.costCenter().totalAllocationPercentage()),
+                        result.costCenter().items().stream()
+                                .map(item -> new CostCenterDistributionItemResponse(
+                                        item.costCenterCode(),
+                                        item.costCenterName(),
+                                        BigDecimal.valueOf(item.allocationPercentage())
+                                ))
+                                .collect(Collectors.toList())
+                ) : null,
+                new HireEmployeeResponse.ContractSummary(
+                        result.contract().startDate(),
+                        result.contract().contractTypeCode(),
+                        result.contract().contractSubtypeCode()
                 ),
-                new HiredWorkCenterResponse(
-                        result.workCenterAssignmentNumber(),
-                        result.workCenterCode(),
-                        result.hireDate()
+                new HireEmployeeResponse.LaborClassificationSummary(
+                        result.laborClassification().startDate(),
+                        result.laborClassification().agreementCode(),
+                        result.laborClassification().agreementCategoryCode()
                 )
         );
     }

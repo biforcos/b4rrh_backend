@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record HireEmployeeRequest(
         String ruleSystemCode,
@@ -11,9 +12,19 @@ public record HireEmployeeRequest(
         String lastName2,
         String preferredName,
         LocalDate hireDate,
-        HirePresenceRequest presence,
-        HireLaborClassificationRequest laborClassification,
+        String entryReasonCode,
+        String companyCode,
+        String workCenterCode,
+        HireEmployeeCostCenterDistributionRequest costCenterDistribution,
         HireContractRequest contract,
-        HireWorkCenterRequest workCenter
+        HireLaborClassificationRequest laborClassification
 ) {
+    public record HireEmployeeCostCenterDistributionRequest(
+            List<HireEmployeeCostCenterItemRequest> items
+    ) {}
+
+    public record HireEmployeeCostCenterItemRequest(
+            String costCenterCode,
+            Double allocationPercentage
+    ) {}
 }

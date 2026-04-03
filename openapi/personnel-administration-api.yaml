@@ -25,6 +25,7 @@ paths:
         - in: query
           name: employeeTypeCode
           required: false
+          description: Optional in V1. Defaults to 'EMP' when not provided.
           schema:
             type: string
             maxLength: 30
@@ -52,15 +53,15 @@ paths:
             minimum: 0
           description: Zero-based page index. Defaults to 0.
       responses:
-        '200':
+        "200":
           description: Employee directory list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EmployeeDirectoryItemResponse'
-        '400':
+                  $ref: "#/components/schemas/EmployeeDirectoryItemResponse"
+        "400":
           description: Invalid query parameters
     post:
       operationId: createEmployee
@@ -70,65 +71,51 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateEmployeeRequest'
+              $ref: "#/components/schemas/CreateEmployeeRequest"
       responses:
-        '201':
+        "201":
           description: Employee created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeResponse'
+                $ref: "#/components/schemas/EmployeeResponse"
 
   /employees/hire:
     post:
       operationId: hireEmployee
       summary: Hire employee lifecycle workflow
       description: |
-        Creates employee core and initial presence, labor classification, contract, and work center
+        Business-oriented workflow that creates an employee and their initial lifecycle state.
+        This operation creates the employee core identity, their first presence,
+        initial contract, initial labor classification, and initial work center assignment
         in a single transaction using a single hireDate.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/HireEmployeeRequest'
+              $ref: "#/components/schemas/HireEmployeeRequest"
       responses:
-        '200':
-          description: Idempotent retry resolved to existing equivalent hire state
+        "201":
+          description: Employee hired successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HireEmployeeResponse'
-        '201':
-          description: Employee hired successfully
+                $ref: "#/components/schemas/HireEmployeeResponse"
+        "400":
+          description: Invalid request payload.
+        "404":
+          description: Required catalog dependency not found (rule system, company, etc).
+        "409":
+          description: Employee already exists.
+        "422":
+          description: Business validation failed (invalid catalog relation or distribution).
+        default:
+          description: Internal error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HireEmployeeResponse'
-        '400':
-          description: Invalid request payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HireEmployeeErrorResponse'
-        '404':
-          description: Required rule system or employee dependency not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HireEmployeeErrorResponse'
-        '409':
-          description: Functional conflict (existing employee state is not equivalent or is inconsistent)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HireEmployeeErrorResponse'
-        '422':
-          description: Business validation failed (invalid catalog value or dependent relation)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HireEmployeeErrorResponse'
+                $ref: "#/components/schemas/HireEmployeeErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/terminate:
     post:
@@ -161,38 +148,38 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TerminateEmployeeRequest'
+              $ref: "#/components/schemas/TerminateEmployeeRequest"
       responses:
-        '200':
+        "200":
           description: Employee terminated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminateEmployeeResponse'
-        '400':
+                $ref: "#/components/schemas/TerminateEmployeeResponse"
+        "400":
           description: Invalid request payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
-        '404':
+                $ref: "#/components/schemas/TerminateEmployeeErrorResponse"
+        "404":
           description: Rule system, employee, or required dependency not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
-        '409':
+                $ref: "#/components/schemas/TerminateEmployeeErrorResponse"
+        "409":
           description: Functional conflict (inconsistent active occurrences or invalid temporal coherence)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
-        '422':
+                $ref: "#/components/schemas/TerminateEmployeeErrorResponse"
+        "422":
           description: Business validation failed (for example invalid exitReasonCode)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminateEmployeeErrorResponse'
+                $ref: "#/components/schemas/TerminateEmployeeErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/rehire:
     post:
@@ -226,44 +213,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RehireEmployeeRequest'
+              $ref: "#/components/schemas/RehireEmployeeRequest"
       responses:
-        '201':
+        "201":
           description: Employee rehired and new active cycle created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeResponse'
-        '200':
+                $ref: "#/components/schemas/RehireEmployeeResponse"
+        "200":
           description: Idempotent replay resolved to existing equivalent active cycle
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeResponse'
-        '400':
+                $ref: "#/components/schemas/RehireEmployeeResponse"
+        "400":
           description: Invalid request payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
-        '404':
+                $ref: "#/components/schemas/RehireEmployeeErrorResponse"
+        "404":
           description: Rule system, employee, or required dependency not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
-        '409':
+                $ref: "#/components/schemas/RehireEmployeeErrorResponse"
+        "409":
           description: Functional conflict (active lifecycle not equivalent or invalid temporal coherence)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
-        '422':
+                $ref: "#/components/schemas/RehireEmployeeErrorResponse"
+        "422":
           description: Business validation failed (invalid catalog value or dependent relation)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RehireEmployeeErrorResponse'
+                $ref: "#/components/schemas/RehireEmployeeErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}:
     get:
@@ -289,13 +276,13 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Employee found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeResponse'
-        '404':
+                $ref: "#/components/schemas/EmployeeResponse"
+        "404":
           description: Rule system or employee not found
     put:
       operationId: updateEmployeeByBusinessKey
@@ -324,17 +311,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateEmployeeRequest'
+              $ref: "#/components/schemas/UpdateEmployeeRequest"
       responses:
-        '200':
+        "200":
           description: Employee updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeResponse'
-        '400':
+                $ref: "#/components/schemas/EmployeeResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey:
@@ -364,24 +351,24 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Frontend-friendly aggregated journey timeline
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeJourneyTracksResponse'
-        '400':
+                $ref: "#/components/schemas/EmployeeJourneyTracksResponse"
+        "400":
           description: Invalid business key input
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JourneyErrorResponse'
-        '404':
+                $ref: "#/components/schemas/JourneyErrorResponse"
+        "404":
           description: Employee not found for journey read model
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JourneyErrorResponse'
+                $ref: "#/components/schemas/JourneyErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey-v2:
     get:
@@ -410,24 +397,24 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Event-based employee journey timeline
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeJourneyResponse'
-        '400':
+                $ref: "#/components/schemas/EmployeeJourneyResponse"
+        "400":
           description: Invalid business key input
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JourneyErrorResponse'
-        '404':
+                $ref: "#/components/schemas/JourneyErrorResponse"
+        "404":
           description: Employee not found for journey read model
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JourneyErrorResponse'
+                $ref: "#/components/schemas/JourneyErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences:
     post:
@@ -457,19 +444,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreatePresenceRequest'
+              $ref: "#/components/schemas/CreatePresenceRequest"
       responses:
-        '201':
+        "201":
           description: Presence created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
-        '400':
+                $ref: "#/components/schemas/PresenceResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or catalog not found
-        '409':
+        "409":
           description: Presence business conflict
     get:
       operationId: listEmployeePresencesByBusinessKey
@@ -494,15 +481,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Presence list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PresenceResponse'
-        '404':
+                  $ref: "#/components/schemas/PresenceResponse"
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}:
@@ -535,13 +522,13 @@ paths:
             type: integer
             format: int32
       responses:
-        '200':
+        "200":
           description: Presence found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
-        '404':
+                $ref: "#/components/schemas/PresenceResponse"
+        "404":
           description: Rule system, employee, or presence not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/presences/{presenceNumber}/close:
@@ -578,19 +565,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClosePresenceRequest'
+              $ref: "#/components/schemas/ClosePresenceRequest"
       responses:
-        '200':
+        "200":
           description: Presence closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresenceResponse'
-        '400':
+                $ref: "#/components/schemas/PresenceResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or presence not found
-        '409':
+        "409":
           description: Presence already closed
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses:
@@ -621,19 +608,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAddressRequest'
+              $ref: "#/components/schemas/CreateAddressRequest"
       responses:
-        '201':
+        "201":
           description: Address created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddressResponse'
-        '400':
+                $ref: "#/components/schemas/AddressResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or catalog not found
-        '409':
+        "409":
           description: Address period overlaps for the same employee and address type
     get:
       operationId: listEmployeeAddressesByBusinessKey
@@ -658,15 +645,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Address list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AddressResponse'
-        '404':
+                  $ref: "#/components/schemas/AddressResponse"
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}:
@@ -699,13 +686,13 @@ paths:
             type: integer
             format: int32
       responses:
-        '200':
+        "200":
           description: Address found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddressResponse'
-        '404':
+                $ref: "#/components/schemas/AddressResponse"
+        "404":
           description: Rule system, employee, or address not found
     put:
       operationId: updateAddressByBusinessKey
@@ -745,19 +732,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateAddressRequest'
+              $ref: "#/components/schemas/UpdateAddressRequest"
       responses:
-        '200':
+        "200":
           description: Address corrected
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddressResponse'
-        '400':
+                $ref: "#/components/schemas/AddressResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or address not found
-        '409':
+        "409":
           description: Domain conflict if correction is invalid
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
@@ -794,19 +781,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseAddressRequest'
+              $ref: "#/components/schemas/CloseAddressRequest"
       responses:
-        '200':
+        "200":
           description: Address closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddressResponse'
-        '400':
+                $ref: "#/components/schemas/AddressResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or address not found
-        '409':
+        "409":
           description: Address already closed
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers:
@@ -837,19 +824,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateWorkCenterRequest'
+              $ref: "#/components/schemas/CreateWorkCenterRequest"
       responses:
-        '201':
+        "201":
           description: Work center assignment created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkCenterResponse'
-        '400':
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or catalog not found
-        '409':
+        "409":
           description: >-
             The requested period overlaps an existing work center assignment for this employee,
             or the period [startDate, endDate] is not fully contained within any of the
@@ -877,15 +864,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Work center assignment list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/WorkCenterResponse'
-        '404':
+                  $ref: "#/components/schemas/WorkCenterResponse"
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}:
@@ -918,13 +905,13 @@ paths:
             type: integer
             format: int32
       responses:
-        '200':
+        "200":
           description: Work center assignment found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkCenterResponse'
-        '404':
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "404":
           description: Rule system, employee, or work center assignment not found
     put:
       operationId: updateWorkCenterByBusinessKey
@@ -963,19 +950,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateWorkCenterRequest'
+              $ref: "#/components/schemas/UpdateWorkCenterRequest"
       responses:
-        '200':
+        "200":
           description: Work center assignment corrected
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkCenterResponse'
-        '400':
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or work center assignment not found
-        '409':
+        "409":
           description: >-
             Work center assignment correction conflicts with temporal rules.
             Resulting period overlaps another assignment for this employee,
@@ -1016,11 +1003,11 @@ paths:
             type: integer
             format: int32
       responses:
-        '204':
+        "204":
           description: Work center assignment deleted
-        '404':
+        "404":
           description: Rule system, employee, or work center assignment not found
-        '409':
+        "409":
           description: >-
             Deletion is not allowed because the assignment startDate matches the startDate of
             an employee presence. The occurrence must be corrected instead of deleted.
@@ -1059,19 +1046,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseWorkCenterRequest'
+              $ref: "#/components/schemas/CloseWorkCenterRequest"
       responses:
-        '200':
+        "200":
           description: Work center assignment closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkCenterResponse'
-        '400':
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or work center assignment not found
-        '409':
+        "409":
           description: >-
             The work center assignment is already closed, or the resulting closed period
             is not fully contained within any of the employee's active presence periods.
@@ -1104,13 +1091,13 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Distribution history
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterDistributionHistoryResponse'
-        '404':
+                $ref: "#/components/schemas/CostCenterDistributionHistoryResponse"
+        "404":
           description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/current:
@@ -1141,13 +1128,13 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Current distribution
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterCurrentDistributionResponse'
-        '404':
+                $ref: "#/components/schemas/CostCenterCurrentDistributionResponse"
+        "404":
           description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions:
@@ -1183,19 +1170,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCostCenterDistributionRequest'
+              $ref: "#/components/schemas/CreateCostCenterDistributionRequest"
       responses:
-        '201':
+        "201":
           description: Distribution window created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
-        '400':
+                $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
+        "400":
           description: Invalid request (invalid item, sum > 100, missing fields)
-        '404':
+        "404":
           description: Employee or catalog value not found
-        '409':
+        "409":
           description: An active distribution window already exists at startDate, or period is outside presence
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/replace-from-date:
@@ -1231,19 +1218,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReplaceCostCenterDistributionFromDateRequest'
+              $ref: "#/components/schemas/ReplaceCostCenterDistributionFromDateRequest"
       responses:
-        '200':
+        "200":
           description: New distribution window created, previous window closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
-        '400':
+                $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee, catalog value, or active window not found
-        '409':
+        "409":
           description: Period is outside presence
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close:
@@ -1284,19 +1271,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseCostCenterDistributionRequest'
+              $ref: "#/components/schemas/CloseCostCenterDistributionRequest"
       responses:
-        '200':
+        "200":
           description: Distribution window closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
-        '400':
+                $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or distribution window not found
-        '409':
+        "409":
           description: Resulting period is outside employee presence history
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
@@ -1327,19 +1314,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateContractRequest'
+              $ref: "#/components/schemas/CreateContractRequest"
       responses:
-        '201':
+        "201":
           description: Contract created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContractResponse'
-        '400':
+                $ref: "#/components/schemas/ContractResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or catalog values not found
-        '409':
+        "409":
           description: >-
             Contract period overlaps, is outside employee presence history,
             or results in incomplete presence coverage.
@@ -1366,15 +1353,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Contract list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ContractResponse'
-        '404':
+                  $ref: "#/components/schemas/ContractResponse"
+        "404":
           description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/replace-from-date:
@@ -1405,19 +1392,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReplaceContractFromDateRequest'
+              $ref: "#/components/schemas/ReplaceContractFromDateRequest"
       responses:
-        '200':
+        "200":
           description: Contract replaced from effective date
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContractResponse'
-        '400':
+                $ref: "#/components/schemas/ContractResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee not found
-        '409':
+        "409":
           description: >-
             Replacement results in an invalid timeline
             (overlap, outside presence, incomplete coverage, or impossible transition).
@@ -1452,13 +1439,13 @@ paths:
             type: string
             format: date
       responses:
-        '200':
+        "200":
           description: Contract found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContractResponse'
-        '404':
+                $ref: "#/components/schemas/ContractResponse"
+        "404":
           description: Employee or contract not found
     put:
       operationId: updateContractByBusinessKey
@@ -1493,19 +1480,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateContractRequest'
+              $ref: "#/components/schemas/UpdateContractRequest"
       responses:
-        '200':
+        "200":
           description: Contract updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContractResponse'
-        '400':
+                $ref: "#/components/schemas/ContractResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or contract not found
-        '409':
+        "409":
           description: >-
             Contract is already closed,
             or the resulting timeline is invalid (overlap, outside presence, incomplete coverage).
@@ -1544,19 +1531,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseContractRequest'
+              $ref: "#/components/schemas/CloseContractRequest"
       responses:
-        '200':
+        "200":
           description: Contract closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContractResponse'
-        '400':
+                $ref: "#/components/schemas/ContractResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or contract not found
-        '409':
+        "409":
           description: >-
             Contract is already closed,
             or closing creates timeline inconsistencies with employee presence.
@@ -1589,19 +1576,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLaborClassificationRequest'
+              $ref: "#/components/schemas/CreateLaborClassificationRequest"
       responses:
-        '201':
+        "201":
           description: Labor classification created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LaborClassificationResponse'
-        '400':
+                $ref: "#/components/schemas/LaborClassificationResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or catalog values not found
-        '409':
+        "409":
           description: >-
             Labor classification period overlaps, is outside employee presence history,
             or results in incomplete presence coverage.
@@ -1628,15 +1615,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Labor classification list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LaborClassificationResponse'
-        '404':
+                  $ref: "#/components/schemas/LaborClassificationResponse"
+        "404":
           description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/replace-from-date:
@@ -1667,19 +1654,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReplaceLaborClassificationFromDateRequest'
+              $ref: "#/components/schemas/ReplaceLaborClassificationFromDateRequest"
       responses:
-        '200':
+        "200":
           description: Labor classification replaced from effective date
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LaborClassificationResponse'
-        '400':
+                $ref: "#/components/schemas/LaborClassificationResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee not found
-        '409':
+        "409":
           description: >-
             Replacement results in an invalid timeline
             (overlap, outside presence, incomplete coverage, or impossible transition).
@@ -1714,13 +1701,13 @@ paths:
             type: string
             format: date
       responses:
-        '200':
+        "200":
           description: Labor classification found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LaborClassificationResponse'
-        '404':
+                $ref: "#/components/schemas/LaborClassificationResponse"
+        "404":
           description: Employee or labor classification not found
     put:
       operationId: updateLaborClassificationByBusinessKey
@@ -1755,19 +1742,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateLaborClassificationRequest'
+              $ref: "#/components/schemas/UpdateLaborClassificationRequest"
       responses:
-        '200':
+        "200":
           description: Labor classification updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LaborClassificationResponse'
-        '400':
+                $ref: "#/components/schemas/LaborClassificationResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or labor classification not found
-        '409':
+        "409":
           description: >-
             Labor classification is already closed,
             or the resulting timeline is invalid (overlap, outside presence, incomplete coverage).
@@ -1806,19 +1793,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseLaborClassificationRequest'
+              $ref: "#/components/schemas/CloseLaborClassificationRequest"
       responses:
-        '200':
+        "200":
           description: Labor classification closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LaborClassificationResponse'
-        '400':
+                $ref: "#/components/schemas/LaborClassificationResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Employee or labor classification not found
-        '409':
+        "409":
           description: >-
             Labor classification is already closed,
             or closing creates timeline inconsistencies with employee presence.
@@ -1851,19 +1838,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateIdentifierRequest'
+              $ref: "#/components/schemas/CreateIdentifierRequest"
       responses:
-        '201':
+        "201":
           description: Identifier created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IdentifierResponse'
-        '400':
+                $ref: "#/components/schemas/IdentifierResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or catalog not found
-        '409':
+        "409":
           description: Identifier already exists for type or primary conflict
     get:
       operationId: listEmployeeIdentifiersByBusinessKey
@@ -1888,15 +1875,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Identifier list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/IdentifierResponse'
-        '404':
+                  $ref: "#/components/schemas/IdentifierResponse"
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers/{identifierTypeCode}:
@@ -1929,13 +1916,13 @@ paths:
             type: string
             maxLength: 30
       responses:
-        '200':
+        "200":
           description: Identifier found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IdentifierResponse'
-        '404':
+                $ref: "#/components/schemas/IdentifierResponse"
+        "404":
           description: Rule system, employee, or identifier not found
     put:
       operationId: updateIdentifierByBusinessKey
@@ -1970,19 +1957,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateIdentifierRequest'
+              $ref: "#/components/schemas/UpdateIdentifierRequest"
       responses:
-        '200':
+        "200":
           description: Identifier updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IdentifierResponse'
-        '400':
+                $ref: "#/components/schemas/IdentifierResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, catalog, or identifier not found
-        '409':
+        "409":
           description: Primary identifier conflict
     delete:
       operationId: deleteIdentifierByBusinessKey
@@ -2013,9 +2000,9 @@ paths:
             type: string
             maxLength: 30
       responses:
-        '204':
+        "204":
           description: Identifier deleted
-        '404':
+        "404":
           description: Rule system, employee, or identifier not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts:
@@ -2046,19 +2033,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateContactRequest'
+              $ref: "#/components/schemas/CreateContactRequest"
       responses:
-        '201':
+        "201":
           description: Contact created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContactResponse'
-        '400':
+                $ref: "#/components/schemas/ContactResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, or catalog not found
-        '409':
+        "409":
           description: Contact already exists for employee and contact type
     get:
       operationId: listEmployeeContactsByBusinessKey
@@ -2083,15 +2070,15 @@ paths:
             type: string
             maxLength: 15
       responses:
-        '200':
+        "200":
           description: Contact list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ContactResponse'
-        '404':
+                  $ref: "#/components/schemas/ContactResponse"
+        "404":
           description: Rule system or employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contacts/{contactTypeCode}:
@@ -2124,13 +2111,13 @@ paths:
             type: string
             maxLength: 30
       responses:
-        '200':
+        "200":
           description: Contact found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContactResponse'
-        '404':
+                $ref: "#/components/schemas/ContactResponse"
+        "404":
           description: Rule system, employee, or contact not found
     put:
       operationId: updateContactByBusinessKey
@@ -2165,17 +2152,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateContactRequest'
+              $ref: "#/components/schemas/UpdateContactRequest"
       responses:
-        '200':
+        "200":
           description: Contact updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContactResponse'
-        '400':
+                $ref: "#/components/schemas/ContactResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system, employee, catalog, or contact not found
     delete:
       operationId: deleteContactByBusinessKey
@@ -2206,9 +2193,9 @@ paths:
             type: string
             maxLength: 30
       responses:
-        '204':
+        "204":
           description: Contact deleted
-        '404':
+        "404":
           description: Rule system, employee, or contact not found
 
   /rule-systems:
@@ -2220,26 +2207,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleSystemRequest'
+              $ref: "#/components/schemas/CreateRuleSystemRequest"
       responses:
-        '201':
+        "201":
           description: Rule system created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleSystemResponse'
+                $ref: "#/components/schemas/RuleSystemResponse"
     get:
       operationId: listRuleSystems
       summary: List rule systems
       responses:
-        '200':
+        "200":
           description: Rule systems list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RuleSystemResponse'
+                  $ref: "#/components/schemas/RuleSystemResponse"
 
   /rule-entity-types:
     post:
@@ -2250,26 +2237,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleEntityTypeRequest'
+              $ref: "#/components/schemas/CreateRuleEntityTypeRequest"
       responses:
-        '201':
+        "201":
           description: Rule entity type created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityTypeResponse'
+                $ref: "#/components/schemas/RuleEntityTypeResponse"
     get:
       operationId: listRuleEntityTypes
       summary: List rule entity types
       responses:
-        '200':
+        "200":
           description: Rule entity types list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RuleEntityTypeResponse'
+                  $ref: "#/components/schemas/RuleEntityTypeResponse"
 
   /rule-entity-types/{ruleEntityTypeCode}:
     get:
@@ -2283,13 +2270,13 @@ paths:
             type: string
             maxLength: 30
       responses:
-        '200':
+        "200":
           description: Rule entity type found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityTypeResponse'
-        '404':
+                $ref: "#/components/schemas/RuleEntityTypeResponse"
+        "404":
           description: Rule entity type not found
 
   /rule-entities:
@@ -2301,14 +2288,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleEntityRequest'
+              $ref: "#/components/schemas/CreateRuleEntityRequest"
       responses:
-        '201':
+        "201":
           description: Rule entity created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityResponse'
+                $ref: "#/components/schemas/RuleEntityResponse"
     get:
       operationId: listRuleEntities
       summary: List or retrieve rule entities by business filters
@@ -2350,14 +2337,14 @@ paths:
             format: date
           description: Optional date used to return only occurrences valid on that day.
       responses:
-        '200':
+        "200":
           description: Rule entities list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RuleEntityResponse'
+                  $ref: "#/components/schemas/RuleEntityResponse"
 
   /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}:
     get:
@@ -2390,13 +2377,13 @@ paths:
             type: string
             format: date
       responses:
-        '200':
+        "200":
           description: Rule entity occurrence found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityResponse'
-        '404':
+                $ref: "#/components/schemas/RuleEntityResponse"
+        "404":
           description: Rule entity occurrence not found
     put:
       operationId: correctRuleEntityByBusinessKey
@@ -2435,19 +2422,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CorrectRuleEntityRequest'
+              $ref: "#/components/schemas/CorrectRuleEntityRequest"
       responses:
-        '200':
+        "200":
           description: Rule entity occurrence corrected
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityResponse'
-        '400':
+                $ref: "#/components/schemas/RuleEntityResponse"
+        "400":
           description: Invalid request payload
-        '404':
+        "404":
           description: Rule entity occurrence not found
-        '409':
+        "409":
           description: Domain conflict while correcting the occurrence
     delete:
       operationId: deleteRuleEntityByBusinessKey
@@ -2481,11 +2468,11 @@ paths:
             type: string
             format: date
       responses:
-        '204':
+        "204":
           description: Rule entity deleted
-        '404':
+        "404":
           description: Rule entity not found
-        '409':
+        "409":
           description: Rule entity is in use and cannot be deleted
 
   /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}/close:
@@ -2525,19 +2512,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloseRuleEntityRequest'
+              $ref: "#/components/schemas/CloseRuleEntityRequest"
       responses:
-        '200':
+        "200":
           description: Rule entity occurrence closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleEntityResponse'
-        '400':
+                $ref: "#/components/schemas/RuleEntityResponse"
+        "400":
           description: Invalid request payload
-        '404':
+        "404":
           description: Rule entity occurrence not found
-        '409':
+        "409":
           description: Domain conflict while closing the occurrence
 
   /labor-classification-catalog/agreement-categories:
@@ -2565,15 +2552,15 @@ paths:
             format: date
           description: Optional date used to return only categories valid for that day.
       responses:
-        '200':
+        "200":
           description: Agreement category catalog list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AgreementCategoryCatalogItemResponse'
-        '400':
+                  $ref: "#/components/schemas/AgreementCategoryCatalogItemResponse"
+        "400":
           description: Invalid request
 
   /contract-catalog/contract-subtypes:
@@ -2601,15 +2588,15 @@ paths:
             format: date
           description: Optional date used to return only subtypes valid for that day.
       responses:
-        '200':
+        "200":
           description: Contract subtype catalog list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ContractSubtypeCatalogItemResponse'
-        '400':
+                  $ref: "#/components/schemas/ContractSubtypeCatalogItemResponse"
+        "400":
           description: Invalid request
 
   /catalog-bindings/{resourceCode}:
@@ -2624,13 +2611,13 @@ paths:
             type: string
             maxLength: 80
       responses:
-        '200':
+        "200":
           description: Catalog bindings for the requested resource
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CatalogBindingsByResourceResponse'
-        '400':
+                $ref: "#/components/schemas/CatalogBindingsByResourceResponse"
+        "400":
           description: Invalid resource code
 
   /catalog-options/direct:
@@ -2671,13 +2658,13 @@ paths:
             maxLength: 100
           description: Optional case-insensitive search by option code or name.
       responses:
-        '200':
+        "200":
           description: Direct catalog options
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DirectCatalogOptionsResponse'
-        '400':
+                $ref: "#/components/schemas/DirectCatalogOptionsResponse"
+        "400":
           description: Invalid request
 
   /rule-systems/{ruleSystemCode}:
@@ -2692,13 +2679,13 @@ paths:
             type: string
             maxLength: 5
       responses:
-        '200':
+        "200":
           description: Rule system found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleSystemResponse'
-        '404':
+                $ref: "#/components/schemas/RuleSystemResponse"
+        "404":
           description: Rule system not found
     put:
       operationId: updateRuleSystemByCode
@@ -2722,17 +2709,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRuleSystemRequest'
+              $ref: "#/components/schemas/UpdateRuleSystemRequest"
       responses:
-        '200':
+        "200":
           description: Rule system updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleSystemResponse'
-        '400':
+                $ref: "#/components/schemas/RuleSystemResponse"
+        "400":
           description: Invalid request
-        '404':
+        "404":
           description: Rule system not found
 
 components:
@@ -2741,15 +2728,15 @@ components:
       type: object
       required:
         - ruleSystemCode
-        - employeeTypeCode
         - employeeNumber
         - firstName
         - lastName1
         - hireDate
-        - presence
-        - laborClassification
+        - entryReasonCode
+        - companyCode
+        - workCenterCode
         - contract
-        - workCenter
+        - laborClassification
       properties:
         ruleSystemCode:
           type: string
@@ -2757,6 +2744,7 @@ components:
         employeeTypeCode:
           type: string
           maxLength: 30
+          description: Optional in V1. Defaults to 'EMP' when not provided.
         employeeNumber:
           type: string
           maxLength: 15
@@ -2777,27 +2765,32 @@ components:
         hireDate:
           type: string
           format: date
-        presence:
-          $ref: '#/components/schemas/HirePresenceRequest'
-        laborClassification:
-          $ref: '#/components/schemas/HireLaborClassificationRequest'
-        contract:
-          $ref: '#/components/schemas/HireContractRequest'
-        workCenter:
-          $ref: '#/components/schemas/HireWorkCenterRequest'
-
-    HirePresenceRequest:
-      type: object
-      required:
-        - companyCode
-        - entryReasonCode
-      properties:
-        companyCode:
-          type: string
-          maxLength: 30
         entryReasonCode:
           type: string
           maxLength: 30
+        companyCode:
+          type: string
+          maxLength: 30
+        workCenterCode:
+          type: string
+          maxLength: 30
+        costCenterDistribution:
+          $ref: "#/components/schemas/CreateCostCenterDistributionInWorkflowRequest"
+        contract:
+          $ref: "#/components/schemas/HireContractRequest"
+        laborClassification:
+          $ref: "#/components/schemas/HireLaborClassificationRequest"
+
+    CreateCostCenterDistributionInWorkflowRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CostCenterDistributionItemRequest"
 
     HireLaborClassificationRequest:
       type: object
@@ -2824,68 +2817,97 @@ components:
         contractSubtypeCode:
           type: string
           maxLength: 30
-
-    HireWorkCenterRequest:
-      type: object
-      required:
-        - workCenterCode
-      properties:
-        workCenterCode:
-          type: string
-          maxLength: 30
+          nullable: true
 
     HireEmployeeResponse:
       type: object
       required:
-        - ruleSystemCode
-        - employeeTypeCode
-        - employeeNumber
-        - firstName
-        - lastName1
-        - status
-        - hireDate
-        - initialPresence
-        - initialLaborClassification
-        - initialContract
-        - initialWorkCenter
+        - employee
+        - presence
+        - workCenter
+        - contract
+        - laborClassification
       properties:
-        ruleSystemCode:
-          type: string
-          maxLength: 5
-        employeeTypeCode:
-          type: string
-          maxLength: 30
-        employeeNumber:
-          type: string
-          maxLength: 15
-        firstName:
-          type: string
-          maxLength: 100
-        lastName1:
-          type: string
-          maxLength: 100
-        lastName2:
-          type: string
-          maxLength: 100
-          nullable: true
-        preferredName:
-          type: string
-          maxLength: 300
-          nullable: true
-        status:
-          type: string
-          maxLength: 30
-        hireDate:
-          type: string
-          format: date
-        initialPresence:
-          $ref: '#/components/schemas/HiredPresenceResponse'
-        initialLaborClassification:
-          $ref: '#/components/schemas/HiredLaborClassificationResponse'
-        initialContract:
-          $ref: '#/components/schemas/HiredContractResponse'
-        initialWorkCenter:
-          $ref: '#/components/schemas/HiredWorkCenterResponse'
+        employee:
+          type: object
+          required:
+            - ruleSystemCode
+            - employeeTypeCode
+            - employeeNumber
+            - displayName
+            - status
+          properties:
+            ruleSystemCode:
+              type: string
+            employeeTypeCode:
+              type: string
+            employeeNumber:
+              type: string
+            displayName:
+              type: string
+            status:
+              type: string
+        presence:
+          type: object
+          required:
+            - presenceNumber
+            - startDate
+            - companyCode
+            - entryReasonCode
+          properties:
+            presenceNumber:
+              type: integer
+            startDate:
+              type: string
+              format: date
+            companyCode:
+              type: string
+            entryReasonCode:
+              type: string
+        workCenter:
+          type: object
+          required:
+            - startDate
+            - workCenterCode
+          properties:
+            startDate:
+              type: string
+              format: date
+            workCenterCode:
+              type: string
+            workCenterName:
+              type: string
+              nullable: true
+        costCenter:
+          $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
+        contract:
+          type: object
+          required:
+            - startDate
+            - contractTypeCode
+            - contractSubtypeCode
+          properties:
+            startDate:
+              type: string
+              format: date
+            contractTypeCode:
+              type: string
+            contractSubtypeCode:
+              type: string
+        laborClassification:
+          type: object
+          required:
+            - startDate
+            - agreementCode
+            - agreementCategoryCode
+          properties:
+            startDate:
+              type: string
+              format: date
+            agreementCode:
+              type: string
+            agreementCategoryCode:
+              type: string
 
     HiredPresenceResponse:
       type: object
@@ -2994,11 +3016,11 @@ components:
           type: string
           maxLength: 30
         laborClassification:
-          $ref: '#/components/schemas/RehireLaborClassificationRequest'
+          $ref: "#/components/schemas/RehireLaborClassificationRequest"
         contract:
-          $ref: '#/components/schemas/RehireContractRequest'
+          $ref: "#/components/schemas/RehireContractRequest"
         workCenter:
-          $ref: '#/components/schemas/RehireWorkCenterRequest'
+          $ref: "#/components/schemas/RehireWorkCenterRequest"
 
     RehireLaborClassificationRequest:
       type: object
@@ -3064,13 +3086,13 @@ components:
           type: string
           maxLength: 30
         newPresence:
-          $ref: '#/components/schemas/RehiredPresenceResponse'
+          $ref: "#/components/schemas/RehiredPresenceResponse"
         newContract:
-          $ref: '#/components/schemas/RehiredContractResponse'
+          $ref: "#/components/schemas/RehiredContractResponse"
         newLaborClassification:
-          $ref: '#/components/schemas/RehiredLaborClassificationResponse'
+          $ref: "#/components/schemas/RehiredLaborClassificationResponse"
         newWorkCenter:
-          $ref: '#/components/schemas/RehiredWorkCenterResponse'
+          $ref: "#/components/schemas/RehiredWorkCenterResponse"
 
     RehiredPresenceResponse:
       type: object
@@ -3205,13 +3227,13 @@ components:
           type: string
           maxLength: 30
         closedPresence:
-          $ref: '#/components/schemas/ClosedPresenceResponse'
+          $ref: "#/components/schemas/ClosedPresenceResponse"
         closedContract:
-          $ref: '#/components/schemas/ClosedContractResponse'
+          $ref: "#/components/schemas/ClosedContractResponse"
         closedLaborClassification:
-          $ref: '#/components/schemas/ClosedLaborClassificationResponse'
+          $ref: "#/components/schemas/ClosedLaborClassificationResponse"
         closedWorkCenter:
-          $ref: '#/components/schemas/ClosedWorkCenterResponse'
+          $ref: "#/components/schemas/ClosedWorkCenterResponse"
 
     ClosedPresenceResponse:
       type: object
@@ -3444,11 +3466,11 @@ components:
         - tracks
       properties:
         employee:
-          $ref: '#/components/schemas/JourneyEmployeeHeader'
+          $ref: "#/components/schemas/JourneyEmployeeHeader"
         tracks:
           type: array
           items:
-            $ref: '#/components/schemas/JourneyTrackResponse'
+            $ref: "#/components/schemas/JourneyTrackResponse"
 
     EmployeeJourneyResponse:
       type: object
@@ -3457,11 +3479,11 @@ components:
         - events
       properties:
         employee:
-          $ref: '#/components/schemas/JourneyEmployeeHeader'
+          $ref: "#/components/schemas/JourneyEmployeeHeader"
         events:
           type: array
           items:
-            $ref: '#/components/schemas/JourneyEventResponse'
+            $ref: "#/components/schemas/JourneyEventResponse"
 
     JourneyEmployeeHeader:
       type: object
@@ -3498,7 +3520,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/JourneyItemResponse'
+            $ref: "#/components/schemas/JourneyItemResponse"
 
     JourneyItemResponse:
       type: object
@@ -3535,16 +3557,16 @@ components:
           type: string
           format: date
         eventType:
-          $ref: '#/components/schemas/JourneyEventType'
+          $ref: "#/components/schemas/JourneyEventType"
         trackCode:
-          $ref: '#/components/schemas/JourneyTrackCode'
+          $ref: "#/components/schemas/JourneyTrackCode"
         title:
           type: string
         subtitle:
           type: string
           nullable: true
         status:
-          $ref: '#/components/schemas/JourneyEventStatus'
+          $ref: "#/components/schemas/JourneyEventStatus"
         isCurrent:
           type: boolean
         details:
@@ -3892,7 +3914,7 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/CostCenterDistributionItemRequest'
+            $ref: "#/components/schemas/CostCenterDistributionItemRequest"
     ReplaceCostCenterDistributionFromDateRequest:
       type: object
       additionalProperties: false
@@ -3910,7 +3932,7 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/CostCenterDistributionItemRequest'
+            $ref: "#/components/schemas/CostCenterDistributionItemRequest"
     CloseCostCenterDistributionRequest:
       type: object
       additionalProperties: false
@@ -3956,7 +3978,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/CostCenterDistributionItemResponse'
+            $ref: "#/components/schemas/CostCenterDistributionItemResponse"
     CostCenterEmployeeKeyResponse:
       type: object
       required:
@@ -3976,9 +3998,9 @@ components:
         - employee
       properties:
         employee:
-          $ref: '#/components/schemas/CostCenterEmployeeKeyResponse'
+          $ref: "#/components/schemas/CostCenterEmployeeKeyResponse"
         currentDistribution:
-          $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
+          $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
           nullable: true
           description: Null if no active distribution exists today.
     CostCenterDistributionHistoryResponse:
@@ -3988,12 +4010,12 @@ components:
         - windows
       properties:
         employee:
-          $ref: '#/components/schemas/CostCenterEmployeeKeyResponse'
+          $ref: "#/components/schemas/CostCenterEmployeeKeyResponse"
         windows:
           type: array
           description: Distribution windows ordered by startDate ascending.
           items:
-            $ref: '#/components/schemas/CostCenterDistributionWindowResponse'
+            $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
     CreateContractRequest:
       type: object
       additionalProperties: false
@@ -4387,7 +4409,7 @@ components:
         fields:
           type: array
           items:
-            $ref: '#/components/schemas/CatalogFieldBindingResponse'
+            $ref: "#/components/schemas/CatalogFieldBindingResponse"
     DirectCatalogOptionResponse:
       type: object
       required:
@@ -4432,7 +4454,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/DirectCatalogOptionResponse'
+            $ref: "#/components/schemas/DirectCatalogOptionResponse"
     CreateRuleSystemRequest:
       type: object
       required:

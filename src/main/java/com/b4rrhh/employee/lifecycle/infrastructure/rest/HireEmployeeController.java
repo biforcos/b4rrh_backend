@@ -31,7 +31,6 @@ public class HireEmployeeController {
     public ResponseEntity<HireEmployeeResponse> hire(@RequestBody HireEmployeeRequest request) {
         HireEmployeeCommand command = webMapper.toCommand(request);
         HireEmployeeResult result = hireEmployeeUseCase.hire(command);
-        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
-        return ResponseEntity.status(status).body(webMapper.toResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(webMapper.toResponse(result));
     }
 }

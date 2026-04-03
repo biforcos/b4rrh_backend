@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.application.command;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record HireEmployeeCommand(
         String ruleSystemCode,
@@ -11,12 +12,29 @@ public record HireEmployeeCommand(
         String lastName2,
         String preferredName,
         LocalDate hireDate,
-        String companyCode,
         String entryReasonCode,
-        String agreementCode,
-        String agreementCategoryCode,
-        String contractTypeCode,
-        String contractSubtypeCode,
-        String workCenterCode
+        String companyCode,
+        String workCenterCode,
+        HireEmployeeContractCommand contract,
+        HireEmployeeLaborClassificationCommand laborClassification,
+        HireEmployeeCostCenterDistributionCommand costCenterDistribution
 ) {
+    public record HireEmployeeContractCommand(
+            String contractTypeCode,
+            String contractSubtypeCode
+    ) {}
+
+    public record HireEmployeeLaborClassificationCommand(
+            String agreementCode,
+            String agreementCategoryCode
+    ) {}
+
+    public record HireEmployeeCostCenterDistributionCommand(
+            List<HireEmployeeCostCenterItemCommand> items
+    ) {}
+
+    public record HireEmployeeCostCenterItemCommand(
+            String costCenterCode,
+            Double allocationPercentage
+    ) {}
 }

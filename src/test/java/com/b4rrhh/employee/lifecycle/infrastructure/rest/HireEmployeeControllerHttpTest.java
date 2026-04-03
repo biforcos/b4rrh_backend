@@ -43,43 +43,30 @@ class HireEmployeeControllerHttpTest {
 
     @Test
     void hireReturnsCreatedWithBusinessKeysAndInitialSections() throws Exception {
+        LocalDate hireDate = LocalDate.of(2026, 3, 23);
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
                 .thenReturn(new HireEmployeeResult(
-                        "ESP",
-                        "INTERNAL",
-                        "EMP001",
-                        "Ana",
-                        "Lopez",
+                        new HireEmployeeResult.EmployeeSummary("ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "Ana Lopez", "ACTIVE", hireDate),
+                        new HireEmployeeResult.PresenceSummary(1, hireDate, "COMP", "HIRE"),
+                        new HireEmployeeResult.WorkCenterSummary(hireDate, "WC1", "WC1"),
                         null,
-                        "Ani",
-                        "ACTIVE",
-                        LocalDate.of(2026, 3, 23),
-                        1,
-                        "COMP",
-                        "HIRE",
-                        "AGR",
-                        "CAT",
-                        "CON",
-                        "SUB",
-                        1,
-                        "WC1",
-                        true
+                        new HireEmployeeResult.ContractSummary(hireDate, "CON", "SUB"),
+                        new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT")
                 ));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "ruleSystemCode": "esp",
-                                  "employeeTypeCode": "internal",
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
                                   "employeeNumber": "EMP001",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
                                   "hireDate": "2026-03-23",
-                                  "presence": {
-                                    "companyCode": "comp",
-                                    "entryReasonCode": "hire"
-                                  },
+                                  "companyCode": "comp",
+                                  "entryReasonCode": "hire",
+                                  "workCenterCode": "wc1",
                                   "laborClassification": {
                                     "agreementCode": "agr",
                                     "agreementCategoryCode": "cat"
@@ -87,9 +74,6 @@ class HireEmployeeControllerHttpTest {
                                   "contract": {
                                     "contractTypeCode": "con",
                                     "contractSubtypeCode": "sub"
-                                  },
-                                  "workCenter": {
-                                    "workCenterCode": "wc1"
                                   }
                                 }
                                 """))
@@ -98,121 +82,14 @@ class HireEmployeeControllerHttpTest {
                 .andExpect(jsonPath("$.employeeTypeCode").value("INTERNAL"))
                 .andExpect(jsonPath("$.employeeNumber").value("EMP001"))
                 .andExpect(jsonPath("$.initialPresence.presenceNumber").value(1))
-                .andExpect(jsonPath("$.hireDate[0]").value(2026))
-                .andExpect(jsonPath("$.hireDate[1]").value(3))
-                .andExpect(jsonPath("$.hireDate[2]").value(23))
-                .andExpect(jsonPath("$.initialPresence.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.initialPresence.startDate[1]").value(3))
-                .andExpect(jsonPath("$.initialPresence.startDate[2]").value(23))
-                .andExpect(jsonPath("$.initialLaborClassification.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.initialLaborClassification.startDate[1]").value(3))
-                .andExpect(jsonPath("$.initialLaborClassification.startDate[2]").value(23))
-                .andExpect(jsonPath("$.initialContract.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.initialContract.startDate[1]").value(3))
-                .andExpect(jsonPath("$.initialContract.startDate[2]").value(23))
                 .andExpect(jsonPath("$.initialContract.contractTypeCode").value("CON"))
-                .andExpect(jsonPath("$.initialWorkCenter.workCenterAssignmentNumber").value(1))
-                .andExpect(jsonPath("$.initialWorkCenter.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.initialWorkCenter.startDate[1]").value(3))
-                .andExpect(jsonPath("$.initialWorkCenter.startDate[2]").value(23))
+                .andExpect(jsonPath("$.initialLaborClassification.agreementCode").value("AGR"))
                 .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
-        assertEquals("esp", captor.getValue().ruleSystemCode());
-        assertEquals(LocalDate.of(2026, 3, 23), captor.getValue().hireDate());
-    }
-
-    @Test
-        void hireReturnsOkWhenIdempotentRetry() throws Exception {
-        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-        .thenReturn(new HireEmployeeResult(
-          "ESP",
-          "INTERNAL",
-          "EMP001",
-          "Ana",
-          "Lopez",
-          null,
-          "Ani",
-          "ACTIVE",
-          LocalDate.of(2026, 3, 23),
-          1,
-          "COMP",
-          "HIRE",
-          "AGR",
-          "CAT",
-          "CON",
-          "SUB",
-          1,
-          "WC1",
-          false
-        ));
-
-        mockMvc.perform(post("/employees/hire")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "ruleSystemCode": "ESP",
-                                  "employeeTypeCode": "INTERNAL",
-                                  "employeeNumber": "EMP001",
-                                  "firstName": "Ana",
-                                  "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23",
-                                  "presence": {
-                                    "companyCode": "COMP",
-                                    "entryReasonCode": "HIRE"
-                                  },
-                                  "laborClassification": {
-                                    "agreementCode": "AGR",
-                                    "agreementCategoryCode": "CAT"
-                                  },
-                                  "contract": {
-                                    "contractTypeCode": "CON",
-                                    "contractSubtypeCode": "SUB"
-                                  },
-                                  "workCenter": {
-                                    "workCenterCode": "WC1"
-                                  }
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.employeeNumber").value("EMP001"));
-    }
-
-    @Test
-    void hireReturnsConflictWhenStateIsNotEquivalent() throws Exception {
-        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenThrow(new HireEmployeeConflictException("existing hire state is not equivalent"));
-
-        mockMvc.perform(post("/employees/hire")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "ruleSystemCode": "ESP",
-                                  "employeeTypeCode": "INTERNAL",
-                                  "employeeNumber": "EMP001",
-                                  "firstName": "Ana",
-                                  "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23",
-                                  "presence": {
-                                    "companyCode": "COMP",
-                                    "entryReasonCode": "HIRE"
-                                  },
-                                  "laborClassification": {
-                                    "agreementCode": "AGR",
-                                    "agreementCategoryCode": "CAT"
-                                  },
-                                  "contract": {
-                                    "contractTypeCode": "CON",
-                                    "contractSubtypeCode": "SUB"
-                                  },
-                                  "workCenter": {
-                                    "workCenterCode": "WC1"
-                                  }
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("HIRE_CONFLICT"));
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals(hireDate, captor.getValue().hireDate());
     }
 
     @Test
@@ -230,10 +107,9 @@ class HireEmployeeControllerHttpTest {
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
                                   "hireDate": "2026-03-23",
-                                  "presence": {
-                                    "companyCode": "BAD",
-                                    "entryReasonCode": "HIRE"
-                                  },
+                                  "companyCode": "BAD",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
                                   "laborClassification": {
                                     "agreementCode": "AGR",
                                     "agreementCategoryCode": "CAT"
@@ -241,9 +117,6 @@ class HireEmployeeControllerHttpTest {
                                   "contract": {
                                     "contractTypeCode": "CON",
                                     "contractSubtypeCode": "SUB"
-                                  },
-                                  "workCenter": {
-                                    "workCenterCode": "WC1"
                                   }
                                 }
                                 """))
