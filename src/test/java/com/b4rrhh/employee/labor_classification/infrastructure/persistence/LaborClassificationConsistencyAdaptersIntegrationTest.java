@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -206,5 +207,92 @@ class LaborClassificationConsistencyAdaptersIntegrationTest {
 
         assertTrue(validRelation);
         assertFalse(invalidRelation);
+    }
+
+    @Test
+    void agreementCategoryRelationLookupHandlesNullReferenceDateWithoutSqlGrammarError() {
+        seedAgreementCategoryRelationData();
+
+        Boolean validRelation = assertDoesNotThrow(() -> relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "AGR_OFFICE",
+                "CAT_ADMIN",
+                null
+        ));
+        Boolean invalidRelation = assertDoesNotThrow(() -> relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "AGR_OFFICE",
+                "CAT_TECH_1",
+                null
+        ));
+
+        assertTrue(validRelation);
+        assertFalse(invalidRelation);
+    }
+
+    private void seedAgreementCategoryRelationData() {
+        jdbcTemplate.update(
+                "insert into rulesystem.rule_system (id, code, name, country_code, active) values (?,?,?,?,?)",
+                1L,
+                "ESP",
+                "Spain",
+                "ESP",
+                true
+        );
+        jdbcTemplate.update(
+                "insert into rulesystem.rule_entity_type (code, name, active) values (?,?,?)",
+                "AGREEMENT",
+                "Agreement",
+                true
+        );
+        jdbcTemplate.update(
+                "insert into rulesystem.rule_entity_type (code, name, active) values (?,?,?)",
+                "AGREEMENT_CATEGORY",
+                "Agreement Category",
+                true
+        );
+
+        jdbcTemplate.update(
+                """
+                insert into rulesystem.rule_entity (
+                    id, rule_system_code, rule_entity_type_code, code, active, start_date, end_date
+                ) values (?,?,?,?,?,?,?)
+                """,
+                100L,
+                "ESP",
+                "AGREEMENT",
+                "AGR_OFFICE",
+                true,
+                LocalDate.of(1900, 1, 1),
+                null
+        );
+        jdbcTemplate.update(
+                """
+                insert into rulesystem.rule_entity (
+                    id, rule_system_code, rule_entity_type_code, code, active, start_date, end_date
+                ) values (?,?,?,?,?,?,?)
+                """,
+                200L,
+                "ESP",
+                "AGREEMENT_CATEGORY",
+                "CAT_ADMIN",
+                true,
+                LocalDate.of(1900, 1, 1),
+                null
+        );
+
+        jdbcTemplate.update(
+                """
+                insert into rulesystem.agreement_category_relation (
+                    rule_system_id, agreement_rule_entity_id, category_rule_entity_id, start_date, end_date, is_active
+                ) values (?,?,?,?,?,?)
+                """,
+                1L,
+                100L,
+                200L,
+                LocalDate.of(1900, 1, 1),
+                null,
+                true
+        );
     }
 }

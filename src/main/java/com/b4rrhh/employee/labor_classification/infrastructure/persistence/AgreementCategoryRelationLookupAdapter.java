@@ -10,21 +10,7 @@ import java.time.LocalDate;
 public class AgreementCategoryRelationLookupAdapter implements AgreementCategoryRelationLookupPort {
 
     private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
-    private final EntityManager entityManager;
-
-    public AgreementCategoryRelationLookupAdapter(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    @Override
-    public boolean existsActiveRelation(
-            String ruleSystemCode,
-            String agreementCode,
-            String agreementCategoryCode,
-            LocalDate referenceDate
-    ) {
-        Object result = entityManager.createNativeQuery("""
+    private static final String BASE_QUERY = """
                 select case when count(*) > 0 then true else false end
                 from rulesystem.agreement_category_relation r
                 join rulesystem.rule_system rs
@@ -43,19 +29,42 @@ public class AgreementCategoryRelationLookupAdapter implements AgreementCategory
                   and agr.active = true
                   and cat.active = true
                   and r.is_active = true
-                  and (:referenceDate is null or agr.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(agr.end_date, :maxDate))
-                  and (:referenceDate is null or cat.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(cat.end_date, :maxDate))
-                  and (:referenceDate is null or r.start_date <= :referenceDate)
-                  and (:referenceDate is null or :referenceDate <= coalesce(r.end_date, :maxDate))
-                """)
+            """;
+    private static final String TEMPORAL_FILTERS = """
+                  and agr.start_date <= :referenceDate
+                  and :referenceDate <= coalesce(agr.end_date, :maxDate)
+                  and cat.start_date <= :referenceDate
+                  and :referenceDate <= coalesce(cat.end_date, :maxDate)
+                  and r.start_date <= :referenceDate
+                  and :referenceDate <= coalesce(r.end_date, :maxDate)
+            """;
+
+    private final EntityManager entityManager;
+
+    public AgreementCategoryRelationLookupAdapter(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    public boolean existsActiveRelation(
+            String ruleSystemCode,
+            String agreementCode,
+            String agreementCategoryCode,
+            LocalDate referenceDate
+    ) {
+        String sql = referenceDate == null ? BASE_QUERY : BASE_QUERY + TEMPORAL_FILTERS;
+
+        var query = entityManager.createNativeQuery(sql)
                 .setParameter("ruleSystemCode", ruleSystemCode)
                 .setParameter("agreementCode", agreementCode)
-                .setParameter("agreementCategoryCode", agreementCategoryCode)
-                .setParameter("referenceDate", referenceDate)
-                .setParameter("maxDate", MAX_DATE)
-                .getSingleResult();
+                .setParameter("agreementCategoryCode", agreementCategoryCode);
+
+        if (referenceDate != null) {
+            query.setParameter("referenceDate", referenceDate);
+            query.setParameter("maxDate", MAX_DATE);
+        }
+
+        Object result = query.getSingleResult();
 
         if (result instanceof Boolean boolResult) {
             return boolResult;
