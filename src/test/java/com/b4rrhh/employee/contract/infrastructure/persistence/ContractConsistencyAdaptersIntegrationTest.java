@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -127,6 +128,47 @@ class ContractConsistencyAdaptersIntegrationTest {
 
     @Test
     void contractSubtypeRelationLookupIsCorrect() {
+        seedContractSubtypeRelationData();
+
+        boolean validRelation = relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "IND",
+                "FT1",
+                LocalDate.of(2026, 1, 1)
+        );
+        boolean invalidRelation = relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "IND",
+                "PT1",
+                LocalDate.of(2026, 1, 1)
+        );
+
+        assertTrue(validRelation);
+        assertFalse(invalidRelation);
+    }
+
+    @Test
+    void contractSubtypeRelationLookupHandlesNullReferenceDateWithoutSqlGrammarError() {
+        seedContractSubtypeRelationData();
+
+        Boolean validRelation = assertDoesNotThrow(() -> relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "IND",
+                "FT1",
+                null
+        ));
+        Boolean invalidRelation = assertDoesNotThrow(() -> relationLookupAdapter.existsActiveRelation(
+                "ESP",
+                "IND",
+                "PT1",
+                null
+        ));
+
+        assertTrue(validRelation);
+        assertFalse(invalidRelation);
+    }
+
+    private void seedContractSubtypeRelationData() {
         jdbcTemplate.update(
                 "insert into rulesystem.rule_system (id, code, name, country_code, active) values (?,?,?,?,?)",
                 1L,
@@ -190,21 +232,5 @@ class ContractConsistencyAdaptersIntegrationTest {
                 null,
                 true
         );
-
-        boolean validRelation = relationLookupAdapter.existsActiveRelation(
-                "ESP",
-                "IND",
-                "FT1",
-                LocalDate.of(2026, 1, 1)
-        );
-        boolean invalidRelation = relationLookupAdapter.existsActiveRelation(
-                "ESP",
-                "IND",
-                "PT1",
-                LocalDate.of(2026, 1, 1)
-        );
-
-        assertTrue(validRelation);
-        assertFalse(invalidRelation);
     }
 }
