@@ -8,12 +8,15 @@ import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CloseWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CreateWorkCenterRequest;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.ReplaceWorkCenterFromDateRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import org.springframework.http.HttpStatus;
@@ -38,6 +41,7 @@ public class WorkCenterController {
         private final DeleteWorkCenterUseCase deleteWorkCenterUseCase;
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+        private final ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase;
         private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
         private final WorkCenterResponseAssembler workCenterResponseAssembler;
 
@@ -47,6 +51,7 @@ public class WorkCenterController {
             DeleteWorkCenterUseCase deleteWorkCenterUseCase,
             GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase,
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
+            ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase,
             UpdateWorkCenterUseCase updateWorkCenterUseCase,
                         WorkCenterResponseAssembler workCenterResponseAssembler
     ) {
@@ -55,6 +60,7 @@ public class WorkCenterController {
         this.deleteWorkCenterUseCase = deleteWorkCenterUseCase;
         this.getWorkCenterByBusinessKeyUseCase = getWorkCenterByBusinessKeyUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
+        this.replaceWorkCenterFromDateUseCase = replaceWorkCenterFromDateUseCase;
         this.updateWorkCenterUseCase = updateWorkCenterUseCase;
                 this.workCenterResponseAssembler = workCenterResponseAssembler;
     }
@@ -79,6 +85,26 @@ public class WorkCenterController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(workCenterResponseAssembler.toResponse(ruleSystemCode, created));
+    }
+
+    @PostMapping("/replace-from-date")
+    public ResponseEntity<WorkCenterResponse> replaceFromDate(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody ReplaceWorkCenterFromDateRequest request
+    ) {
+        WorkCenter replaced = replaceWorkCenterFromDateUseCase.replaceFromDate(
+                new ReplaceWorkCenterFromDateCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.effectiveDate(),
+                        request.workCenterCode()
+                )
+        );
+
+        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, replaced));
     }
 
     @GetMapping

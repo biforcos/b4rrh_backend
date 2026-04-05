@@ -905,6 +905,58 @@ paths:
         "404":
           description: Rule system or employee not found
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/replace-from-date:
+    post:
+      operationId: replaceWorkCenterFromDateByBusinessKey
+      summary: Replace employee work center assignment from effective date by business key
+      description: >-
+        Canonical business operation to change employee work center assignment from an effective date.
+        If an assignment covers effectiveDate, it is closed at effectiveDate - 1 and a new assignment
+        starts at effectiveDate. If no assignment covers effectiveDate, a new assignment is created
+        directly when the temporal context is valid.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceWorkCenterFromDateRequest"
+      responses:
+        "200":
+          description: Work center assignment replaced from effective date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
+          description: Invalid request
+        "404":
+          description: Rule system, employee, or catalog not found
+        "409":
+          description: >-
+            Work center replacement conflicts with temporal rules.
+            Resulting periods overlap another assignment for this employee,
+            are not fully contained within employee presence history,
+            or leave a required presence coverage gap.
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}:
     get:
       operationId: getWorkCenterByBusinessKey
@@ -3895,6 +3947,23 @@ components:
             Date on which the assignment ends (yyyy-MM-dd). Must be >= the assignment's startDate.
             The resulting period [startDate, endDate] must be fully contained within
             an existing employee presence period.
+    ReplaceWorkCenterFromDateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - effectiveDate
+        - workCenterCode
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: >-
+            Effective date (yyyy-MM-dd) from which the new work center assignment applies.
+            If an assignment covers effectiveDate, it is closed at effectiveDate - 1.
+        workCenterCode:
+          type: string
+          maxLength: 30
+          description: Code validated against active WORK_CENTER rule entities for the employee ruleSystemCode.
     WorkCenterResponse:
       type: object
       required:
