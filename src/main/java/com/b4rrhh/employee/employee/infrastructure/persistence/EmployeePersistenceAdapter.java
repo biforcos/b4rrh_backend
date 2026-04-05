@@ -37,6 +37,11 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
     }
 
     @Override
+    public void deleteById(Long id) {
+        springDataEmployeeRepository.deleteById(id);
+    }
+
+    @Override
     public Employee save(Employee employee) {
         EmployeeEntity entity = mapToEntity(employee);
         EmployeeEntity savedEntity = springDataEmployeeRepository.save(entity);

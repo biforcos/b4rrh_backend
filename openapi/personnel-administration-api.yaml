@@ -323,6 +323,36 @@ paths:
           description: Invalid request
         "404":
           description: Rule system or employee not found
+    delete:
+      operationId: deleteEmployeeByBusinessKey
+      summary: Administrative delete employee by business key
+      description: |
+        Exceptional administrative operation to physically delete an employee.
+        This operation is outside normal lifecycle workflows and does not replace terminate.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      responses:
+        "204":
+          description: Employee deleted successfully
+        "404":
+          description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/journey:
     get:

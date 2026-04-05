@@ -13,5 +13,7 @@ public interface EmployeeRepository {
             String employeeNumber
     );
 
+    void deleteById(Long id);
+
     Employee save(Employee employee);
 }

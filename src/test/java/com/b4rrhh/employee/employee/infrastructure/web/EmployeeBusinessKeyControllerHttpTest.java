@@ -1,6 +1,8 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
+import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyCommand;
+import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeNotFoundException;
@@ -15,12 +17,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,6 +34,8 @@ class EmployeeBusinessKeyControllerHttpTest {
 
     @Mock
     private GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
+        @Mock
+        private DeleteEmployeeByBusinessKeyUseCase deleteEmployeeByBusinessKeyUseCase;
     @Mock
     private UpdateEmployeeUseCase updateEmployeeUseCase;
 
@@ -39,6 +45,7 @@ class EmployeeBusinessKeyControllerHttpTest {
     void setUp() {
         EmployeeBusinessKeyController controller = new EmployeeBusinessKeyController(
                 getEmployeeByBusinessKeyUseCase,
+                deleteEmployeeByBusinessKeyUseCase,
                 updateEmployeeUseCase
         );
 
@@ -125,5 +132,31 @@ class EmployeeBusinessKeyControllerHttpTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("firstName is required"));
+    }
+
+    @Test
+    void deleteByBusinessKeyReturns204WhenEmployeeExists() throws Exception {
+        doNothing().when(deleteEmployeeByBusinessKeyUseCase).delete(any(DeleteEmployeeByBusinessKeyCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteEmployeeByBusinessKeyCommand> captor =
+                ArgumentCaptor.forClass(DeleteEmployeeByBusinessKeyCommand.class);
+        verify(deleteEmployeeByBusinessKeyUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+    }
+
+    @Test
+    void deleteByBusinessKeyReturns404WhenEmployeeDoesNotExist() throws Exception {
+        doThrow(new EmployeeNotFoundException("ESP", "INTERNAL", "EMP404"))
+                .when(deleteEmployeeByBusinessKeyUseCase)
+                .delete(any(DeleteEmployeeByBusinessKeyCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP404"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").exists());
     }
 }
