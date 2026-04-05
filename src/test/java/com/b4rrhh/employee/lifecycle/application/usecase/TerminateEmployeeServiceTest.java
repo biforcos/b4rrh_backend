@@ -175,18 +175,18 @@ class TerminateEmployeeServiceTest {
         assertEquals(1, result.closedWorkCenterAssignmentNumber());
 
         InOrder inOrder = inOrder(
+                closePresenceUseCase,
                 closeWorkCenterUseCase,
                 closeLaborClassificationUseCase,
                 closeContractUseCase,
                 closeActiveCostCenterDistributionUseCase,
-                closePresenceUseCase,
                 employeeRepository,
                 listEmployeePresencesUseCase
         );
+        inOrder.verify(closePresenceUseCase).close(any(ClosePresenceCommand.class));
         inOrder.verify(closeWorkCenterUseCase).close(any(CloseWorkCenterCommand.class));
         inOrder.verify(closeLaborClassificationUseCase).close(any(CloseLaborClassificationCommand.class));
         inOrder.verify(closeContractUseCase).close(any(CloseContractCommand.class));
-        inOrder.verify(closePresenceUseCase).close(any(ClosePresenceCommand.class));
         inOrder.verify(employeeRepository).save(any(Employee.class));
 
         ArgumentCaptor<ClosePresenceCommand> closePresenceCaptor = ArgumentCaptor.forClass(ClosePresenceCommand.class);
@@ -247,13 +247,97 @@ class TerminateEmployeeServiceTest {
                 .thenReturn(List.of(activeLaborClassification()));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activeWorkCenter()));
-        when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class))).thenReturn(activeWorkCenter());
-        when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class))).thenReturn(activeLaborClassification());
-        when(closeContractUseCase.close(any(CloseContractCommand.class))).thenReturn(activeContract());
         when(closePresenceUseCase.close(any(ClosePresenceCommand.class)))
                 .thenThrow(new PresenceCatalogValueInvalidException("exitReasonCode", "VOL"));
 
         assertThrows(TerminateEmployeeCatalogValueInvalidException.class, () -> service.terminate(command));
+    }
+
+    @Test
+    void terminatesAndClosesLaborClassificationAgainstProjectedClosedPresenceTimeline() {
+        TerminateEmployeeCommand command = new TerminateEmployeeCommand(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                LocalDate.of(2021, 4, 12),
+                "VOL"
+        );
+
+        Presence activePresence = new Presence(
+                10L,
+                100L,
+                1,
+                "COMP",
+                "HIRE",
+                null,
+                LocalDate.of(2021, 1, 6),
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+        Presence closedPresence = new Presence(
+                10L,
+                100L,
+                1,
+                "COMP",
+                "HIRE",
+                "VOL",
+                LocalDate.of(2021, 1, 6),
+                LocalDate.of(2021, 4, 12),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+        LaborClassification activeLaborClassification = new LaborClassification(
+                100L,
+                "AGR",
+                "CAT",
+                LocalDate.of(2021, 1, 6),
+                null
+        );
+        LaborClassification closedLaborClassification = new LaborClassification(
+                100L,
+                "AGR",
+                "CAT",
+                LocalDate.of(2021, 1, 6),
+                LocalDate.of(2021, 4, 12)
+        );
+
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("ACTIVE")));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence), List.of(closedPresence));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of(activeLaborClassification));
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of());
+        when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence);
+        when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class)))
+                .thenReturn(closedLaborClassification);
+        when(employeeRepository.save(any(Employee.class))).thenReturn(employee("TERMINATED"));
+
+        TerminateEmployeeResult result = service.terminate(command);
+
+        assertEquals("TERMINATED", result.status());
+        assertEquals(LocalDate.of(2021, 4, 12), result.terminationDate());
+        assertEquals(LocalDate.of(2021, 1, 6), result.closedLaborClassificationStartDate());
+        assertEquals(LocalDate.of(2021, 4, 12), result.closedLaborClassificationEndDate());
+
+        InOrder inOrder = inOrder(
+                closePresenceUseCase,
+                closeLaborClassificationUseCase,
+                employeeRepository,
+                listEmployeePresencesUseCase
+        );
+        inOrder.verify(closePresenceUseCase).close(any(ClosePresenceCommand.class));
+        inOrder.verify(closeLaborClassificationUseCase).close(any(CloseLaborClassificationCommand.class));
+
+        ArgumentCaptor<CloseLaborClassificationCommand> closeLaborCaptor =
+                ArgumentCaptor.forClass(CloseLaborClassificationCommand.class);
+        verify(closeLaborClassificationUseCase).close(closeLaborCaptor.capture());
+        assertEquals(LocalDate.of(2021, 1, 6), closeLaborCaptor.getValue().startDate());
+        assertEquals(LocalDate.of(2021, 4, 12), closeLaborCaptor.getValue().endDate());
     }
 
     @Test

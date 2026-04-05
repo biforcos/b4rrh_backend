@@ -207,6 +207,15 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
         Presence closedPresence;
 
         try {
+                        closedPresence = closePresenceUseCase.close(new ClosePresenceCommand(
+                                        ruleSystemCode,
+                                        employeeTypeCode,
+                                        employeeNumber,
+                                        activePresence.getPresenceNumber(),
+                                        terminationDate,
+                                        exitReasonCode
+                        ));
+
             if (activeWorkCenter.isPresent()) {
                 WorkCenter workCenter = activeWorkCenter.get();
                 closedWorkCenter = closeWorkCenterUseCase.close(new CloseWorkCenterCommand(
@@ -246,15 +255,6 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                     employeeNumber,
                     terminationDate
             );
-
-            closedPresence = closePresenceUseCase.close(new ClosePresenceCommand(
-                    ruleSystemCode,
-                    employeeTypeCode,
-                    employeeNumber,
-                    activePresence.getPresenceNumber(),
-                    terminationDate,
-                    exitReasonCode
-            ));
         } catch (PresenceCatalogValueInvalidException ex) {
             throw new TerminateEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
         } catch (PresenceNotFoundException
