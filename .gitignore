@@ -35,3 +35,4 @@ Thumbs.db
 # Dependency directories
 /lib/
 docs/deuda.md
+docs/architecture/adr/ADR_BUNDLE.md
