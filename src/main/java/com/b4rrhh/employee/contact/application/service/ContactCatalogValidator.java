@@ -28,7 +28,7 @@ public class ContactCatalogValidator {
     public void validateContactTypeCode(String ruleSystemCode, String contactTypeCode, LocalDate referenceDate) {
         validateCatalog(
                 ruleSystemCode,
-                ContactRuleEntityTypeCodes.EMPLOYEE_CONTACT_TYPE,
+            ContactRuleEntityTypeCodes.CONTACT_TYPE,
                 contactTypeCode,
                 "contactTypeCode",
                 referenceDate

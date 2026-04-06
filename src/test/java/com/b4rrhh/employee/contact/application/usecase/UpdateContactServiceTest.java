@@ -71,7 +71,7 @@ class UpdateContactServiceTest {
                 .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(10L, "EMAIL"))
                 .thenReturn(Optional.of(existingEmailContact()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
         when(contactRepository.save(any(Contact.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -115,7 +115,7 @@ class UpdateContactServiceTest {
                 .thenReturn(Optional.of(employeeContext(10L, EMPLOYEE_NUMBER)));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(10L, "EMAIL"))
                 .thenReturn(Optional.of(existingEmailContact()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
 
         assertThrows(ContactValueInvalidException.class, () -> service.update(command));
@@ -158,7 +158,7 @@ class UpdateContactServiceTest {
         return new RuleEntity(
                 1L,
                 ruleSystemCode,
-                "EMPLOYEE_CONTACT_TYPE",
+                "CONTACT_TYPE",
                 code,
                 code,
                 null,

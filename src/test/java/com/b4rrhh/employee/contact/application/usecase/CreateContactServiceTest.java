@@ -71,7 +71,7 @@ class CreateContactServiceTest {
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
         when(employeeContactLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(10L, "EMAIL")).thenReturn(Optional.empty());
         when(contactRepository.save(any(Contact.class))).thenAnswer(invocation -> {
@@ -111,7 +111,7 @@ class CreateContactServiceTest {
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
         when(employeeContactLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "SOCIAL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "SOCIAL"))
                 .thenReturn(Optional.empty());
 
         assertThrows(ContactCatalogValueInvalidException.class, () -> service.create(command));
@@ -131,7 +131,7 @@ class CreateContactServiceTest {
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
         when(employeeContactLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(10L, "EMAIL")).thenReturn(Optional.empty());
 
@@ -152,7 +152,7 @@ class CreateContactServiceTest {
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
         when(employeeContactLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP001"))
                 .thenReturn(Optional.of(employeeContext(10L, "EMP001")));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(10L, "EMAIL"))
                 .thenReturn(Optional.of(existingEmailContact(10L)));
@@ -174,7 +174,7 @@ class CreateContactServiceTest {
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
         when(employeeContactLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, "EMP002"))
                 .thenReturn(Optional.of(employeeContext(11L, "EMP002")));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "EMPLOYEE_CONTACT_TYPE", "EMAIL"))
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, "CONTACT_TYPE", "EMAIL"))
                 .thenReturn(Optional.of(activeContactTypeRuleEntity(RULE_SYSTEM_CODE, "EMAIL")));
         when(contactRepository.findByEmployeeIdAndContactTypeCode(11L, "EMAIL"))
                 .thenReturn(Optional.empty());
@@ -218,7 +218,7 @@ class CreateContactServiceTest {
         return new RuleEntity(
                 1L,
                 ruleSystemCode,
-                "EMPLOYEE_CONTACT_TYPE",
+                "CONTACT_TYPE",
                 code,
                 code,
                 null,

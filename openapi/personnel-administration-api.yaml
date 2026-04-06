@@ -4843,7 +4843,7 @@ components:
         contactTypeName:
           type: string
           nullable: true
-          description: Optional display name from EMPLOYEE_CONTACT_TYPE rule entities in the employee ruleSystemCode catalog.
+          description: Optional display name from CONTACT_TYPE rule entities in the employee ruleSystemCode catalog.
         contactValue:
           type: string
     AgreementCategoryCatalogItemResponse:

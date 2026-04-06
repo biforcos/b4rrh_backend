@@ -27,7 +27,7 @@ public class ContactCatalogReadAdapter implements ContactCatalogReadPort {
         return ruleEntityRepository
                 .findByBusinessKey(
                         normalizedRuleSystemCode,
-                        ContactRuleEntityTypeCodes.EMPLOYEE_CONTACT_TYPE,
+                ContactRuleEntityTypeCodes.CONTACT_TYPE,
                         normalizedContactTypeCode
                 )
                 .map(entity -> entity.getName() == null ? null : entity.getName().trim())
