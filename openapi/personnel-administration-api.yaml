@@ -30,6 +30,10 @@ tags:
     description: Functional aggregated company resource backed by COMPANY rule entities and company_profile enrichment.
   - name: Company Profile
     description: Enriched company profile reads and updates backed by the COMPANY occurrence applicable on the current date.
+  - name: Work Center
+    description: Functional aggregated work center resource backed by WORK_CENTER rule entities and work_center_profile enrichment.
+  - name: Work Center Contact
+    description: Work center contact management anchored to the WORK_CENTER aggregated resource.
   - name: Catalogs
     description: Read-only catalog and catalog binding queries.
   - name: Rule Systems
@@ -930,14 +934,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateWorkCenterRequest"
+              $ref: "#/components/schemas/EmployeeCreateWorkCenterRequest"
       responses:
         "201":
           description: Work center assignment created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkCenterResponse"
+                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "400":
           description: Invalid request
         "404":
@@ -979,7 +983,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/WorkCenterResponse"
+                  $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "404":
           description: Rule system or employee not found
 
@@ -1018,14 +1022,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReplaceWorkCenterFromDateRequest"
+              $ref: "#/components/schemas/EmployeeReplaceWorkCenterFromDateRequest"
       responses:
         "200":
           description: Work center assignment replaced from effective date
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkCenterResponse"
+                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "400":
           description: Invalid request
         "404":
@@ -1074,7 +1078,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkCenterResponse"
+                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "404":
           description: Rule system, employee, or work center assignment not found
     put:
@@ -1116,14 +1120,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateWorkCenterRequest"
+              $ref: "#/components/schemas/EmployeeUpdateWorkCenterRequest"
       responses:
         "200":
           description: Work center assignment corrected
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkCenterResponse"
+                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "400":
           description: Invalid request
         "404":
@@ -1216,14 +1220,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CloseWorkCenterRequest"
+              $ref: "#/components/schemas/EmployeeCloseWorkCenterRequest"
       responses:
         "200":
           description: Work center assignment closed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkCenterResponse"
+                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
         "400":
           description: Invalid request
         "404":
@@ -3111,6 +3115,411 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompanyProfileErrorResponse"
 
+  /work-centers:
+    post:
+      operationId: createWorkCenter
+      summary: Create aggregated work center
+      tags:
+        - Work Center
+      description: |
+        Creates a WORK_CENTER base occurrence in rulesystem.rule_entity and its work_center_profile in a single transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkCenterRequest"
+      responses:
+        "201":
+          description: Work center created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center business key already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+    get:
+      operationId: listWorkCenters
+      summary: List aggregated work centers
+      tags:
+        - Work Center
+      description: |
+        Returns WORK_CENTER entries applicable on the current server date enriched with work_center_profile data when available.
+      responses:
+        "200":
+          description: Aggregated work center list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkCenterListItemResponse"
+
+  /work-centers/{ruleSystemCode}/{workCenterCode}:
+    get:
+      operationId: getWorkCenter
+      summary: Get aggregated work center by business key
+      tags:
+        - Work Center
+      description: |
+        Resolves the WORK_CENTER occurrence applicable on the current server date and returns its
+        aggregated base ficha enriched with work_center_profile data, including companyCode and address.
+        Contacts are exposed through the canonical contacts subresource for the same business key.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        "200":
+          description: Aggregated work center found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+    put:
+      operationId: updateWorkCenter
+      summary: Update aggregated work center by business key
+      tags:
+        - Work Center
+      description: |
+        Resolves the WORK_CENTER occurrence applicable on the current server date and updates base mutable fields,
+        companyCode, and simple address in work_center_profile. This endpoint does not modify contacts.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkCenterRequest"
+      responses:
+        "200":
+          description: Work center updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+
+  /work-centers/{ruleSystemCode}/{workCenterCode}/contacts:
+    get:
+      operationId: listWorkCenterContacts
+      summary: List work center contacts by business key
+      tags:
+        - Work Center Contact
+      description: |
+        Resolves the WORK_CENTER occurrence applicable on the current server date and returns the
+        canonical list of contacts identified by contactNumber within that work center.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        "200":
+          description: Work center contacts found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkCenterContactResponse"
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+    post:
+      operationId: createWorkCenterContact
+      summary: Create work center contact by business key
+      tags:
+        - Work Center Contact
+      description: |
+        Resolves the WORK_CENTER occurrence applicable on the current server date, validates the provided
+        CONTACT_TYPE code, and creates a new contact. The backend assigns the initial contactNumber using
+        the next available max(contact_number) + 1 value within the work center.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkCenterContactRequest"
+      responses:
+        "201":
+          description: Work center contact created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterContactResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Functional conflict while creating the contact for the resolved work center
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+
+  /work-centers/{ruleSystemCode}/{workCenterCode}/contacts/{contactNumber}:
+    get:
+      operationId: getWorkCenterContact
+      summary: Get work center contact by business key
+      tags:
+        - Work Center Contact
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: contactNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Work center contact found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterContactResponse"
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center or contact does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+    put:
+      operationId: updateWorkCenterContact
+      summary: Update work center contact by business key
+      tags:
+        - Work Center Contact
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: contactNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkCenterContactRequest"
+      responses:
+        "200":
+          description: Work center contact updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterContactResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center or contact does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+    delete:
+      operationId: deleteWorkCenterContact
+      summary: Delete work center contact by business key
+      tags:
+        - Work Center Contact
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: workCenterCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: contactNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "204":
+          description: Work center contact deleted
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "404":
+          description: Work center or contact does not exist for the business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+        "409":
+          description: Work center exists but is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCenterErrorResponse"
+
   /catalog-options/direct:
     get:
       operationId: getDirectCatalogOptions
@@ -4300,7 +4709,7 @@ components:
           type: string
           format: date
           nullable: true
-    CreateWorkCenterRequest:
+    EmployeeCreateWorkCenterRequest:
       type: object
       additionalProperties: false
       required:
@@ -4324,7 +4733,7 @@ components:
           description: >-
             Optional end date (yyyy-MM-dd). When provided, must be >= startDate and the period
             [startDate, endDate] must be fully contained within a single employee presence period.
-    UpdateWorkCenterRequest:
+    EmployeeUpdateWorkCenterRequest:
       type: object
       additionalProperties: false
       required:
@@ -4349,7 +4758,7 @@ components:
             Corrected optional end date (yyyy-MM-dd). When provided, must be >= startDate and the
             resulting period [startDate, endDate] must be fully contained within an existing employee
             presence period.
-    CloseWorkCenterRequest:
+    EmployeeCloseWorkCenterRequest:
       type: object
       additionalProperties: false
       required:
@@ -4362,7 +4771,7 @@ components:
             Date on which the assignment ends (yyyy-MM-dd). Must be >= the assignment's startDate.
             The resulting period [startDate, endDate] must be fully contained within
             an existing employee presence period.
-    ReplaceWorkCenterFromDateRequest:
+    EmployeeReplaceWorkCenterFromDateRequest:
       type: object
       additionalProperties: false
       required:
@@ -4379,7 +4788,7 @@ components:
           type: string
           maxLength: 30
           description: Code validated against active WORK_CENTER rule entities for the employee ruleSystemCode.
-    WorkCenterResponse:
+    EmployeeWorkCenterAssignmentResponse:
       type: object
       required:
         - workCenterAssignmentNumber
@@ -5203,6 +5612,213 @@ components:
         address:
           $ref: "#/components/schemas/CompanyProfileAddress"
     CompanyProfileErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    WorkCenterAddress:
+      type: object
+      properties:
+        street:
+          type: string
+          maxLength: 300
+          nullable: true
+        city:
+          type: string
+          maxLength: 120
+          nullable: true
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        regionCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        countryCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+          description: ISO 3166-1 alpha-3 country code aligned with COUNTRY rule entity codes.
+    CreateWorkCenterRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - workCenterCode
+        - name
+        - startDate
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        workCenterCode:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        companyCode:
+          type: string
+          maxLength: 30
+          nullable: true
+          description: Optional COMPANY code validated against the rule system catalog on the work center start date.
+        address:
+          $ref: "#/components/schemas/WorkCenterAddress"
+    UpdateWorkCenterRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        companyCode:
+          type: string
+          maxLength: 30
+          nullable: true
+          description: Optional COMPANY code validated against the rule system catalog on the current server date.
+        address:
+          $ref: "#/components/schemas/WorkCenterAddress"
+    WorkCenterContactResponse:
+      type: object
+      required:
+        - contactNumber
+        - contactTypeCode
+        - contactValue
+      properties:
+        contactNumber:
+          type: integer
+          format: int32
+        contactTypeCode:
+          type: string
+          maxLength: 30
+        contactTypeName:
+          type: string
+          nullable: true
+          description: Optional display name from CONTACT_TYPE rule entities in the work center ruleSystemCode catalog.
+        contactValue:
+          type: string
+          maxLength: 300
+    CreateWorkCenterContactRequest:
+      type: object
+      required:
+        - contactTypeCode
+        - contactValue
+      properties:
+        contactTypeCode:
+          type: string
+          maxLength: 30
+          description: CONTACT_TYPE business code validated by the backend for the resolved work center and current server date.
+        contactValue:
+          type: string
+          maxLength: 300
+      description: The client provides only the contact payload. The backend assigns the initial contactNumber using the next max(contact_number) + 1 value for the resolved work center.
+    UpdateWorkCenterContactRequest:
+      type: object
+      required:
+        - contactTypeCode
+        - contactValue
+      properties:
+        contactTypeCode:
+          type: string
+          maxLength: 30
+        contactValue:
+          type: string
+          maxLength: 300
+    WorkCenterResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - workCenterCode
+        - name
+        - active
+        - startDate
+        - address
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        workCenterCode:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        active:
+          type: boolean
+        companyCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        address:
+          $ref: "#/components/schemas/WorkCenterAddress"
+      description: Aggregated base work center ficha enriched with work_center_profile data. Contacts are exposed only by the canonical contacts subresource.
+    WorkCenterListItemResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - workCenterCode
+        - name
+        - active
+        - startDate
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        workCenterCode:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        companyCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        city:
+          type: string
+          maxLength: 120
+          nullable: true
+        countryCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+        active:
+          type: boolean
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    WorkCenterErrorResponse:
       type: object
       required:
         - message

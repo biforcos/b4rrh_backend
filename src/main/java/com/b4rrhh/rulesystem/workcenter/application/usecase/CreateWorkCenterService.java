@@ -1,0 +1,111 @@
+package com.b4rrhh.rulesystem.workcenter.application.usecase;
+
+import com.b4rrhh.rulesystem.workcenter.application.view.WorkCenterDetails;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
+import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
+import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
+import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
+import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterAlreadyExistsException;
+import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterAddress;
+import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterProfile;
+import com.b4rrhh.rulesystem.workcenter.domain.port.WorkCenterProfileRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class CreateWorkCenterService implements CreateWorkCenterUseCase {
+
+    private final RuleEntityRepository ruleEntityRepository;
+    private final RuleSystemRepository ruleSystemRepository;
+    private final RuleEntityTypeRepository ruleEntityTypeRepository;
+    private final WorkCenterProfileRepository workCenterProfileRepository;
+    private final WorkCenterInputNormalizer inputNormalizer;
+    private final WorkCenterCatalogValidator catalogValidator;
+
+    public CreateWorkCenterService(
+            RuleEntityRepository ruleEntityRepository,
+            RuleSystemRepository ruleSystemRepository,
+            RuleEntityTypeRepository ruleEntityTypeRepository,
+            WorkCenterProfileRepository workCenterProfileRepository,
+            WorkCenterInputNormalizer inputNormalizer,
+            WorkCenterCatalogValidator catalogValidator
+    ) {
+        this.ruleEntityRepository = ruleEntityRepository;
+        this.ruleSystemRepository = ruleSystemRepository;
+        this.ruleEntityTypeRepository = ruleEntityTypeRepository;
+        this.workCenterProfileRepository = workCenterProfileRepository;
+        this.inputNormalizer = inputNormalizer;
+        this.catalogValidator = catalogValidator;
+    }
+
+    @Override
+    @Transactional
+        public WorkCenterDetails create(CreateWorkCenterCommand command) {
+        String ruleSystemCode = inputNormalizer.normalizeRequiredRuleSystemCode(command.ruleSystemCode());
+        String workCenterCode = inputNormalizer.normalizeRequiredWorkCenterCode(command.workCenterCode());
+        String name = inputNormalizer.normalizeRequiredName(command.name());
+        String description = inputNormalizer.normalizeOptionalDescription(command.description());
+        java.time.LocalDate startDate = inputNormalizer.requireStartDate(command.startDate());
+        String companyCode = inputNormalizer.normalizeOptionalCompanyCode(command.companyCode());
+        WorkCenterAddress address = inputNormalizer.normalizeAddress(
+                command.street(),
+                command.city(),
+                command.postalCode(),
+                command.regionCode(),
+                command.countryCode()
+        );
+
+        ruleSystemRepository.findByCode(ruleSystemCode).orElseThrow(
+                () -> new IllegalArgumentException("Rule system not found with code: " + ruleSystemCode)
+        );
+
+        ruleEntityTypeRepository.findByCode(WorkCenterRuleEntityTypeCodes.WORK_CENTER).orElseThrow(
+                () -> new IllegalArgumentException(
+                        "Rule entity type not found with code: " + WorkCenterRuleEntityTypeCodes.WORK_CENTER
+                )
+        );
+
+        ruleEntityRepository.findByBusinessKey(ruleSystemCode, WorkCenterRuleEntityTypeCodes.WORK_CENTER, workCenterCode)
+                .ifPresent(existing -> {
+                    throw new WorkCenterAlreadyExistsException(ruleSystemCode, workCenterCode);
+                });
+
+        catalogValidator.validateCompanyCode(ruleSystemCode, companyCode, startDate);
+        catalogValidator.validateCountryCode(ruleSystemCode, address.getCountryCode(), startDate);
+
+        RuleEntity savedEntity = ruleEntityRepository.save(new RuleEntity(
+                null,
+                ruleSystemCode,
+                WorkCenterRuleEntityTypeCodes.WORK_CENTER,
+                workCenterCode,
+                name,
+                description,
+                true,
+                startDate,
+                null,
+                null,
+                null
+        ));
+
+        WorkCenterProfile savedProfile = workCenterProfileRepository.save(
+                savedEntity.getId(),
+                new WorkCenterProfile(companyCode, address)
+        );
+
+        return new WorkCenterDetails(
+                new WorkCenter(
+                        savedEntity.getRuleSystemCode(),
+                        savedEntity.getCode(),
+                        savedEntity.getName(),
+                        savedEntity.getDescription(),
+                        savedEntity.getStartDate(),
+                        savedEntity.getEndDate(),
+                        savedEntity.isActive()
+                ),
+                savedProfile
+        );
+    }
+}
