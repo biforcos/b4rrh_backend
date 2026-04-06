@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-@Service
+@Service("rulesystemUpdateWorkCenterService")
 public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
 
     private final WorkCenterResolver workCenterResolver;

@@ -10,7 +10,7 @@ import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterListIte
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("rulesystemWorkCenterResponseAssembler")
 public class WorkCenterResponseAssembler {
 
     public WorkCenterResponse toResponse(WorkCenterDetails details) {

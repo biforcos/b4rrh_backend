@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = {WorkCenterController.class, WorkCenterContactController.class})
+@RestControllerAdvice(name = "rulesystemWorkCenterExceptionHandler", assignableTypes = {WorkCenterController.class, WorkCenterContactController.class})
 public class WorkCenterExceptionHandler {
 
     @ExceptionHandler({

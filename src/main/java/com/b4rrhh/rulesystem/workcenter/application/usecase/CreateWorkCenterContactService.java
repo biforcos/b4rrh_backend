@@ -5,6 +5,7 @@ import com.b4rrhh.rulesystem.workcenter.application.port.WorkCenterContactCatalo
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterResolver;
+import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactAlreadyExistsException;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterContact;
 import com.b4rrhh.rulesystem.workcenter.domain.port.WorkCenterContactRepository;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,12 @@ public class CreateWorkCenterContactService implements CreateWorkCenterContactUs
         RuleEntity workCenterEntity = workCenterResolver.resolveApplicableToday(ruleSystemCode, workCenterCode);
         catalogValidator.validateContactTypeCode(ruleSystemCode, contactTypeCode, LocalDate.now());
         Integer contactNumber = workCenterContactRepository.nextContactNumberForWorkCenterRuleEntityId(workCenterEntity.getId());
+
+        workCenterContactRepository
+            .findByWorkCenterRuleEntityIdAndContactNumber(workCenterEntity.getId(), contactNumber)
+            .ifPresent(existing -> {
+                throw new WorkCenterContactAlreadyExistsException(ruleSystemCode, workCenterCode, contactNumber);
+            });
 
         WorkCenterContact savedContact = workCenterContactRepository.save(
                 workCenterEntity.getId(),

@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
+@Service("employeeCreateWorkCenterService")
 public class CreateWorkCenterService implements CreateWorkCenterUseCase {
 
     private final WorkCenterRepository workCenterRepository;

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-@Component
+@Component("rulesystemWorkCenterCatalogValidator")
 public class WorkCenterCatalogValidator {
 
     private final RuleEntityRepository ruleEntityRepository;

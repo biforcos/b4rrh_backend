@@ -15,7 +15,7 @@ import com.b4rrhh.rulesystem.workcenter.domain.port.WorkCenterProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@Service("rulesystemCreateWorkCenterService")
 public class CreateWorkCenterService implements CreateWorkCenterUseCase {
 
     private final RuleEntityRepository ruleEntityRepository;

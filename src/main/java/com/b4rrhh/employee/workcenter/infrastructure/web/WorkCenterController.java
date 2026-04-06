@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
+@RestController("employeeWorkCenterController")
 @RequestMapping("/employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers")
 public class WorkCenterController {
 

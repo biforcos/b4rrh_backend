@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes = WorkCenterController.class)
+@RestControllerAdvice(name = "employeeWorkCenterExceptionHandler", assignableTypes = WorkCenterController.class)
 public class WorkCenterExceptionHandler {
 
     @ExceptionHandler({
