@@ -78,6 +78,37 @@ class UpdateCompanyServiceTest {
     }
 
     @Test
+    void updateCreatesProfileWhenMissing() {
+        RuleEntity company = ruleEntity();
+        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
+                .thenReturn(Optional.of(company));
+        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
+                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
+        when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
+        when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+
+        var result = service.update(new UpdateCompanyCommand(
+                "ESP",
+                "ACME",
+                "Acme Renamed",
+                "Updated description",
+                "Acme Spain SA",
+                "A123",
+                "Gran Via 1",
+                "Madrid",
+                "28013",
+                "MD",
+                "ESP"
+        ));
+
+        assertEquals("Acme Renamed", result.name());
+        assertEquals("Acme Spain SA", result.legalName());
+        verify(companyProfileRepository).save(any(Long.class), any(CompanyProfile.class));
+    }
+
+    @Test
     void updateMapsNotApplicableAsConflictException() {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.empty());

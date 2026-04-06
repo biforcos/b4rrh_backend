@@ -2930,6 +2930,7 @@ paths:
         - Company
       description: |
         Resolves the COMPANY occurrence applicable on the current server date and returns its aggregated data.
+        If company_profile does not exist yet, the response falls back to base COMPANY data and empty profile fields.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2976,6 +2977,7 @@ paths:
       description: |
         Resolves the COMPANY occurrence applicable on the current server date and updates both
         base COMPANY mutable fields and the associated company_profile.
+        If company_profile does not exist yet, this operation creates it as part of the aggregated update.
       parameters:
         - in: path
           name: ruleSystemCode

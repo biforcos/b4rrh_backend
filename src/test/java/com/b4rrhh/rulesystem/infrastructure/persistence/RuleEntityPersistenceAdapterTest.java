@@ -4,12 +4,14 @@ import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Sort;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +36,39 @@ class RuleEntityPersistenceAdapterTest {
     void setUp() {
         adapter = new RuleEntityPersistenceAdapter(springDataRuleEntityRepository);
     }
+
+        @Test
+        void findByFiltersUsesSpecificationAndStableSortWithoutReferenceDate() {
+                RuleEntityEntity entity = new RuleEntityEntity();
+                entity.setId(10L);
+                entity.setRuleSystemCode("ESP");
+                entity.setRuleEntityTypeCode("COMPANY");
+                entity.setCode("ACME");
+                entity.setName("Acme");
+                entity.setActive(true);
+                entity.setStartDate(LocalDate.of(2020, 1, 1));
+                entity.setCreatedAt(LocalDateTime.now());
+                entity.setUpdatedAt(LocalDateTime.now());
+
+                when(springDataRuleEntityRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Sort.class)))
+                                .thenReturn(List.of(entity));
+
+                List<RuleEntity> result = adapter.findByFilters("ESP", "COMPANY", null, true, null);
+
+                assertEquals(1, result.size());
+                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleSystemCode", "ruleEntityTypeCode", "code")));
+        }
+
+        @Test
+        void findByFiltersUsesSpecificationAndStableSortWithReferenceDate() {
+                when(springDataRuleEntityRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Sort.class)))
+                                .thenReturn(List.of());
+
+                List<RuleEntity> result = adapter.findByFilters("ESP", "COMPANY", null, true, LocalDate.of(2026, 4, 6));
+
+                assertEquals(0, result.size());
+                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleSystemCode", "ruleEntityTypeCode", "code")));
+        }
 
     @Test
     void createFlowPersistsNewEntityWithoutLoadingExistingOccurrence() {

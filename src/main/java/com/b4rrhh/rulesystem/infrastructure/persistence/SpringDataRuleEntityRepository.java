@@ -1,6 +1,7 @@
 package com.b4rrhh.rulesystem.infrastructure.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -8,29 +9,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntityEntity, Long> {
+public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntityEntity, Long>, JpaSpecificationExecutor<RuleEntityEntity> {
 
     LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
-    @Query("""
-        select re
-        from RuleEntityEntity re
-        where (:ruleSystemCode is null or re.ruleSystemCode = :ruleSystemCode)
-          and (:ruleEntityTypeCode is null or re.ruleEntityTypeCode = :ruleEntityTypeCode)
-          and (:code is null or re.code = :code)
-          and (:active is null or re.active = :active)
-          and (:referenceDate is null or re.startDate <= :referenceDate)
-          and (:referenceDate is null or :referenceDate <= coalesce(re.endDate, :maxDate))
-        order by re.ruleSystemCode, re.ruleEntityTypeCode, re.code
-        """)
-    List<RuleEntityEntity> findByFilters(
-        @Param("ruleSystemCode") String ruleSystemCode,
-        @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
-        @Param("code") String code,
-        @Param("active") Boolean active,
-        @Param("referenceDate") LocalDate referenceDate,
-        @Param("maxDate") LocalDate maxDate
-    );
 
     @Query("""
         select re

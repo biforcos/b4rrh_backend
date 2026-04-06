@@ -8,7 +8,6 @@ import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCo
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotApplicableException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotFoundException;
-import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
@@ -59,7 +58,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
 
         CompanyProfile existingProfile = companyProfileRepository
                 .findByCompanyRuleEntityId(savedCompanyEntity.getId())
-                .orElseThrow(() -> new CompanyProfileNotFoundException(ruleSystemCode, companyCode));
+            .orElseGet(() -> fallbackProfile(savedCompanyEntity));
 
         CompanyProfile updatedProfile = existingProfile.update(
                 command.legalName(),
@@ -101,6 +100,18 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 companyProfile.getPostalCode(),
                 companyProfile.getRegionCode(),
                 companyProfile.getCountryCode()
+        );
+    }
+
+    private CompanyProfile fallbackProfile(RuleEntity companyEntity) {
+        return new CompanyProfile(
+                companyEntity.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         );
     }
 

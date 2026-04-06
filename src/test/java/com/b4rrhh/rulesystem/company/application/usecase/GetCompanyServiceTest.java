@@ -58,6 +58,20 @@ class GetCompanyServiceTest {
         assertEquals("Acme Spain SA", result.legalName());
     }
 
+        @Test
+        void getFallsBackToCompanyDataWhenProfileMissing() {
+                RuleEntity company = ruleEntity();
+                when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
+                                .thenReturn(Optional.of(company));
+                when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
+
+                var result = service.get(new GetCompanyQuery("esp", "acme"));
+
+                assertEquals("Acme SA", result.legalName());
+                assertEquals(null, result.taxIdentifier());
+                assertEquals(null, result.street());
+        }
+
     @Test
     void getMapsResolverNotFoundToCompanyNotFound() {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))

@@ -2,9 +2,13 @@ package com.b4rrhh.rulesystem.infrastructure.persistence;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.stereotype.Component;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,14 +34,40 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
             Boolean active,
             LocalDate referenceDate
     ) {
-        return springDataRuleEntityRepository.findByFilters(
-                        ruleSystemCode,
-                        ruleEntityTypeCode,
-                        code,
-                        active,
-                        referenceDate,
-                        SpringDataRuleEntityRepository.MAX_DATE
-                )
+                Specification<RuleEntityEntity> specification = (root, query, criteriaBuilder) -> {
+                        List<Predicate> predicates = new ArrayList<>();
+
+                        if (ruleSystemCode != null) {
+                                predicates.add(criteriaBuilder.equal(root.get("ruleSystemCode"), ruleSystemCode));
+                        }
+
+                        if (ruleEntityTypeCode != null) {
+                                predicates.add(criteriaBuilder.equal(root.get("ruleEntityTypeCode"), ruleEntityTypeCode));
+                        }
+
+                        if (code != null) {
+                                predicates.add(criteriaBuilder.equal(root.get("code"), code));
+                        }
+
+                        if (active != null) {
+                                predicates.add(criteriaBuilder.equal(root.get("active"), active));
+                        }
+
+                        if (referenceDate != null) {
+                                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), referenceDate));
+                                predicates.add(criteriaBuilder.or(
+                                                criteriaBuilder.isNull(root.get("endDate")),
+                                                criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), referenceDate)
+                                ));
+                        }
+
+                        return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+                };
+
+                return springDataRuleEntityRepository.findAll(
+                                                specification,
+                                                Sort.by("ruleSystemCode", "ruleEntityTypeCode", "code")
+                                )
                 .stream()
                 .map(this::toDomain)
                 .toList();
