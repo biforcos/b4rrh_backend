@@ -3,11 +3,45 @@ info:
   title: B4RRHH Personnel Administration API
   version: 0.1.0
 
+tags:
+  - name: Employee Directory
+    description: Employee directory queries and employee core administrative operations.
+  - name: Employee Lifecycle
+    description: Hire, rehire, and terminate lifecycle workflows.
+  - name: Employee Journey
+    description: Read-only employee journey and timeline views.
+  - name: Employee Presence
+    description: Employee presence occurrence management.
+  - name: Employee Address
+    description: Employee address occurrence management.
+  - name: Employee Work Center
+    description: Employee work center assignment management.
+  - name: Employee Cost Center
+    description: Employee cost center distribution management.
+  - name: Employee Contract
+    description: Employee contract occurrence management.
+  - name: Employee Labor Classification
+    description: Employee labor classification occurrence management.
+  - name: Employee Identifier
+    description: Employee identifier management.
+  - name: Employee Contact
+    description: Employee contact management.
+  - name: Catalogs
+    description: Read-only catalog and catalog binding queries.
+  - name: Rule Systems
+    description: Rule system administration endpoints.
+  - name: Rule Entity Types
+    description: Rule entity type administration endpoints.
+  - name: Rule Entities
+    description: Rule entity administration endpoints.
+
 paths:
   /employees:
     get:
       operationId: listEmployees
       summary: List or search employees for directory reads
+      tags:
+        - Employee Directory
       parameters:
         - in: query
           name: q
@@ -66,6 +100,8 @@ paths:
     post:
       operationId: createEmployee
       summary: Create employee
+      tags:
+        - Employee Directory
       requestBody:
         required: true
         content:
@@ -84,6 +120,8 @@ paths:
     post:
       operationId: hireEmployee
       summary: Hire employee lifecycle workflow
+      tags:
+        - Employee Lifecycle
       description: |
         Business-oriented workflow that creates an employee and their initial lifecycle state.
         This operation creates the employee core identity, their first presence,
@@ -121,6 +159,8 @@ paths:
     post:
       operationId: terminateEmployee
       summary: Terminate employee lifecycle workflow
+      tags:
+        - Employee Lifecycle
       description: |
         Closes active presence, contract, labor classification, and work center in a single transaction
         using a single mandatory terminationDate.
@@ -185,6 +225,8 @@ paths:
     post:
       operationId: rehireEmployee
       summary: Rehire employee lifecycle workflow
+      tags:
+        - Employee Lifecycle
       description: |
         Reopens employee lifecycle by creating a new active presence, contract,
         labor classification, and work center assignment with a single mandatory rehireDate.
@@ -256,6 +298,8 @@ paths:
     get:
       operationId: getEmployeeByBusinessKey
       summary: Get employee by business key
+      tags:
+        - Employee Directory
       parameters:
         - in: path
           name: ruleSystemCode
@@ -287,6 +331,8 @@ paths:
     put:
       operationId: updateEmployeeByBusinessKey
       summary: Update employee core identity fields by business key
+      tags:
+        - Employee Directory
       parameters:
         - in: path
           name: ruleSystemCode
@@ -326,6 +372,8 @@ paths:
     delete:
       operationId: deleteEmployeeByBusinessKey
       summary: Administrative delete employee by business key
+      tags:
+        - Employee Directory
       description: |
         Exceptional administrative operation to physically delete an employee.
         This operation is outside normal lifecycle workflows and does not replace terminate.
@@ -358,6 +406,8 @@ paths:
     get:
       operationId: getEmployeeJourney
       summary: Get aggregated employee journey timeline (read-only view)
+      tags:
+        - Employee Journey
       description: |
         Read-only aggregated timeline view for frontend rendering.
         This endpoint does not mutate data and does not replace canonical write verticals.
@@ -404,6 +454,8 @@ paths:
     get:
       operationId: getEmployeeJourneyV2
       summary: Get employee journey timeline as chronological events (read-only view)
+      tags:
+        - Employee Journey
       description: |
         Read-only event-based timeline for employee lifecycle visualization.
         This endpoint does not mutate data and does not replace canonical write verticals.
@@ -450,6 +502,8 @@ paths:
     post:
       operationId: createPresenceByBusinessKey
       summary: Create employee presence by business key
+      tags:
+        - Employee Presence
       parameters:
         - in: path
           name: ruleSystemCode
@@ -491,6 +545,8 @@ paths:
     get:
       operationId: listEmployeePresencesByBusinessKey
       summary: List employee presences by business key
+      tags:
+        - Employee Presence
       parameters:
         - in: path
           name: ruleSystemCode
@@ -526,6 +582,8 @@ paths:
     get:
       operationId: getPresenceByBusinessKey
       summary: Get employee presence by business key
+      tags:
+        - Employee Presence
       parameters:
         - in: path
           name: ruleSystemCode
@@ -565,6 +623,8 @@ paths:
     post:
       operationId: closePresenceByBusinessKey
       summary: Close employee presence by business key
+      tags:
+        - Employee Presence
       parameters:
         - in: path
           name: ruleSystemCode
@@ -614,6 +674,8 @@ paths:
     post:
       operationId: createAddressByBusinessKey
       summary: Create employee address by business key
+      tags:
+        - Employee Address
       parameters:
         - in: path
           name: ruleSystemCode
@@ -655,6 +717,8 @@ paths:
     get:
       operationId: listEmployeeAddressesByBusinessKey
       summary: List employee addresses by business key
+      tags:
+        - Employee Address
       parameters:
         - in: path
           name: ruleSystemCode
@@ -690,6 +754,8 @@ paths:
     get:
       operationId: getAddressByBusinessKey
       summary: Get employee address by business key
+      tags:
+        - Employee Address
       parameters:
         - in: path
           name: ruleSystemCode
@@ -727,6 +793,8 @@ paths:
     put:
       operationId: updateAddressByBusinessKey
       summary: Correct employee address by business key
+      tags:
+        - Employee Address
       description: >-
         Administrative correction of the same address occurrence identified by
         ruleSystemCode, employeeTypeCode, employeeNumber, and addressNumber.
@@ -781,6 +849,8 @@ paths:
     post:
       operationId: closeAddressByBusinessKey
       summary: Close employee address by business key
+      tags:
+        - Employee Address
       parameters:
         - in: path
           name: ruleSystemCode
@@ -830,6 +900,8 @@ paths:
     post:
       operationId: createWorkCenterByBusinessKey
       summary: Create employee work center assignment by business key
+      tags:
+        - Employee Work Center
       parameters:
         - in: path
           name: ruleSystemCode
@@ -874,6 +946,8 @@ paths:
     get:
       operationId: listEmployeeWorkCentersByBusinessKey
       summary: List employee work center assignments by business key
+      tags:
+        - Employee Work Center
       parameters:
         - in: path
           name: ruleSystemCode
@@ -909,6 +983,8 @@ paths:
     post:
       operationId: replaceWorkCenterFromDateByBusinessKey
       summary: Replace employee work center assignment from effective date by business key
+      tags:
+        - Employee Work Center
       description: >-
         Canonical business operation to change employee work center assignment from an effective date.
         If an assignment covers effectiveDate, it is closed at effectiveDate - 1 and a new assignment
@@ -961,6 +1037,8 @@ paths:
     get:
       operationId: getWorkCenterByBusinessKey
       summary: Get employee work center assignment by business key
+      tags:
+        - Employee Work Center
       parameters:
         - in: path
           name: ruleSystemCode
@@ -998,6 +1076,8 @@ paths:
     put:
       operationId: updateWorkCenterByBusinessKey
       summary: Correct employee work center assignment by business key
+      tags:
+        - Employee Work Center
       description: >-
         Administrative correction of an existing work center assignment occurrence.
         This operation corrects assignment content and dates for the same occurrence
@@ -1053,6 +1133,8 @@ paths:
     delete:
       operationId: deleteWorkCenterByBusinessKey
       summary: Delete employee work center assignment by business key
+      tags:
+        - Employee Work Center
       description: >-
         Administrative deletion of a specific work center assignment occurrence identified by
         business keys. This operation does not represent a workflow transition and does not
@@ -1098,6 +1180,8 @@ paths:
     post:
       operationId: closeWorkCenterByBusinessKey
       summary: Close employee work center assignment by business key
+      tags:
+        - Employee Work Center
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1149,6 +1233,8 @@ paths:
     get:
       operationId: listCostCenterDistributionHistory
       summary: List full cost center distribution history grouped by window
+      tags:
+        - Employee Cost Center
       description: |
         Returns all distribution windows for the employee ordered chronologically.
         Each window groups the allocation lines that share the same startDate.
@@ -1186,6 +1272,8 @@ paths:
     get:
       operationId: getCurrentCostCenterDistribution
       summary: Get the current active cost center distribution
+      tags:
+        - Employee Cost Center
       description: |
         Returns the distribution window active today for the employee.
         currentDistribution is null if no active distribution exists.
@@ -1223,6 +1311,8 @@ paths:
     post:
       operationId: createCostCenterDistribution
       summary: Create a new cost center distribution window
+      tags:
+        - Employee Cost Center
       description: |
         Creates a new distribution window starting at startDate.
         Rejected if an active distribution already exists at startDate.
@@ -1271,6 +1361,8 @@ paths:
     post:
       operationId: replaceCostCenterDistributionFromDate
       summary: Replace the active cost center distribution from an effective date
+      tags:
+        - Employee Cost Center
       description: |
         Finds the active distribution window at effectiveDate - 1 day,
         closes all its lines at effectiveDate - 1 day,
@@ -1319,6 +1411,8 @@ paths:
     post:
       operationId: closeCostCenterDistribution
       summary: Close the cost center distribution window identified by startDate
+      tags:
+        - Employee Cost Center
       description: |
         Closes all allocation lines in the window that shares the given startDate.
         All lines in the window receive the same endDate.
@@ -1372,6 +1466,8 @@ paths:
     post:
       operationId: createContractByBusinessKey
       summary: Create employee contract by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1415,6 +1511,8 @@ paths:
     get:
       operationId: listEmployeeContractsByBusinessKey
       summary: List employee contracts by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1450,6 +1548,8 @@ paths:
     post:
       operationId: replaceContractFromDateByBusinessKey
       summary: Replace employee contract from effective date by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1495,6 +1595,8 @@ paths:
     get:
       operationId: getContractByBusinessKey
       summary: Get employee contract by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1532,6 +1634,8 @@ paths:
     put:
       operationId: updateContractByBusinessKey
       summary: Update employee contract by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1583,6 +1687,8 @@ paths:
     post:
       operationId: closeContractByBusinessKey
       summary: Close employee contract by business key
+      tags:
+        - Employee Contract
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1634,6 +1740,8 @@ paths:
     post:
       operationId: createLaborClassificationByBusinessKey
       summary: Create employee labor classification by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1677,6 +1785,8 @@ paths:
     get:
       operationId: listEmployeeLaborClassificationsByBusinessKey
       summary: List employee labor classifications by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1712,6 +1822,8 @@ paths:
     post:
       operationId: replaceLaborClassificationFromDateByBusinessKey
       summary: Replace employee labor classification from effective date by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1757,6 +1869,8 @@ paths:
     get:
       operationId: getLaborClassificationByBusinessKey
       summary: Get employee labor classification by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1794,6 +1908,8 @@ paths:
     put:
       operationId: updateLaborClassificationByBusinessKey
       summary: Update employee labor classification by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1845,6 +1961,8 @@ paths:
     post:
       operationId: closeLaborClassificationByBusinessKey
       summary: Close employee labor classification by business key
+      tags:
+        - Employee Labor Classification
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1896,6 +2014,8 @@ paths:
     post:
       operationId: createIdentifierByBusinessKey
       summary: Create employee identifier
+      tags:
+        - Employee Identifier
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1937,6 +2057,8 @@ paths:
     get:
       operationId: listEmployeeIdentifiersByBusinessKey
       summary: List employee identifiers
+      tags:
+        - Employee Identifier
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1972,6 +2094,8 @@ paths:
     get:
       operationId: getIdentifierByBusinessKey
       summary: Get employee identifier by business key
+      tags:
+        - Employee Identifier
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2009,6 +2133,8 @@ paths:
     put:
       operationId: updateIdentifierByBusinessKey
       summary: Update employee identifier
+      tags:
+        - Employee Identifier
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2056,6 +2182,8 @@ paths:
     delete:
       operationId: deleteIdentifierByBusinessKey
       summary: Delete employee identifier
+      tags:
+        - Employee Identifier
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2091,6 +2219,8 @@ paths:
     post:
       operationId: createContactByBusinessKey
       summary: Create employee contact
+      tags:
+        - Employee Contact
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2132,6 +2262,8 @@ paths:
     get:
       operationId: listEmployeeContactsByBusinessKey
       summary: List employee contacts
+      tags:
+        - Employee Contact
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2167,6 +2299,8 @@ paths:
     get:
       operationId: getContactByBusinessKey
       summary: Get employee contact by business key
+      tags:
+        - Employee Contact
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2204,6 +2338,8 @@ paths:
     put:
       operationId: updateContactByBusinessKey
       summary: Update employee contact
+      tags:
+        - Employee Contact
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2249,6 +2385,8 @@ paths:
     delete:
       operationId: deleteContactByBusinessKey
       summary: Delete employee contact
+      tags:
+        - Employee Contact
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2284,6 +2422,8 @@ paths:
     post:
       operationId: createRuleSystem
       summary: Create rule system
+      tags:
+        - Rule Systems
       requestBody:
         required: true
         content:
@@ -2300,6 +2440,8 @@ paths:
     get:
       operationId: listRuleSystems
       summary: List rule systems
+      tags:
+        - Rule Systems
       responses:
         "200":
           description: Rule systems list
@@ -2314,6 +2456,8 @@ paths:
     post:
       operationId: createRuleEntityType
       summary: Create rule entity type
+      tags:
+        - Rule Entity Types
       requestBody:
         required: true
         content:
@@ -2330,6 +2474,8 @@ paths:
     get:
       operationId: listRuleEntityTypes
       summary: List rule entity types
+      tags:
+        - Rule Entity Types
       responses:
         "200":
           description: Rule entity types list
@@ -2344,6 +2490,8 @@ paths:
     get:
       operationId: getRuleEntityTypeByCode
       summary: Get rule entity type by code
+      tags:
+        - Rule Entity Types
       parameters:
         - in: path
           name: ruleEntityTypeCode
@@ -2365,6 +2513,8 @@ paths:
     post:
       operationId: createRuleEntity
       summary: Create rule entity
+      tags:
+        - Rule Entities
       requestBody:
         required: true
         content:
@@ -2381,6 +2531,8 @@ paths:
     get:
       operationId: listRuleEntities
       summary: List or retrieve rule entities by business filters
+      tags:
+        - Rule Entities
       description: |
         Canonical retrieval is query-based using business keys.
         Supported canonical combinations include:
@@ -2432,6 +2584,8 @@ paths:
     get:
       operationId: getRuleEntityByBusinessKey
       summary: Get rule entity occurrence by full business key
+      tags:
+        - Rule Entities
       description: Returns the exact occurrence identified by ruleSystemCode, ruleEntityTypeCode, code and startDate.
       parameters:
         - in: path
@@ -2470,6 +2624,8 @@ paths:
     put:
       operationId: correctRuleEntityByBusinessKey
       summary: Correct existing rule entity occurrence
+      tags:
+        - Rule Entities
       description: |
         Corrects mutable fields of the same occurrence identified by the full business key.
         Identity fields (ruleSystemCode, ruleEntityTypeCode, code, startDate) are immutable.
@@ -2521,6 +2677,8 @@ paths:
     delete:
       operationId: deleteRuleEntityByBusinessKey
       summary: Delete rule entity by functional business key
+      tags:
+        - Rule Entities
       description: |
         Delete is allowed only when the target rule entity exists and is not referenced by business resources.
         This operation is business-key only and does not use technical identifiers.
@@ -2561,6 +2719,8 @@ paths:
     post:
       operationId: closeRuleEntityByBusinessKey
       summary: Close rule entity occurrence validity
+      tags:
+        - Rule Entities
       description: |
         Explicit domain action to close an existing occurrence by setting endDate.
         Identity fields remain immutable.
@@ -2613,6 +2773,8 @@ paths:
     get:
       operationId: listLaborClassificationAgreementCategories
       summary: List agreement categories valid for an agreement
+      tags:
+        - Catalogs
       parameters:
         - in: query
           name: ruleSystemCode
@@ -2649,6 +2811,8 @@ paths:
     get:
       operationId: listContractCatalogSubtypes
       summary: List contract subtypes valid for a contract type
+      tags:
+        - Catalogs
       parameters:
         - in: query
           name: ruleSystemCode
@@ -2685,6 +2849,8 @@ paths:
     get:
       operationId: getCatalogBindingsByResourceCode
       summary: Get catalog bindings by resource code
+      tags:
+        - Catalogs
       parameters:
         - in: path
           name: resourceCode
@@ -2706,6 +2872,8 @@ paths:
     get:
       operationId: getDirectCatalogOptions
       summary: Get direct catalog options by rule system and entity type
+      tags:
+        - Catalogs
       description: |
         Returns direct catalog options from `rulesystem.rule_entity` for the requested rule system and entity type.
         `referenceDate` in the response is the effective date applied by the service:
@@ -2753,6 +2921,8 @@ paths:
     get:
       operationId: getRuleSystemByCode
       summary: Get rule system by code
+      tags:
+        - Rule Systems
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2772,6 +2942,8 @@ paths:
     put:
       operationId: updateRuleSystemByCode
       summary: Update rule system by code
+      tags:
+        - Rule Systems
       description: |
         Updates mutable fields for an existing rule system.
         Domain rules for V1:
