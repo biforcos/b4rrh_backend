@@ -41,19 +41,19 @@ class CloseRuleEntityServiceTest {
         LocalDate endDate = LocalDate.of(2026, 12, 31);
         RuleEntity existing = ruleEntity(startDate, null);
 
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate, startDate))
+        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "COMPANY", "ES01", startDate, endDate, startDate))
                 .thenReturn(false);
         when(ruleEntityRepository.save(existing)).thenReturn(existing);
 
-        RuleEntity result = service.close(new CloseRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate));
+        RuleEntity result = service.close(new CloseRuleEntityCommand("ESP", "COMPANY", "ES01", startDate, endDate));
 
         assertEquals(endDate, result.getEndDate());
         assertEquals(false, result.isActive());
         verify(ruleEntityRepository).existsOverlapExcludingStartDate(
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+                "COMPANY",
                 "ES01",
                 startDate,
                 endDate,
@@ -65,12 +65,12 @@ class CloseRuleEntityServiceTest {
     @Test
     void failsWhenOccurrenceDoesNotExist() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 RuleEntityNotFoundException.class,
-                () -> service.close(new CloseRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, LocalDate.of(2026, 12, 31)))
+                () -> service.close(new CloseRuleEntityCommand("ESP", "COMPANY", "ES01", startDate, LocalDate.of(2026, 12, 31)))
         );
     }
 
@@ -78,12 +78,12 @@ class CloseRuleEntityServiceTest {
     void failsWhenOccurrenceIsAlreadyClosed() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
         RuleEntity existing = ruleEntity(startDate, LocalDate.of(2025, 12, 31));
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
 
         assertThrows(
                 RuleEntityAlreadyClosedException.class,
-                () -> service.close(new CloseRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, LocalDate.of(2026, 12, 31)))
+                () -> service.close(new CloseRuleEntityCommand("ESP", "COMPANY", "ES01", startDate, LocalDate.of(2026, 12, 31)))
         );
 
         verify(ruleEntityRepository, never()).save(existing);
@@ -93,12 +93,12 @@ class CloseRuleEntityServiceTest {
     void failsWhenEndDateIsBeforeStartDate() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
         RuleEntity existing = ruleEntity(startDate, null);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
 
         assertThrows(
                 RuleEntityInvalidDateRangeException.class,
-                () -> service.close(new CloseRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, LocalDate.of(1899, 12, 31)))
+                () -> service.close(new CloseRuleEntityCommand("ESP", "COMPANY", "ES01", startDate, LocalDate.of(1899, 12, 31)))
         );
 
         verify(ruleEntityRepository, never()).save(existing);
@@ -109,14 +109,14 @@ class CloseRuleEntityServiceTest {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
         LocalDate endDate = LocalDate.of(2026, 12, 31);
         RuleEntity existing = ruleEntity(startDate, null);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate, startDate))
+        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "COMPANY", "ES01", startDate, endDate, startDate))
                 .thenReturn(true);
 
         assertThrows(
                 RuleEntityOverlapException.class,
-                () -> service.close(new CloseRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate))
+                () -> service.close(new CloseRuleEntityCommand("ESP", "COMPANY", "ES01", startDate, endDate))
         );
 
         verify(ruleEntityRepository, never()).save(existing);
@@ -126,7 +126,7 @@ class CloseRuleEntityServiceTest {
         return new RuleEntity(
                 1L,
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+                "COMPANY",
                 "ES01",
                 "Company",
                 null,

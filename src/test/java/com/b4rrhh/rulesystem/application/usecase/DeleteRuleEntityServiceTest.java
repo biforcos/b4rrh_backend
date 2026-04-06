@@ -38,52 +38,52 @@ class DeleteRuleEntityServiceTest {
     @Test
     void deletesRuleEntityWhenExistsAndIsNotUsed() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(ruleEntity(startDate)));
-        when(ruleEntityUsageCheckPort.isRuleEntityUsed("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"))
+        when(ruleEntityUsageCheckPort.isRuleEntityUsed("ESP", "COMPANY", "ES01"))
                 .thenReturn(false);
 
-        service.delete(new DeleteRuleEntityCommand("esp", "employee_presence_company", "es01", startDate));
+        service.delete(new DeleteRuleEntityCommand("esp", "company", "es01", startDate));
 
-        verify(ruleEntityRepository).deleteByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate);
+        verify(ruleEntityRepository).deleteByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate);
     }
 
     @Test
     void throwsNotFoundWhenRuleEntityDoesNotExist() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 RuleEntityNotFoundException.class,
-                () -> service.delete(new DeleteRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+                () -> service.delete(new DeleteRuleEntityCommand("ESP", "COMPANY", "ES01", startDate))
         );
 
-        verify(ruleEntityUsageCheckPort, never()).isRuleEntityUsed("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01");
-        verify(ruleEntityRepository, never()).deleteByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate);
+        verify(ruleEntityUsageCheckPort, never()).isRuleEntityUsed("ESP", "COMPANY", "ES01");
+        verify(ruleEntityRepository, never()).deleteByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate);
     }
 
     @Test
     void throwsConflictWhenRuleEntityIsUsed() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(ruleEntity(startDate)));
-        when(ruleEntityUsageCheckPort.isRuleEntityUsed("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"))
+        when(ruleEntityUsageCheckPort.isRuleEntityUsed("ESP", "COMPANY", "ES01"))
                 .thenReturn(true);
 
         assertThrows(
                 RuleEntityInUseException.class,
-                () -> service.delete(new DeleteRuleEntityCommand("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+                () -> service.delete(new DeleteRuleEntityCommand("ESP", "COMPANY", "ES01", startDate))
         );
 
-        verify(ruleEntityRepository, never()).deleteByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate);
+        verify(ruleEntityRepository, never()).deleteByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate);
     }
 
     private RuleEntity ruleEntity(LocalDate startDate) {
         return new RuleEntity(
                 1L,
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+                "COMPANY",
                 "ES01",
                 "Company",
                 null,

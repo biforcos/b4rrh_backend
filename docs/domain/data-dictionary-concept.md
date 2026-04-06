@@ -72,7 +72,8 @@ Dictionary entries reference rule entity types.
 ### Examples:
 
 - `company_code` → `COMPANY`
-- `entry_reason_code` → `ENTRY_REASON`
+- `entry_reason_code` → `EMPLOYEE_PRESENCE_ENTRY_REASON`
+- `exit_reason_code` → `EMPLOYEE_PRESENCE_EXIT_REASON`
 - `contract_type_code` → `CONTRACT_TYPE`
 
 ### Resolution Process:

@@ -67,7 +67,8 @@ Queries and validations must respect this convention consistently.
 
 The following are not yet enforced at database level in v0:
 - semantic validation that company_code points to a COMPANY rule entity
-- semantic validation that entry_reason_code points to an ENTRY_REASON rule entity
+- semantic validation that entry_reason_code points to an EMPLOYEE_PRESENCE_ENTRY_REASON rule entity
+- semantic validation that exit_reason_code points to an EMPLOYEE_PRESENCE_EXIT_REASON rule entity
 - semantic validation that contract_type_code points to a CONTRACT_TYPE rule entity
 - temporal overlap prevention through PostgreSQL exclusion constraints
 - the physical implementation of the business dictionary

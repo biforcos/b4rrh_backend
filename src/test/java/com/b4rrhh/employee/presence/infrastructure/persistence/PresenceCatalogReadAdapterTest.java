@@ -23,28 +23,28 @@ class PresenceCatalogReadAdapterTest {
     private RuleEntityRepository ruleEntityRepository;
 
     @Test
-    void findCompanyNameUsesEmployeePresenceCompanyTypeAndReturnsLabelWhenFound() {
+    void findCompanyNameUsesCompanyTypeAndReturnsLabelWhenFound() {
         PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
-        RuleEntity entity = ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC01", " Empresa Activa ");
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC01"))
+        RuleEntity entity = ruleEntity("ESP", "COMPANY", "AC01", " Empresa Activa ");
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "AC01"))
                 .thenReturn(Optional.of(entity));
 
         Optional<String> result = adapter.findCompanyName(" esp ", " ac01 ");
 
         assertEquals(Optional.of("Empresa Activa"), result);
-        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC01");
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "COMPANY", "AC01");
     }
 
     @Test
     void findCompanyNameReturnsEmptyWhenLabelIsMissing() {
         PresenceCatalogReadAdapter adapter = new PresenceCatalogReadAdapter(ruleEntityRepository);
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC99"))
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "AC99"))
                 .thenReturn(Optional.empty());
 
         Optional<String> result = adapter.findCompanyName("ESP", "AC99");
 
         assertTrue(result.isEmpty());
-        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC99");
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "COMPANY", "AC99");
     }
 
     @Test

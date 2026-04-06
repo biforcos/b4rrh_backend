@@ -31,7 +31,7 @@ class ListRuleEntitiesServiceTest {
 
     @Test
     void listsByRuleSystemCode() {
-        List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
+        List<RuleEntity> expected = List.of(ruleEntity("ESP", "COMPANY", "ES01"));
         when(ruleEntityRepository.findByFilters("ESP", null, null, null, null)).thenReturn(expected);
 
         List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("esp", null, null, null, null));
@@ -43,38 +43,38 @@ class ListRuleEntitiesServiceTest {
 
     @Test
     void listsByRuleSystemCodeAndRuleEntityTypeCode() {
-        List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null, null)).thenReturn(expected);
+        List<RuleEntity> expected = List.of(ruleEntity("ESP", "COMPANY", "ES01"));
+        when(ruleEntityRepository.findByFilters("ESP", "COMPANY", null, null, null)).thenReturn(expected);
 
-        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("ESP", "employee_presence_company", null, null, null));
+        List<RuleEntity> result = service.list(new ListRuleEntitiesQuery("ESP", "company", null, null, null));
 
         assertEquals(1, result.size());
-        assertEquals("EMPLOYEE_PRESENCE_COMPANY", result.get(0).getRuleEntityTypeCode());
-        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", null, null, null);
+        assertEquals("COMPANY", result.get(0).getRuleEntityTypeCode());
+        verify(ruleEntityRepository).findByFilters("ESP", "COMPANY", null, null, null);
     }
 
     @Test
     void listsByRuleSystemCodeRuleEntityTypeCodeAndCode() {
-        List<RuleEntity> expected = List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"))
+        List<RuleEntity> expected = List.of(ruleEntity("ESP", "COMPANY", "ES01"));
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "ES01"))
             .thenReturn(expected.stream().findFirst());
 
         List<RuleEntity> result = service.list(
-            new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "es01", null, null)
+            new ListRuleEntitiesQuery("ESP", "COMPANY", "es01", null, null)
         );
 
         assertEquals(1, result.size());
         assertEquals("ES01", result.get(0).getCode());
-        verify(ruleEntityRepository).findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01");
+        verify(ruleEntityRepository).findByBusinessKey("ESP", "COMPANY", "ES01");
     }
 
     @Test
     void returnsEmptyListWhenNoResults() {
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99"))
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "ES99"))
             .thenReturn(java.util.Optional.empty());
 
         List<RuleEntity> result = service.list(
-            new ListRuleEntitiesQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES99", null, null)
+            new ListRuleEntitiesQuery("ESP", "COMPANY", "ES99", null, null)
         );
 
         assertEquals(0, result.size());
@@ -82,12 +82,12 @@ class ListRuleEntitiesServiceTest {
 
     @Test
     void normalizesFiltersBeforeSearching() {
-        when(ruleEntityRepository.findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true, null))
-                .thenReturn(List.of(ruleEntity("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01")));
+        when(ruleEntityRepository.findByFilters("ESP", "COMPANY", "ES01", true, null))
+            .thenReturn(List.of(ruleEntity("ESP", "COMPANY", "ES01")));
 
-        service.list(new ListRuleEntitiesQuery(" esp ", " employee_presence_company ", " es01 ", true, null));
+        service.list(new ListRuleEntitiesQuery(" esp ", " company ", " es01 ", true, null));
 
-        verify(ruleEntityRepository).findByFilters("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", true, null);
+        verify(ruleEntityRepository).findByFilters("ESP", "COMPANY", "ES01", true, null);
         }
 
         @Test

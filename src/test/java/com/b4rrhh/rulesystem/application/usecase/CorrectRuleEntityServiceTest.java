@@ -41,14 +41,14 @@ class CorrectRuleEntityServiceTest {
         LocalDate endDate = LocalDate.of(2026, 12, 31);
         RuleEntity existing = ruleEntity(startDate, null);
 
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate, startDate))
+        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "COMPANY", "ES01", startDate, endDate, startDate))
                 .thenReturn(false);
         when(ruleEntityRepository.save(existing)).thenReturn(existing);
 
         RuleEntity result = service.correct(new CorrectRuleEntityCommand(
-                "esp", "employee_presence_company", "es01", startDate,
+                "esp", "company", "es01", startDate,
                 "Company corrected", "Corrected description", endDate
         ));
 
@@ -57,7 +57,7 @@ class CorrectRuleEntityServiceTest {
         RuleEntity persisted = captor.getValue();
 
         assertEquals("ESP", persisted.getRuleSystemCode());
-        assertEquals("EMPLOYEE_PRESENCE_COMPANY", persisted.getRuleEntityTypeCode());
+        assertEquals("COMPANY", persisted.getRuleEntityTypeCode());
         assertEquals("ES01", persisted.getCode());
         assertEquals(startDate, persisted.getStartDate());
         assertEquals("Company corrected", persisted.getName());
@@ -70,13 +70,13 @@ class CorrectRuleEntityServiceTest {
     @Test
     void throwsNotFoundWhenOccurrenceDoesNotExist() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 RuleEntityNotFoundException.class,
                 () -> service.correct(new CorrectRuleEntityCommand(
-                        "ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate,
+                        "ESP", "COMPANY", "ES01", startDate,
                         "Company corrected", null, null
                 ))
         );
@@ -86,13 +86,13 @@ class CorrectRuleEntityServiceTest {
     void throwsConflictWhenEndDateIsBeforeStartDate() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
         RuleEntity existing = ruleEntity(startDate, null);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
 
         assertThrows(
                 RuleEntityInvalidDateRangeException.class,
                 () -> service.correct(new CorrectRuleEntityCommand(
-                        "ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate,
+                        "ESP", "COMPANY", "ES01", startDate,
                         "Company corrected", null, LocalDate.of(1899, 12, 31)
                 ))
         );
@@ -106,15 +106,15 @@ class CorrectRuleEntityServiceTest {
         LocalDate endDate = LocalDate.of(2026, 12, 31);
         RuleEntity existing = ruleEntity(startDate, null);
 
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate, endDate, startDate))
+        when(ruleEntityRepository.existsOverlapExcludingStartDate("ESP", "COMPANY", "ES01", startDate, endDate, startDate))
                 .thenReturn(true);
 
         assertThrows(
                 RuleEntityOverlapException.class,
                 () -> service.correct(new CorrectRuleEntityCommand(
-                        "ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate,
+                        "ESP", "COMPANY", "ES01", startDate,
                         "Company corrected", null, endDate
                 ))
         );
@@ -126,7 +126,7 @@ class CorrectRuleEntityServiceTest {
         return new RuleEntity(
                 1L,
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+                "COMPANY",
                 "ES01",
                 "Company",
                 null,

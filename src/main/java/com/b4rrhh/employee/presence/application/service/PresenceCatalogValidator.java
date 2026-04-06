@@ -34,7 +34,7 @@ public class PresenceCatalogValidator {
     }
 
     public void validateCompanyCode(String ruleSystemCode, String companyCode, LocalDate referenceDate) {
-        validateCatalog(ruleSystemCode, PresenceRuleEntityTypeCodes.EMPLOYEE_PRESENCE_COMPANY, companyCode, "companyCode", referenceDate);
+        validateCatalog(ruleSystemCode, PresenceRuleEntityTypeCodes.COMPANY, companyCode, "companyCode", referenceDate);
     }
 
     public void validateEntryReasonCode(String ruleSystemCode, String entryReasonCode, LocalDate referenceDate) {

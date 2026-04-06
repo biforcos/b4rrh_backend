@@ -14,10 +14,10 @@ The rule system context is taken from:
 - reference entity type: `COMPANY`
 
 ### entry_reason_code
-- reference entity type: `ENTRY_REASON`
+- reference entity type: `EMPLOYEE_PRESENCE_ENTRY_REASON`
 
 ### exit_reason_code
-- reference entity type: `EXIT_REASON`
+- reference entity type: `EMPLOYEE_PRESENCE_EXIT_REASON`
 
 ## Validation rule
 

@@ -71,19 +71,19 @@ class RuleEntityBusinessKeyControllerHttpTest {
         when(getRuleEntityByBusinessKeyUseCase.get(any(GetRuleEntityByBusinessKeyQuery.class)))
                 .thenReturn(ruleEntity(LocalDate.of(1900, 1, 1), null));
 
-        mockMvc.perform(get("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01"))
+        mockMvc.perform(get("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ruleSystemCode").value("ESP"))
-                .andExpect(jsonPath("$.ruleEntityTypeCode").value("EMPLOYEE_PRESENCE_COMPANY"))
+                .andExpect(jsonPath("$.ruleEntityTypeCode").value("COMPANY"))
                 .andExpect(jsonPath("$.code").value("ES01"));
     }
 
     @Test
     void getReturns404WhenOccurrenceDoesNotExist() throws Exception {
         when(getRuleEntityByBusinessKeyUseCase.get(any(GetRuleEntityByBusinessKeyQuery.class)))
-                .thenThrow(new RuleEntityNotFoundException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
+                .thenThrow(new RuleEntityNotFoundException("ESP", "COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
 
-        mockMvc.perform(get("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01"))
+        mockMvc.perform(get("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isNotFound());
     }
 
@@ -92,7 +92,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
         when(correctRuleEntityUseCase.correct(any(CorrectRuleEntityCommand.class)))
                 .thenReturn(ruleEntity(LocalDate.of(1900, 1, 1), LocalDate.of(2026, 12, 31)));
 
-        mockMvc.perform(put("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01")
+        mockMvc.perform(put("/rule-entities/ESP/COMPANY/ES01/1900-01-01")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -110,7 +110,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
         when(correctRuleEntityUseCase.correct(any(CorrectRuleEntityCommand.class)))
                 .thenThrow(new IllegalArgumentException("name is required"));
 
-        mockMvc.perform(put("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01")
+        mockMvc.perform(put("/rule-entities/ESP/COMPANY/ES01/1900-01-01")
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -119,9 +119,9 @@ class RuleEntityBusinessKeyControllerHttpTest {
     @Test
     void putReturns404WhenOccurrenceDoesNotExist() throws Exception {
         when(correctRuleEntityUseCase.correct(any(CorrectRuleEntityCommand.class)))
-                .thenThrow(new RuleEntityNotFoundException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
+                .thenThrow(new RuleEntityNotFoundException("ESP", "COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
 
-        mockMvc.perform(put("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01")
+        mockMvc.perform(put("/rule-entities/ESP/COMPANY/ES01/1900-01-01")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -134,9 +134,9 @@ class RuleEntityBusinessKeyControllerHttpTest {
     @Test
     void putReturns409WhenDomainConflictOccurs() throws Exception {
         when(correctRuleEntityUseCase.correct(any(CorrectRuleEntityCommand.class)))
-                .thenThrow(new RuleEntityOverlapException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
+                .thenThrow(new RuleEntityOverlapException("ESP", "COMPANY", "ES01"));
 
-        mockMvc.perform(put("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01")
+        mockMvc.perform(put("/rule-entities/ESP/COMPANY/ES01/1900-01-01")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -152,7 +152,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
         when(closeRuleEntityUseCase.close(any(CloseRuleEntityCommand.class)))
                 .thenReturn(ruleEntity(LocalDate.of(1900, 1, 1), LocalDate.of(2026, 12, 31)));
 
-        mockMvc.perform(post("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01/close")
+        mockMvc.perform(post("/rule-entities/ESP/COMPANY/ES01/1900-01-01/close")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -170,7 +170,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
         when(closeRuleEntityUseCase.close(any(CloseRuleEntityCommand.class)))
                 .thenThrow(new IllegalArgumentException("endDate is required"));
 
-        mockMvc.perform(post("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01/close")
+        mockMvc.perform(post("/rule-entities/ESP/COMPANY/ES01/1900-01-01/close")
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -179,9 +179,9 @@ class RuleEntityBusinessKeyControllerHttpTest {
     @Test
     void closeReturns404WhenOccurrenceDoesNotExist() throws Exception {
         when(closeRuleEntityUseCase.close(any(CloseRuleEntityCommand.class)))
-                .thenThrow(new RuleEntityNotFoundException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
+                .thenThrow(new RuleEntityNotFoundException("ESP", "COMPANY", "ES01", LocalDate.of(1900, 1, 1)));
 
-        mockMvc.perform(post("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01/close")
+        mockMvc.perform(post("/rule-entities/ESP/COMPANY/ES01/1900-01-01/close")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -194,9 +194,9 @@ class RuleEntityBusinessKeyControllerHttpTest {
     @Test
     void closeReturns409WhenDomainConflictOccurs() throws Exception {
         when(closeRuleEntityUseCase.close(any(CloseRuleEntityCommand.class)))
-                .thenThrow(new RuleEntityAlreadyClosedException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"));
+                .thenThrow(new RuleEntityAlreadyClosedException("ESP", "COMPANY", "ES01"));
 
-        mockMvc.perform(post("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01/close")
+        mockMvc.perform(post("/rule-entities/ESP/COMPANY/ES01/1900-01-01/close")
                         .contentType("application/json")
                         .content("""
                                 {
@@ -210,35 +210,35 @@ class RuleEntityBusinessKeyControllerHttpTest {
     void deleteReturns204WhenRuleEntityCanBeDeleted() throws Exception {
         doNothing().when(deleteRuleEntityUseCase).delete(any(DeleteRuleEntityCommand.class));
 
-        mockMvc.perform(delete("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01"))
+        mockMvc.perform(delete("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isNoContent());
 
         ArgumentCaptor<DeleteRuleEntityCommand> captor = ArgumentCaptor.forClass(DeleteRuleEntityCommand.class);
         verify(deleteRuleEntityUseCase).delete(captor.capture());
         assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("EMPLOYEE_PRESENCE_COMPANY", captor.getValue().ruleEntityTypeCode());
+        assertEquals("COMPANY", captor.getValue().ruleEntityTypeCode());
         assertEquals("ES01", captor.getValue().code());
         assertEquals(LocalDate.of(1900, 1, 1), captor.getValue().startDate());
     }
 
     @Test
     void deleteReturns404WhenRuleEntityDoesNotExist() throws Exception {
-        doThrow(new RuleEntityNotFoundException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", LocalDate.of(1900, 1, 1)))
+        doThrow(new RuleEntityNotFoundException("ESP", "COMPANY", "ES01", LocalDate.of(1900, 1, 1)))
                 .when(deleteRuleEntityUseCase)
                 .delete(any(DeleteRuleEntityCommand.class));
 
-        mockMvc.perform(delete("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01"))
+        mockMvc.perform(delete("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").exists());
     }
 
     @Test
     void deleteReturns409WhenRuleEntityIsUsed() throws Exception {
-        doThrow(new RuleEntityInUseException("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01"))
+        doThrow(new RuleEntityInUseException("ESP", "COMPANY", "ES01"))
                 .when(deleteRuleEntityUseCase)
                 .delete(any(DeleteRuleEntityCommand.class));
 
-        mockMvc.perform(delete("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01"))
+        mockMvc.perform(delete("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").exists());
     }
@@ -248,7 +248,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
                 when(closeRuleEntityUseCase.close(any(CloseRuleEntityCommand.class)))
                                 .thenThrow(new RuleEntityInvalidDateRangeException(LocalDate.of(1900, 1, 1), LocalDate.of(1899, 12, 31)));
 
-                mockMvc.perform(post("/rule-entities/ESP/EMPLOYEE_PRESENCE_COMPANY/ES01/1900-01-01/close")
+                mockMvc.perform(post("/rule-entities/ESP/COMPANY/ES01/1900-01-01/close")
                                                 .contentType("application/json")
                                                 .content("""
                                                                 {
@@ -262,7 +262,7 @@ class RuleEntityBusinessKeyControllerHttpTest {
                 return new RuleEntity(
                                 1L,
                                 "ESP",
-                                "EMPLOYEE_PRESENCE_COMPANY",
+                                "COMPANY",
                                 "ES01",
                                 "Company",
                                 null,

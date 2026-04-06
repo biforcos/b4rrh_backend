@@ -55,8 +55,8 @@ Defines types of parameterized entities.
 Examples:
 
 - COMPANY
-- ENTRY_REASON
-- EXIT_REASON
+- EMPLOYEE_PRESENCE_ENTRY_REASON
+- EMPLOYEE_PRESENCE_EXIT_REASON
 - CONTRACT_TYPE
 - COST_CENTER
 
@@ -130,6 +130,12 @@ Fields include:
 - `exit_reason_code`
 - `valid_from`
 - `valid_to`
+
+Reference catalogs:
+
+- `company_code` → `COMPANY`
+- `entry_reason_code` → `EMPLOYEE_PRESENCE_ENTRY_REASON`
+- `exit_reason_code` → `EMPLOYEE_PRESENCE_EXIT_REASON`
 
 Presence number is a sequential identifier per employee.
 

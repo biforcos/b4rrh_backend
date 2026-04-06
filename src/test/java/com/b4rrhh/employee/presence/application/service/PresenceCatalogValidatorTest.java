@@ -40,7 +40,7 @@ class PresenceCatalogValidatorTest {
 
     @Test
     void validatesInclusiveEndDateSemantics() {
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC01"))
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "AC01"))
                 .thenReturn(Optional.of(activeRuleEntityWithDates(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))));
 
         // Inclusive end date: referenceDate == endDate is valid.
@@ -49,7 +49,7 @@ class PresenceCatalogValidatorTest {
 
     @Test
     void rejectsReferenceDateAfterEndDate() {
-        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_COMPANY", "AC01"))
+        when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "AC01"))
                 .thenReturn(Optional.of(activeRuleEntityWithDates(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))));
 
         assertThrows(
@@ -62,7 +62,7 @@ class PresenceCatalogValidatorTest {
         return new RuleEntity(
                 1L,
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+            "COMPANY",
                 "AC01",
                 "Company",
                 null,

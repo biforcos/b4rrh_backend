@@ -1018,7 +1018,7 @@
                 }
               ]
             },
-            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY"
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=COMPANY"
           },
           "response": []
         },
@@ -1067,7 +1067,7 @@
                 }
               ]
             },
-            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01&active=true"
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=COMPANY&code=ES01&active=true"
           },
           "response": []
         },
@@ -1112,7 +1112,7 @@
                 }
               ]
             },
-            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=EMPLOYEE_PRESENCE_COMPANY&code=ES01"
+            "description": "GET /rule-entities?ruleSystemCode=ESP&ruleEntityTypeCode=COMPANY&code=ES01"
           },
           "response": []
         },
@@ -2668,7 +2668,7 @@
     },
     {
       "key": "ruleEntityTypeCode",
-      "value": "EMPLOYEE_PRESENCE_COMPANY"
+      "value": "COMPANY"
     },
     {
       "key": "ruleEntityCode",

@@ -26,7 +26,7 @@ public class PresenceCatalogReadAdapter implements PresenceCatalogReadPort {
 
         return findCatalogName(
                 normalizedRuleSystemCode,
-                PresenceRuleEntityTypeCodes.EMPLOYEE_PRESENCE_COMPANY,
+                PresenceRuleEntityTypeCodes.COMPANY,
                 normalizedCompanyCode
         );
     }

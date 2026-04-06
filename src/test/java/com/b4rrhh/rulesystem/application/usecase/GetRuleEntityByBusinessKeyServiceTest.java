@@ -36,27 +36,27 @@ class GetRuleEntityByBusinessKeyServiceTest {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
         RuleEntity entity = ruleEntity(startDate, null);
 
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.of(entity));
 
-        RuleEntity result = service.get(new GetRuleEntityByBusinessKeyQuery("esp", "employee_presence_company", "es01", startDate));
+        RuleEntity result = service.get(new GetRuleEntityByBusinessKeyQuery("esp", "company", "es01", startDate));
 
         assertEquals("ESP", result.getRuleSystemCode());
-        assertEquals("EMPLOYEE_PRESENCE_COMPANY", result.getRuleEntityTypeCode());
+        assertEquals("COMPANY", result.getRuleEntityTypeCode());
         assertEquals("ES01", result.getCode());
         assertEquals(startDate, result.getStartDate());
-        verify(ruleEntityRepository).findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate);
+        verify(ruleEntityRepository).findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate);
     }
 
     @Test
     void throwsNotFoundWhenOccurrenceDoesNotExist() {
         LocalDate startDate = LocalDate.of(1900, 1, 1);
-        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+        when(ruleEntityRepository.findByBusinessKeyAndStartDate("ESP", "COMPANY", "ES01", startDate))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 RuleEntityNotFoundException.class,
-                () -> service.get(new GetRuleEntityByBusinessKeyQuery("ESP", "EMPLOYEE_PRESENCE_COMPANY", "ES01", startDate))
+                () -> service.get(new GetRuleEntityByBusinessKeyQuery("ESP", "COMPANY", "ES01", startDate))
         );
     }
 
@@ -64,7 +64,7 @@ class GetRuleEntityByBusinessKeyServiceTest {
         return new RuleEntity(
                 1L,
                 "ESP",
-                "EMPLOYEE_PRESENCE_COMPANY",
+                "COMPANY",
                 "ES01",
                 "Company",
                 null,

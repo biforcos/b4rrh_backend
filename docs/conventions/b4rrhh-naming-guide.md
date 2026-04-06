@@ -239,8 +239,9 @@ For metamodel-backed catalogs:
 Examples:
 
 - `EMPLOYEE_CONTACT_TYPE`
-- `EMPLOYEE_ENTRY_REASON`
-- `EMPLOYEE_EXIT_REASON`
+- `EMPLOYEE_PRESENCE_ENTRY_REASON`
+- `EMPLOYEE_PRESENCE_EXIT_REASON`
+- `COMPANY`
 
 Catalog-backed fields in resources should use `...Code` suffix:
 
