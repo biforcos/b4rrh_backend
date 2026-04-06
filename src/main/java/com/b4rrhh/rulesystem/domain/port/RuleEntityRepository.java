@@ -15,6 +15,12 @@ public interface RuleEntityRepository {
             Boolean active,
             LocalDate referenceDate
     );
+    Optional<RuleEntity> findApplicableByBusinessKey(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate referenceDate
+    );
     Optional<RuleEntity> findByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code);
     Optional<RuleEntity> findByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate);
     boolean existsOverlapExcludingStartDate(

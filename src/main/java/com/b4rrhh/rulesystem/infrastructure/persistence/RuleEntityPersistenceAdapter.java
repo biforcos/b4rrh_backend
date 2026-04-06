@@ -44,6 +44,37 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
     }
 
     @Override
+    public Optional<RuleEntity> findApplicableByBusinessKey(
+            String ruleSystemCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate referenceDate
+    ) {
+        List<RuleEntityEntity> matches = springDataRuleEntityRepository.findApplicableByBusinessKey(
+                ruleSystemCode,
+                ruleEntityTypeCode,
+                code,
+                referenceDate,
+                SpringDataRuleEntityRepository.MAX_DATE
+        );
+
+        if (matches.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple applicable rule entities found for business key: "
+                            + ruleSystemCode
+                            + "/"
+                            + ruleEntityTypeCode
+                            + "/"
+                            + code
+                            + " at "
+                            + referenceDate
+            );
+        }
+
+        return matches.stream().findFirst().map(this::toDomain);
+    }
+
+    @Override
     public Optional<RuleEntity> findByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code) {
         return springDataRuleEntityRepository
                 .findByRuleSystemCodeAndRuleEntityTypeCodeAndCode(ruleSystemCode, ruleEntityTypeCode, code)

@@ -26,6 +26,8 @@ tags:
     description: Employee identifier management.
   - name: Employee Contact
     description: Employee contact management.
+  - name: Company Profile
+    description: Enriched company profile reads and updates backed by the COMPANY occurrence applicable on the current date.
   - name: Catalogs
     description: Read-only catalog and catalog binding queries.
   - name: Rule Systems
@@ -2868,6 +2870,94 @@ paths:
         "400":
           description: Invalid resource code
 
+  /companies/{ruleSystemCode}/{companyCode}/profile:
+    get:
+      operationId: getCompanyProfile
+      summary: Get enriched company profile by business key
+      tags:
+        - Company Profile
+      description: |
+        Resolves the COMPANY base occurrence by business key using the occurrence applicable on the current server date.
+        If no COMPANY occurrence is applicable today, the profile is not reachable through this endpoint.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: companyCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        "200":
+          description: Company profile found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileResponse"
+        "404":
+          description: Company does not exist, is not applicable today, or profile has not been created yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileErrorResponse"
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileErrorResponse"
+    put:
+      operationId: upsertCompanyProfile
+      summary: Create or update enriched company profile by business key
+      tags:
+        - Company Profile
+      description: |
+        Resolves the COMPANY base occurrence by business key using the occurrence applicable on the current server date.
+        Upsert is only allowed for a COMPANY occurrence that is active/applicable today.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: companyCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCompanyProfileRequest"
+      responses:
+        "200":
+          description: Company profile stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileResponse"
+        "400":
+          description: Invalid request payload or invalid country code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileErrorResponse"
+        "404":
+          description: Company does not exist or is not applicable today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileErrorResponse"
+
   /catalog-options/direct:
     get:
       operationId: getDirectCatalogOptions
@@ -4731,6 +4821,71 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DirectCatalogOptionResponse"
+    CompanyProfileAddress:
+      type: object
+      properties:
+        street:
+          type: string
+          maxLength: 300
+          nullable: true
+        city:
+          type: string
+          maxLength: 120
+          nullable: true
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        regionCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        countryCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+          description: ISO 3166-1 alpha-3 country code aligned with COUNTRY rule entity codes.
+    UpsertCompanyProfileRequest:
+      type: object
+      required:
+        - legalName
+      properties:
+        legalName:
+          type: string
+          maxLength: 200
+        taxIdentifier:
+          type: string
+          maxLength: 50
+          nullable: true
+        address:
+          $ref: "#/components/schemas/CompanyProfileAddress"
+    CompanyProfileResponse:
+      type: object
+      required:
+        - companyCode
+        - legalName
+        - address
+      properties:
+        companyCode:
+          type: string
+          maxLength: 30
+        legalName:
+          type: string
+          maxLength: 200
+        taxIdentifier:
+          type: string
+          maxLength: 50
+          nullable: true
+        address:
+          $ref: "#/components/schemas/CompanyProfileAddress"
+    CompanyProfileErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
     CreateRuleSystemRequest:
       type: object
       required:

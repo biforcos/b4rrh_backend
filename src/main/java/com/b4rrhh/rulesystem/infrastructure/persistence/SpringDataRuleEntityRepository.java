@@ -55,6 +55,24 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
             @Param("maxDate") LocalDate maxDate
     );
 
+        @Query("""
+      select re
+      from RuleEntityEntity re
+      where re.ruleSystemCode = :ruleSystemCode
+        and re.ruleEntityTypeCode = :ruleEntityTypeCode
+        and re.code = :code
+        and re.startDate <= :referenceDate
+        and :referenceDate <= coalesce(re.endDate, :maxDate)
+      order by re.startDate desc, re.id desc
+      """)
+        List<RuleEntityEntity> findApplicableByBusinessKey(
+          @Param("ruleSystemCode") String ruleSystemCode,
+          @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
+          @Param("code") String code,
+          @Param("referenceDate") LocalDate referenceDate,
+          @Param("maxDate") LocalDate maxDate
+        );
+
     Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCode(
             String ruleSystemCode,
             String ruleEntityTypeCode,

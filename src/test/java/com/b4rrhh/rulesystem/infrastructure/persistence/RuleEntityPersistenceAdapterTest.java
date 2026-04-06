@@ -295,4 +295,80 @@ class RuleEntityPersistenceAdapterTest {
                 SpringDataRuleEntityRepository.MAX_DATE
         );
     }
+
+    @Test
+    void applicableLookupReturnsSingleApplicableOccurrence() {
+        RuleEntityEntity applicable = new RuleEntityEntity();
+        applicable.setId(50L);
+        applicable.setRuleSystemCode("ESP");
+        applicable.setRuleEntityTypeCode("COMPANY");
+        applicable.setCode("ACME");
+        applicable.setName("Acme");
+        applicable.setActive(true);
+        applicable.setStartDate(LocalDate.of(2020, 1, 1));
+        applicable.setEndDate(null);
+        applicable.setCreatedAt(LocalDateTime.now());
+        applicable.setUpdatedAt(LocalDateTime.now());
+
+        when(springDataRuleEntityRepository.findApplicableByBusinessKey(
+                "ESP",
+                "COMPANY",
+                "ACME",
+                LocalDate.of(2026, 4, 6),
+                SpringDataRuleEntityRepository.MAX_DATE
+        )).thenReturn(java.util.List.of(applicable));
+
+        Optional<RuleEntity> result = adapter.findApplicableByBusinessKey(
+                "ESP",
+                "COMPANY",
+                "ACME",
+                LocalDate.of(2026, 4, 6)
+        );
+
+        assertEquals(true, result.isPresent());
+        assertEquals(50L, result.get().getId());
+    }
+
+    @Test
+    void applicableLookupFailsWhenMoreThanOneOccurrenceIsApplicable() {
+        RuleEntityEntity first = new RuleEntityEntity();
+        first.setId(50L);
+        first.setRuleSystemCode("ESP");
+        first.setRuleEntityTypeCode("COMPANY");
+        first.setCode("ACME");
+        first.setName("Acme 1");
+        first.setActive(true);
+        first.setStartDate(LocalDate.of(2020, 1, 1));
+        first.setCreatedAt(LocalDateTime.now());
+        first.setUpdatedAt(LocalDateTime.now());
+
+        RuleEntityEntity second = new RuleEntityEntity();
+        second.setId(51L);
+        second.setRuleSystemCode("ESP");
+        second.setRuleEntityTypeCode("COMPANY");
+        second.setCode("ACME");
+        second.setName("Acme 2");
+        second.setActive(true);
+        second.setStartDate(LocalDate.of(2021, 1, 1));
+        second.setCreatedAt(LocalDateTime.now());
+        second.setUpdatedAt(LocalDateTime.now());
+
+        when(springDataRuleEntityRepository.findApplicableByBusinessKey(
+                "ESP",
+                "COMPANY",
+                "ACME",
+                LocalDate.of(2026, 4, 6),
+                SpringDataRuleEntityRepository.MAX_DATE
+        )).thenReturn(java.util.List.of(first, second));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> adapter.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.of(2026, 4, 6))
+        );
+
+        assertEquals(
+                "Multiple applicable rule entities found for business key: ESP/COMPANY/ACME at 2026-04-06",
+                exception.getMessage()
+        );
+    }
 }
