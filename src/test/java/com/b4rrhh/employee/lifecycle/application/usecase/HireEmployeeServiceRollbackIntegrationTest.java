@@ -13,6 +13,8 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,6 +142,18 @@ class HireEmployeeServiceRollbackIntegrationTest {
         @Bean
         CreateContractUseCase createContractUseCase() {
             return command -> null;
+        }
+
+        @Bean
+        WorkCenterCompanyLookupPort workCenterCompanyLookupPort() {
+            return (ruleSystemCode, workCenterCode, referenceDate) -> "BAD_WC".equals(workCenterCode)
+                    ? java.util.Optional.of("COMP")
+                    : java.util.Optional.empty();
+        }
+
+        @Bean
+        WorkCenterCompanyValidator workCenterCompanyValidator(WorkCenterCompanyLookupPort workCenterCompanyLookupPort) {
+            return new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
         }
 
         @Bean

@@ -24,6 +24,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -224,6 +226,16 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                     command.startDate(),
                     command.endDate()
             );
+        }
+
+        @Bean
+        WorkCenterCompanyLookupPort workCenterCompanyLookupPort() {
+            return (ruleSystemCode, workCenterCode, referenceDate) -> java.util.Optional.of("ES01");
+        }
+
+        @Bean
+        WorkCenterCompanyValidator workCenterCompanyValidator(WorkCenterCompanyLookupPort workCenterCompanyLookupPort) {
+            return new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
         }
 
         @Bean
