@@ -358,6 +358,34 @@ Represents temporal employee allocations to cost centers with percentage.
 - lifecycle_strategy = CLOSE
 - delete_policy = FORBIDDEN
 
+---
+
+# 12. `employee.working_time`
+
+Represents the employee working time conditions over time.
+
+## Structural Properties
+
+- historized = true
+- occurrence_type = MULTIPLE
+- simultaneous_occurrences = SINGLE_ACTIVE
+- lifecycle_strategy = CLOSE
+- delete_policy = FORBIDDEN
+
+## Fields
+
+- working_time_number
+- working_time_percentage
+- weekly_hours
+- daily_hours
+- monthly_hours
+- start_date
+- end_date
+
+## Functional Business Key
+
+(employee, working_time_number)
+
 ## Fields
 
 - cost_center_code

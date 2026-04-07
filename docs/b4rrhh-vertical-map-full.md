@@ -9,6 +9,7 @@
 | contact | REFERENCE_CURRENT | SIMPLE | none | CRUD |
 | address | REFERENCE_CURRENT | SIMPLE | none | CRUD |
 | work_center | FLEXIBLE_TIMELINE | SIMPLE | NO_OVERLAP + CONTAINED | CRUD |
+| working_time | FLEXIBLE_TIMELINE | none | NO_OVERLAP + CONTAINED | close |
 | cost_center | DISTRIBUTED_TIMELINE | SIMPLE | MULTI_ACTIVE + SUM<=100 | TBD |
 | labor_classification | STRONG_TIMELINE | COMPOSITE | FULL_COVERAGE | replaceFromDate |
 | contract | STRONG_TIMELINE | COMPOSITE | FULL_COVERAGE | replaceFromDate |
@@ -32,6 +33,10 @@
 - presence
 - labor_classification
 - contract
+
+### Contained Timeline Cluster
+- work_center
+- working_time
 
 ### Distributed Cluster
 - cost_center
