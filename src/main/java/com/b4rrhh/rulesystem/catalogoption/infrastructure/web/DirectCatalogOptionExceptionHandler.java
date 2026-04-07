@@ -7,7 +7,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes = DirectCatalogOptionController.class)
+@RestControllerAdvice(assignableTypes = {
+    DirectCatalogOptionController.class,
+    WorkCenterByCompanyCatalogController.class
+})
 public class DirectCatalogOptionExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)

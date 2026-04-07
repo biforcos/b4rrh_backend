@@ -3569,6 +3569,55 @@ paths:
         "400":
           description: Invalid request
 
+  /catalog-options/work-centers-by-company:
+    get:
+      operationId: getWorkCentersByCompany
+      summary: Get work center catalog options by company
+      tags:
+        - Catalogs
+      description: |
+        Returns WORK_CENTER catalog options applicable to the requested rule system and reference date,
+        filtered by the company that owns the work center through `rulesystem.work_center_profile.company_code`.
+        `referenceDate` in the response is the effective date applied by the service:
+        - request `referenceDate` when provided
+        - current date when omitted
+      parameters:
+        - in: query
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: query
+          name: companyCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: query
+          name: referenceDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Optional date used as effective date for validity filtering.
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Optional case-insensitive search by option code or name.
+      responses:
+        "200":
+          description: Work center options filtered by company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkCentersByCompanyResponse"
+        "400":
+          description: Invalid request
+
   /rule-systems/{ruleSystemCode}:
     get:
       operationId: getRuleSystemByCode
@@ -4805,6 +4854,14 @@ components:
           type: string
           nullable: true
           description: Optional visible label resolved from WORK_CENTER rule entities for the employee ruleSystemCode and workCenterCode.
+        companyCode:
+          type: string
+          nullable: true
+          description: Company code owning the work center according to rulesystem.work_center_profile.
+        companyName:
+          type: string
+          nullable: true
+          description: Optional visible label resolved from COMPANY rule entities for the employee ruleSystemCode and companyCode.
         startDate:
           type: string
           format: date
@@ -5383,6 +5440,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DirectCatalogOptionResponse"
+    WorkCenterByCompanyOptionResponse:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+    WorkCentersByCompanyResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - companyCode
+        - referenceDate
+        - items
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        companyCode:
+          type: string
+          maxLength: 30
+        referenceDate:
+          type: string
+          format: date
+          description: Effective date applied by the service (request referenceDate when provided; otherwise current date).
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkCenterByCompanyOptionResponse"
     CompanyAddress:
       type: object
       properties:

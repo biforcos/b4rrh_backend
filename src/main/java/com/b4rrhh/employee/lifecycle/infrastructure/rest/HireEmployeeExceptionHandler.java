@@ -11,6 +11,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceRuleSystemNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleSystemNotFoundException;
@@ -32,6 +33,12 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleConflict(HireEmployeeConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new HireEmployeeErrorResponse("HIRE_CONFLICT", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(WorkCenterCompanyMismatchException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleWorkCenterCompanyMismatch(WorkCenterCompanyMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new HireEmployeeErrorResponse("WORK_CENTER_COMPANY_MISMATCH", ex.getMessage(), null));
     }
 
     @ExceptionHandler(HireEmployeeCatalogValueInvalidException.class)

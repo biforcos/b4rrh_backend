@@ -43,10 +43,10 @@ class CatalogBindingControllerHttpTest {
                 .thenReturn(List.of(new CatalogFieldBinding(
                         "employee.work_center",
                         "workCenterCode",
-                        CatalogKind.DIRECT,
-                        "WORK_CENTER",
+                        CatalogKind.CUSTOM,
                         null,
                         null,
+                        "WORK_CENTER_BY_COMPANY",
                         true
                 )));
 
@@ -54,10 +54,10 @@ class CatalogBindingControllerHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resourceCode").value("employee.work_center"))
                 .andExpect(jsonPath("$.fields[0].fieldCode").value("workCenterCode"))
-                .andExpect(jsonPath("$.fields[0].catalogKind").value("DIRECT"))
-                .andExpect(jsonPath("$.fields[0].ruleEntityTypeCode").value("WORK_CENTER"))
+                .andExpect(jsonPath("$.fields[0].catalogKind").value("CUSTOM"))
+                .andExpect(jsonPath("$.fields[0].ruleEntityTypeCode").doesNotExist())
                 .andExpect(jsonPath("$.fields[0].dependsOnFieldCode").doesNotExist())
-                .andExpect(jsonPath("$.fields[0].customResolverCode").doesNotExist())
+                .andExpect(jsonPath("$.fields[0].customResolverCode").value("WORK_CENTER_BY_COMPANY"))
                 .andExpect(jsonPath("$.fields[0].active").value(true))
                 .andExpect(jsonPath("$.fields[0].id").doesNotExist());
 

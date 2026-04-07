@@ -28,12 +28,18 @@ class WorkCenterResponseAssemblerTest {
         WorkCenter workCenter = workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null);
         when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
                 .thenReturn(Optional.of("Oficina central"));
+        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+            .thenReturn(Optional.of("COMP"));
+        when(workCenterCatalogReadPort.findCompanyName("ESP", "COMP"))
+            .thenReturn(Optional.of("Compañía principal"));
 
         WorkCenterResponse response = assembler.toResponse("ESP", workCenter);
 
         assertEquals(1, response.workCenterAssignmentNumber());
         assertEquals("MADRID_HQ", response.workCenterCode());
         assertEquals("Oficina central", response.workCenterName());
+        assertEquals("COMP", response.companyCode());
+        assertEquals("Compañía principal", response.companyName());
     }
 
     @Test
@@ -42,11 +48,15 @@ class WorkCenterResponseAssemblerTest {
         WorkCenter workCenter = workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null);
         when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
                 .thenReturn(Optional.empty());
+        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+            .thenReturn(Optional.empty());
 
         WorkCenterResponse response = assembler.toResponse("ESP", workCenter);
 
         assertEquals("MADRID_HQ", response.workCenterCode());
         assertNull(response.workCenterName());
+        assertNull(response.companyCode());
+        assertNull(response.companyName());
     }
 
     private WorkCenter workCenter(

@@ -37,6 +37,7 @@ import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+    private final WorkCenterCompanyValidator workCenterCompanyValidator;
 
     public HireEmployeeService(
             EmployeeRepository employeeRepository,
@@ -62,7 +64,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             CreateContractUseCase createContractUseCase,
             CreateWorkCenterUseCase createWorkCenterUseCase,
-            CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase
+            CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
+            WorkCenterCompanyValidator workCenterCompanyValidator
     ) {
         this.employeeRepository = employeeRepository;
         this.createEmployeeUseCase = createEmployeeUseCase;
@@ -71,6 +74,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
+        this.workCenterCompanyValidator = workCenterCompanyValidator;
     }
 
     @Override
@@ -97,6 +101,13 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                 ruleSystemCode, employeeTypeCode, employeeNumber).isPresent()) {
             throw new HireEmployeeAlreadyExistsException(ruleSystemCode, employeeTypeCode, employeeNumber);
         }
+
+        workCenterCompanyValidator.validateBelongsToCompany(
+            ruleSystemCode,
+            workCenterCode,
+            companyCode,
+            hireDate
+        );
 
         Employee createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
                 ruleSystemCode, employeeTypeCode, employeeNumber, firstName, lastName1, lastName2, preferredName

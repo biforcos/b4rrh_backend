@@ -14,6 +14,7 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapExceptio
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,19 +35,22 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
     private final RuleSystemRepository ruleSystemRepository;
     private final WorkCenterCatalogValidator workCenterCatalogValidator;
     private final WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
+    private final WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService;
 
     public ReplaceWorkCenterFromDateService(
             WorkCenterRepository workCenterRepository,
             EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort,
             RuleSystemRepository ruleSystemRepository,
             WorkCenterCatalogValidator workCenterCatalogValidator,
-            WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator
+            WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator,
+                WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService
     ) {
         this.workCenterRepository = workCenterRepository;
         this.employeeWorkCenterLookupPort = employeeWorkCenterLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.workCenterCatalogValidator = workCenterCatalogValidator;
         this.workCenterPresenceConsistencyValidator = workCenterPresenceConsistencyValidator;
+        this.workCenterEmployeeCompanyDomainService = workCenterEmployeeCompanyDomainService;
     }
 
     @Override
@@ -101,6 +105,15 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
+        );
+
+        workCenterEmployeeCompanyDomainService.validateWorkCenterBelongsToEmployeeCompany(
+                employee.employeeId(),
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber,
+                normalizedWorkCenterCode,
+                normalizedEffectiveDate
         );
 
         validateNoOverlap(

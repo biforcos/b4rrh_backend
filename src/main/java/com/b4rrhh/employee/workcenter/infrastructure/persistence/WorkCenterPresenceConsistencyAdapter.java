@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class WorkCenterPresenceConsistencyAdapter implements WorkCenterPresenceConsistencyPort {
@@ -67,6 +68,34 @@ public class WorkCenterPresenceConsistencyAdapter implements WorkCenterPresenceC
         }
 
         return Boolean.parseBoolean(String.valueOf(result));
+    }
+
+    @Override
+    public Optional<String> findActiveCompanyCode(Long employeeId, LocalDate referenceDate) {
+        List<?> rows = entityManager.createNativeQuery("""
+                select p.company_code
+                from employee.presence p
+                where p.employee_id = :employeeId
+                  and p.start_date <= :referenceDate
+                  and :referenceDate <= coalesce(p.end_date, :maxDate)
+                order by p.start_date desc, p.presence_number desc
+                """)
+                .setParameter("employeeId", employeeId)
+                .setParameter("referenceDate", referenceDate)
+                .setParameter("maxDate", MAX_DATE)
+                .setMaxResults(1)
+                .getResultList();
+
+        if (rows.isEmpty() || rows.get(0) == null) {
+            return Optional.empty();
+        }
+
+        String companyCode = String.valueOf(rows.get(0)).trim();
+        if (companyCode.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(companyCode.toUpperCase());
     }
 
     @Override

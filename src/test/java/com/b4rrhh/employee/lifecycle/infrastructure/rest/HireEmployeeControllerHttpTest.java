@@ -4,6 +4,7 @@ import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,5 +123,37 @@ class HireEmployeeControllerHttpTest {
                                 """))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("INVALID_CATALOG_VALUE"));
+    }
+
+    @Test
+    void hireReturnsConflictWhenWorkCenterBelongsToDifferentCompany() throws Exception {
+        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
+                .thenThrow(new WorkCenterCompanyMismatchException("WC1", "COMP"));
+
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_COMPANY_MISMATCH"));
     }
 }

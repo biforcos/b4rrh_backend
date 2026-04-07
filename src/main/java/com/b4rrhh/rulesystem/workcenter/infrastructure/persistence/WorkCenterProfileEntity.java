@@ -32,7 +32,7 @@ public class WorkCenterProfileEntity {
     @Column(name = "work_center_rule_entity_id", nullable = false)
     private Long workCenterRuleEntityId;
 
-    @Column(name = "company_code", length = 30)
+    @Column(name = "company_code", nullable = false, length = 30)
     private String companyCode;
 
     @Column(name = "street", length = 300)

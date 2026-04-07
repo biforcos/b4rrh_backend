@@ -7,6 +7,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValue
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -284,6 +285,35 @@ class RehireEmployeeControllerHttpTest {
                                 """))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("INVALID_DISTRIBUTION"));
+    }
+
+    @Test
+    void rehireReturnsConflictWhenWorkCenterBelongsToDifferentCompany() throws Exception {
+        when(rehireEmployeeUseCase.rehire(any(RehireEmployeeCommand.class)))
+                .thenThrow(new WorkCenterCompanyMismatchException("MADRID_01", "ES01"));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_COMPANY_MISMATCH"));
     }
 
     @Test

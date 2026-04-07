@@ -12,6 +12,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInval
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeErrorResponse;
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceRuleSystemNotFoundException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleSystemNotFoundException;
@@ -51,6 +52,12 @@ public class RehireEmployeeExceptionHandler {
     public ResponseEntity<RehireEmployeeErrorResponse> handleConflict(RehireEmployeeConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new RehireEmployeeErrorResponse("REHIRE_CONFLICT", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(WorkCenterCompanyMismatchException.class)
+    public ResponseEntity<RehireEmployeeErrorResponse> handleWorkCenterCompanyMismatch(WorkCenterCompanyMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new RehireEmployeeErrorResponse("WORK_CENTER_COMPANY_MISMATCH", ex.getMessage(), null));
     }
 
     @ExceptionHandler({

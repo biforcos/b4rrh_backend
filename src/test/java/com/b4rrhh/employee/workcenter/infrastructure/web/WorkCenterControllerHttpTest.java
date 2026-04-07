@@ -18,6 +18,7 @@ import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCas
 import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
@@ -98,6 +99,10 @@ class WorkCenterControllerHttpTest {
         );
 
         lenient().when(workCenterCatalogReadPort.findWorkCenterName(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        lenient().when(workCenterCatalogReadPort.findWorkCenterCompanyCode(anyString(), anyString(), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(workCenterCatalogReadPort.findCompanyName(anyString(), anyString()))
                 .thenReturn(Optional.empty());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -260,6 +265,23 @@ class WorkCenterControllerHttpTest {
     }
 
     @Test
+    void createMapsCompanyMismatchToHttp409() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterCompanyMismatchException("MADRID_HQ", "COMP"));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "MADRID_HQ",
+                                  "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_COMPANY_MISMATCH"));
+    }
+
+    @Test
     void closeMapsAlreadyClosedToHttp409() throws Exception {
         when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class)))
                 .thenThrow(new WorkCenterAlreadyClosedException(1));
@@ -403,11 +425,17 @@ class WorkCenterControllerHttpTest {
                 .thenReturn(Optional.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
         when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
                 .thenReturn(Optional.of("Oficina central"));
+        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCatalogReadPort.findCompanyName("ESP", "COMP"))
+                .thenReturn(Optional.of("Compañía principal"));
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.workCenterCode").value("MADRID_HQ"))
                 .andExpect(jsonPath("$.workCenterName").value("Oficina central"))
+                .andExpect(jsonPath("$.companyCode").value("COMP"))
+                .andExpect(jsonPath("$.companyName").value("Compañía principal"))
                 .andExpect(jsonPath("$.id").doesNotExist());
     }
 

@@ -59,6 +59,7 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresence
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterPresenceCoverageGapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,6 +83,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+    private final WorkCenterCompanyValidator workCenterCompanyValidator;
 
     public RehireEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
@@ -94,7 +96,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             CreateContractUseCase createContractUseCase,
             CreateWorkCenterUseCase createWorkCenterUseCase,
-            CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase
+                CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
+                WorkCenterCompanyValidator workCenterCompanyValidator
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -107,6 +110,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
+        this.workCenterCompanyValidator = workCenterCompanyValidator;
     }
 
     @Override
@@ -135,6 +139,13 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                         employeeTypeCode,
                         employeeNumber
                 ));
+
+        workCenterCompanyValidator.validateBelongsToCompany(
+            ruleSystemCode,
+            workCenterCode,
+            companyCode,
+            rehireDate
+        );
 
         List<Presence> presenceHistory = listEmployeePresencesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);

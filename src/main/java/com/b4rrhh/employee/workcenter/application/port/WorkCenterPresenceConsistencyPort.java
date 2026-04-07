@@ -1,9 +1,12 @@
 package com.b4rrhh.employee.workcenter.application.port;
 
+import com.b4rrhh.employee.workcenter.domain.port.EmployeeActiveCompanyLookupPort;
+
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
-public interface WorkCenterPresenceConsistencyPort {
+public interface WorkCenterPresenceConsistencyPort extends EmployeeActiveCompanyLookupPort {
 
     boolean existsPresenceContainingPeriod(
             Long employeeId,
@@ -12,6 +15,9 @@ public interface WorkCenterPresenceConsistencyPort {
     );
 
     boolean existsPresenceStartingAt(Long employeeId, LocalDate startDate);
+
+    @Override
+    Optional<String> findActiveCompanyCode(Long employeeId, LocalDate referenceDate);
 
     List<PresencePeriod> findPresencePeriodsByEmployeeIdOrderByStartDate(Long employeeId);
 }

@@ -25,7 +25,10 @@ import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalid
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,11 +64,15 @@ class HireEmployeeServiceTest {
     private CreateWorkCenterUseCase createWorkCenterUseCase;
     @Mock
     private CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+        @Mock
+        private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
+        private WorkCenterCompanyValidator workCenterCompanyValidator;
     private HireEmployeeService service;
 
     @BeforeEach
     void setUp() {
+                workCenterCompanyValidator = new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
         service = new HireEmployeeService(
                 employeeRepository,
                 createEmployeeUseCase,
@@ -73,7 +80,8 @@ class HireEmployeeServiceTest {
                 createLaborClassificationUseCase,
                 createContractUseCase,
                 createWorkCenterUseCase,
-                createCostCenterDistributionUseCase
+                                createCostCenterDistributionUseCase,
+                                workCenterCompanyValidator
         );
     }
 
@@ -81,6 +89,7 @@ class HireEmployeeServiceTest {
     void hiresEmployeeAndPropagatesHireDateToAllInitialRecords() {
         HireEmployeeCommand command = validCommand();
         LocalDate hireDate = command.hireDate();
+                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", hireDate)).thenReturn(Optional.of("COMP"));
 
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.empty());
@@ -130,6 +139,19 @@ class HireEmployeeServiceTest {
         assertEquals(hireDate, workCenterCaptor.getValue().startDate());
     }
 
+        @Test
+        void failsFastWhenWorkCenterDoesNotBelongToCompany() {
+                HireEmployeeCommand command = validCommand();
+
+                when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
+                                .thenReturn(Optional.empty());
+                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23)))
+                        .thenReturn(Optional.of("OTHER"));
+
+                assertThrows(WorkCenterCompanyMismatchException.class, () -> service.hire(command));
+                verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
+        }
+
     @Test
     void failsWhenEmployeeAlreadyExists() {
         HireEmployeeCommand command = validCommand();
@@ -148,6 +170,7 @@ class HireEmployeeServiceTest {
     @Test
     void mapsInvalidCatalogValueToLifecycleException() {
         HireEmployeeCommand command = validCommand();
+                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23))).thenReturn(Optional.of("COMP"));
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
@@ -164,6 +187,7 @@ class HireEmployeeServiceTest {
     @Test
     void mapsInvalidAgreementCategoryDependencyToLifecycleException() {
         HireEmployeeCommand command = validCommand();
+                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23))).thenReturn(Optional.of("COMP"));
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))

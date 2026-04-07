@@ -5,12 +5,16 @@ import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupP
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterPresenceConsistencyValidator;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterPresenceCoverageGapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.port.EmployeeActiveCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
 import com.b4rrhh.rulesystem.domain.model.RuleSystem;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,19 +53,29 @@ class ReplaceWorkCenterFromDateServiceTest {
     private RuleSystemRepository ruleSystemRepository;
     @Mock
     private WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
+        @Mock
+        private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
+        @Mock
+        private EmployeeActiveCompanyLookupPort employeeActiveCompanyLookupPort;
 
     private WorkCenterCatalogValidator workCenterCatalogValidator;
+        private WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService;
     private ReplaceWorkCenterFromDateService service;
 
     @BeforeEach
     void setUp() {
         workCenterCatalogValidator = new TestWorkCenterCatalogValidator();
+        workCenterEmployeeCompanyDomainService = new WorkCenterEmployeeCompanyDomainService(
+                employeeActiveCompanyLookupPort,
+                workCenterCompanyLookupPort
+        );
         service = new ReplaceWorkCenterFromDateService(
                 workCenterRepository,
                 employeeWorkCenterLookupPort,
                 ruleSystemRepository,
                 workCenterCatalogValidator,
-                workCenterPresenceConsistencyValidator
+                workCenterPresenceConsistencyValidator,
+                workCenterEmployeeCompanyDomainService
         );
     }
 
@@ -79,6 +93,10 @@ class ReplaceWorkCenterFromDateServiceTest {
         whenRuleSystemAndEmployeeExist();
         when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "BARCELONA_HQ", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
         when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         WorkCenter replaced = service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "barcelona_hq"));
@@ -103,6 +121,10 @@ class ReplaceWorkCenterFromDateServiceTest {
         whenRuleSystemAndEmployeeExist();
         when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
+        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "SEVILLA_HQ", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
         when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         WorkCenter replaced = service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "sevilla_hq"));
@@ -161,6 +183,10 @@ class ReplaceWorkCenterFromDateServiceTest {
         whenRuleSystemAndEmployeeExist();
         when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(futureOpen));
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "BARCELONA_HQ", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
 
         assertThrows(
                 WorkCenterOverlapException.class,
@@ -222,6 +248,10 @@ class ReplaceWorkCenterFromDateServiceTest {
         whenRuleSystemAndEmployeeExist();
         when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "BARCELONA_HQ", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
 
         doThrow(new WorkCenterPresenceCoverageGapException(
                 RULE_SYSTEM_CODE,
@@ -237,6 +267,24 @@ class ReplaceWorkCenterFromDateServiceTest {
 
         assertThrows(
                 WorkCenterPresenceCoverageGapException.class,
+                () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "BARCELONA_HQ"))
+        );
+
+        verify(workCenterRepository, never()).save(any(WorkCenter.class));
+    }
+
+    @Test
+    void rejectsWhenReplacementWorkCenterBelongsToDifferentCompany() {
+        whenRuleSystemAndEmployeeExist();
+        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
+        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "BARCELONA_HQ", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("OTHER"));
+
+        assertThrows(
+                WorkCenterCompanyMismatchException.class,
                 () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "BARCELONA_HQ"))
         );
 

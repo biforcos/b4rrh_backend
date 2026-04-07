@@ -31,7 +31,10 @@ import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,11 +82,15 @@ class RehireEmployeeServiceTest {
     private CreateWorkCenterUseCase createWorkCenterUseCase;
     @Mock
     private CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+        @Mock
+        private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
+        private WorkCenterCompanyValidator workCenterCompanyValidator;
     private RehireEmployeeService service;
 
     @BeforeEach
     void setUp() {
+                workCenterCompanyValidator = new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
         service = new RehireEmployeeService(
                 getEmployeeByBusinessKeyUseCase,
                 employeeRepository,
@@ -95,13 +102,16 @@ class RehireEmployeeServiceTest {
                 createLaborClassificationUseCase,
                 createContractUseCase,
                 createWorkCenterUseCase,
-                createCostCenterDistributionUseCase
+                                createCostCenterDistributionUseCase,
+                                workCenterCompanyValidator
         );
     }
 
     @Test
     void rehiresEmployeeAndPropagatesRehireDateToAllInitialRecords() {
         RehireEmployeeCommand command = validCommand();
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
@@ -164,8 +174,21 @@ class RehireEmployeeServiceTest {
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
     }
 
+        @Test
+        void failsFastWhenWorkCenterDoesNotBelongToCompany() {
+                when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                                .thenReturn(Optional.of(employee("TERMINATED")));
+                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                        .thenReturn(Optional.of("OTHER"));
+
+                assertThrows(WorkCenterCompanyMismatchException.class, () -> service.rehire(validCommand()));
+                verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+        }
+
     @Test
     void failsIfActivePresenceAlreadyExists() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
@@ -183,6 +206,8 @@ class RehireEmployeeServiceTest {
 
     @Test
     void failsIfNoPreviousClosedPresenceExists() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
@@ -200,6 +225,8 @@ class RehireEmployeeServiceTest {
 
     @Test
     void failsIfRehireDateIsEqualToLastClosedPresenceEndDate() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
         // Same-day terminate + rehire must be rejected
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
@@ -225,6 +252,9 @@ class RehireEmployeeServiceTest {
                 null
         );
 
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 3, 1)))
+                .thenReturn(Optional.of("ES01"));
+
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
@@ -243,6 +273,8 @@ class RehireEmployeeServiceTest {
     @Test
     void returnsIdempotentSuccessWhenActiveCycleIsEquivalent() {
         Presence activePresence = activePresence(LocalDate.of(2026, 4, 15));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("ACTIVE")));
@@ -266,6 +298,8 @@ class RehireEmployeeServiceTest {
 
     @Test
     void failsWithConflictWhenActiveCycleIsNotEquivalent() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("ACTIVE")));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
@@ -292,6 +326,9 @@ class RehireEmployeeServiceTest {
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
                 null
         );
+
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 6, 1)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence firstCycleClosed = new Presence(
                 10L, 100L, 1, "ES01", "HIRE", "VOL",
@@ -354,6 +391,8 @@ class RehireEmployeeServiceTest {
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
                 null
         );
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 1)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence olderClosed = new Presence(
                 10L, 100L, 1, "ES01", "HIRE", "VOL",
@@ -394,6 +433,8 @@ class RehireEmployeeServiceTest {
                         )
                 )
         );
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
@@ -450,6 +491,8 @@ class RehireEmployeeServiceTest {
                         )
                 )
         );
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 
@@ -477,6 +520,8 @@ class RehireEmployeeServiceTest {
     void activatesEmployeeUsingDomainBehaviorRatherThanManualReconstruction() {
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
@@ -516,6 +561,8 @@ class RehireEmployeeServiceTest {
                         )
                 )
         );
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 
@@ -546,6 +593,8 @@ class RehireEmployeeServiceTest {
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
                 new RehireEmployeeCommand.RehireEmployeeCostCenterDistributionCommand(List.of())
         );
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
 
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 

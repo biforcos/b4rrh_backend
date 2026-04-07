@@ -20,11 +20,19 @@ public class WorkCenterResponseAssembler {
         String workCenterName = workCenterCatalogReadPort
                 .findWorkCenterName(ruleSystemCode, workCenter.getWorkCenterCode())
                 .orElse(null);
+        String companyCode = workCenterCatalogReadPort
+            .findWorkCenterCompanyCode(ruleSystemCode, workCenter.getWorkCenterCode(), workCenter.getStartDate())
+            .orElse(null);
+        String companyName = companyCode == null
+            ? null
+            : workCenterCatalogReadPort.findCompanyName(ruleSystemCode, companyCode).orElse(null);
 
         return new WorkCenterResponse(
                 workCenter.getWorkCenterAssignmentNumber(),
                 workCenter.getWorkCenterCode(),
                 workCenterName,
+            companyCode,
+            companyName,
                 workCenter.getStartDate(),
                 workCenter.getEndDate()
         );

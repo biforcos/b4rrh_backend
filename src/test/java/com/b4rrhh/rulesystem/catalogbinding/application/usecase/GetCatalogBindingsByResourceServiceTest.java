@@ -36,10 +36,10 @@ class GetCatalogBindingsByResourceServiceTest {
                 .thenReturn(List.of(new CatalogFieldBinding(
                         "employee.work_center",
                         "workCenterCode",
-                        CatalogKind.DIRECT,
-                        "WORK_CENTER",
+                        CatalogKind.CUSTOM,
                         null,
                         null,
+                        "WORK_CENTER_BY_COMPANY",
                         true
                 )));
 
@@ -49,6 +49,7 @@ class GetCatalogBindingsByResourceServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("workCenterCode", result.get(0).fieldCode());
+                assertEquals(CatalogKind.CUSTOM, result.get(0).catalogKind());
         verify(catalogBindingRepository).findActiveByResourceCode("employee.work_center");
     }
 

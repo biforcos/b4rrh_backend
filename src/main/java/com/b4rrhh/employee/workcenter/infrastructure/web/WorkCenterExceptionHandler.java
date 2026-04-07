@@ -3,6 +3,7 @@ package com.b4rrhh.employee.workcenter.infrastructure.web;
 import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
@@ -65,12 +66,20 @@ public class WorkCenterExceptionHandler {
 
     @ExceptionHandler({
             WorkCenterAlreadyClosedException.class,
+                        WorkCenterCompanyMismatchException.class,
             WorkCenterDeleteForbiddenAtPresenceStartException.class,
             WorkCenterOverlapException.class,
             WorkCenterOutsidePresencePeriodException.class,
             WorkCenterPresenceCoverageGapException.class
     })
     public ResponseEntity<WorkCenterErrorResponse> handleConflict(RuntimeException ex) {
+                if (ex instanceof WorkCenterCompanyMismatchException) {
+                        return conflict(
+                                        "WORK_CENTER_COMPANY_MISMATCH",
+                                        ex.getMessage(),
+                                        null
+                        );
+                }
         if (ex instanceof WorkCenterOverlapException) {
             return conflict(
                     "WORK_CENTER_OVERLAP",
