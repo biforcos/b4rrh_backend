@@ -19,6 +19,10 @@ import com.b4rrhh.employee.presence.application.usecase.ClosePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.ClosePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -35,6 +39,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -202,6 +207,25 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
             ));
         }
 
+                @Bean
+                ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase() {
+                    return command -> List.of(WorkingTime.rehydrate(
+                        30L,
+                        100L,
+                        1,
+                        LocalDate.of(2026, 1, 1),
+                        null,
+                        new BigDecimal("75"),
+                        new WorkingTimeDerivedHours(
+                            new BigDecimal("30"),
+                            new BigDecimal("6"),
+                            new BigDecimal("130")
+                        ),
+                        LocalDateTime.now(),
+                        LocalDateTime.now()
+                    ));
+                }
+
         @Bean
         CloseWorkCenterUseCase closeWorkCenterUseCase() {
             return command -> new WorkCenter(
@@ -253,6 +277,25 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
                     LocalDateTime.now()
             );
         }
+
+                @Bean
+                CloseWorkingTimeUseCase closeWorkingTimeUseCase() {
+                    return command -> WorkingTime.rehydrate(
+                        30L,
+                        100L,
+                        command.workingTimeNumber(),
+                        LocalDate.of(2026, 1, 1),
+                        command.endDate(),
+                        new BigDecimal("75"),
+                        new WorkingTimeDerivedHours(
+                            new BigDecimal("30"),
+                            new BigDecimal("6"),
+                            new BigDecimal("130")
+                        ),
+                        LocalDateTime.now(),
+                        LocalDateTime.now()
+                    );
+                }
 
         @Bean
         CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionAtTerminationUseCase() {

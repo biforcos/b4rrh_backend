@@ -38,6 +38,15 @@ import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalid
 import com.b4rrhh.employee.presence.domain.exception.PresenceNotFoundException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimeDateRangeException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -68,10 +77,12 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
     private final ListEmployeeContractsUseCase listEmployeeContractsUseCase;
     private final ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+        private final ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase;
     private final CloseWorkCenterUseCase closeWorkCenterUseCase;
     private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
     private final CloseContractUseCase closeContractUseCase;
     private final ClosePresenceUseCase closePresenceUseCase;
+        private final CloseWorkingTimeUseCase closeWorkingTimeUseCase;
     private final CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase;
 
     public TerminateEmployeeService(
@@ -81,10 +92,12 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
             ListEmployeeContractsUseCase listEmployeeContractsUseCase,
             ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase,
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
+            ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase,
             CloseWorkCenterUseCase closeWorkCenterUseCase,
             CloseLaborClassificationUseCase closeLaborClassificationUseCase,
             CloseContractUseCase closeContractUseCase,
             ClosePresenceUseCase closePresenceUseCase,
+            CloseWorkingTimeUseCase closeWorkingTimeUseCase,
             CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
@@ -93,10 +106,12 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
         this.listEmployeeContractsUseCase = listEmployeeContractsUseCase;
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
+                this.listEmployeeWorkingTimesUseCase = listEmployeeWorkingTimesUseCase;
         this.closeWorkCenterUseCase = closeWorkCenterUseCase;
         this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
         this.closeContractUseCase = closeContractUseCase;
         this.closePresenceUseCase = closePresenceUseCase;
+                this.closeWorkingTimeUseCase = closeWorkingTimeUseCase;
         this.closeActiveCostCenterDistributionUseCase = closeActiveCostCenterDistributionUseCase;
     }
 
@@ -131,6 +146,9 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
         );
         List<WorkCenter> workCenterHistory = listEmployeeWorkCentersUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
+        List<WorkingTime> workingTimeHistory = listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(
+                new ListEmployeeWorkingTimesCommand(ruleSystemCode, employeeTypeCode, employeeNumber)
+        );
 
         if (TERMINATED_STATUS.equalsIgnoreCase(employee.getStatus())) {
             return resolveIdempotentTermination(
@@ -140,7 +158,8 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                     presenceHistory,
                     contractHistory,
                     laborHistory,
-                    workCenterHistory
+                                        workCenterHistory,
+                                        workingTimeHistory
             );
         }
 
@@ -186,6 +205,18 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 terminationDate
         );
 
+        List<WorkingTime> activeWorkingTimes = requireAtMostOneActive(
+                "working time",
+                workingTimeHistory,
+                WorkingTime::isActive
+        );
+        Optional<WorkingTime> activeWorkingTime = resolveOptionalActiveInTerminationDate(
+                "working time",
+                activeWorkingTimes,
+                WorkingTime::getStartDate,
+                terminationDate
+        );
+
         validateTerminationDateNotBeforeStart("active presence", activePresence.getStartDate(), terminationDate);
         activeContract.ifPresent(contract ->
                 validateTerminationDateNotBeforeStart("active contract", contract.getStartDate(), terminationDate)
@@ -200,10 +231,14 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
         activeWorkCenter.ifPresent(workCenter ->
                 validateTerminationDateNotBeforeStart("active work center", workCenter.getStartDate(), terminationDate)
         );
+        activeWorkingTime.ifPresent(workingTime ->
+                validateTerminationDateNotBeforeStart("active working time", workingTime.getStartDate(), terminationDate)
+        );
 
         WorkCenter closedWorkCenter = null;
         LaborClassification closedLaborClassification = null;
         Contract closedContract = null;
+        WorkingTime closedWorkingTime = null;
         Presence closedPresence;
 
         try {
@@ -249,6 +284,17 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 ));
             }
 
+            if (activeWorkingTime.isPresent()) {
+                WorkingTime workingTime = activeWorkingTime.get();
+                closedWorkingTime = closeWorkingTimeUseCase.close(new CloseWorkingTimeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        workingTime.getWorkingTimeNumber(),
+                        terminationDate
+                ));
+            }
+
             closeActiveCostCenterDistributionUseCase.closeIfPresent(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -274,7 +320,11 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                  | WorkCenterAlreadyClosedException
                  | InvalidWorkCenterDateRangeException
                  | WorkCenterOutsidePresencePeriodException
-                 | WorkCenterPresenceCoverageGapException ex) {
+                                 | WorkCenterPresenceCoverageGapException
+                                 | WorkingTimeNotFoundException
+                                 | WorkingTimeAlreadyClosedException
+                                 | InvalidWorkingTimeDateRangeException
+                                 | WorkingTimeOutsidePresencePeriodException ex) {
             throw new TerminateEmployeeConflictException(ex.getMessage(), ex);
         }
 
@@ -335,7 +385,7 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 closedPresence.getEntryReasonCode(),
                 closedPresence.getExitReasonCode(),
                 closedPresence.getStartDate(),
-                closedPresence.getEndDate(),
+                                closedPresence.getEndDate(),
                                 closedContract != null ? closedContract.getContractCode() : null,
                                 closedContract != null ? closedContract.getContractSubtypeCode() : null,
                                 closedContract != null ? closedContract.getStartDate() : null,
@@ -347,7 +397,14 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                                 closedWorkCenter != null ? closedWorkCenter.getWorkCenterAssignmentNumber() : null,
                                 closedWorkCenter != null ? closedWorkCenter.getWorkCenterCode() : null,
                                 closedWorkCenter != null ? closedWorkCenter.getStartDate() : null,
-                                closedWorkCenter != null ? closedWorkCenter.getEndDate() : null
+                                closedWorkCenter != null ? closedWorkCenter.getEndDate() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWorkingTimeNumber() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWorkingTimePercentage() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWeeklyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getDailyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getMonthlyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getStartDate() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getEndDate() : null
         );
     }
 
@@ -358,7 +415,8 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
             List<Presence> presenceHistory,
             List<Contract> contractHistory,
             List<LaborClassification> laborHistory,
-            List<WorkCenter> workCenterHistory
+            List<WorkCenter> workCenterHistory,
+            List<WorkingTime> workingTimeHistory
     ) {
         Presence idempotentPresence = presenceHistory.stream()
                 .filter(presence -> terminationDate.equals(presence.getEndDate()))
@@ -385,6 +443,12 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                         .thenComparing(WorkCenter::getWorkCenterAssignmentNumber))
                 .orElse(null);
 
+        WorkingTime closedWorkingTime = workingTimeHistory.stream()
+                .filter(workingTime -> terminationDate.equals(workingTime.getEndDate()))
+                .max(Comparator.comparing(WorkingTime::getStartDate)
+                        .thenComparing(WorkingTime::getWorkingTimeNumber))
+                .orElse(null);
+
         return new TerminateEmployeeResult(
                 employee.getRuleSystemCode(),
                 employee.getEmployeeTypeCode(),
@@ -409,7 +473,14 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 closedWorkCenter != null ? closedWorkCenter.getWorkCenterAssignmentNumber() : null,
                 closedWorkCenter != null ? closedWorkCenter.getWorkCenterCode() : null,
                 closedWorkCenter != null ? closedWorkCenter.getStartDate() : null,
-                closedWorkCenter != null ? closedWorkCenter.getEndDate() : null
+                                closedWorkCenter != null ? closedWorkCenter.getEndDate() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWorkingTimeNumber() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWorkingTimePercentage() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getWeeklyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getDailyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getMonthlyHours() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getStartDate() : null,
+                                closedWorkingTime != null ? closedWorkingTime.getEndDate() : null
         );
     }
 

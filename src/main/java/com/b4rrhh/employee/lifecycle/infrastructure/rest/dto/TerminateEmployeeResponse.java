@@ -12,6 +12,7 @@ public record TerminateEmployeeResponse(
         ClosedPresenceResponse closedPresence,
         ClosedContractResponse closedContract,
         ClosedLaborClassificationResponse closedLaborClassification,
-        ClosedWorkCenterResponse closedWorkCenter
+        ClosedWorkCenterResponse closedWorkCenter,
+        ClosedWorkingTimeResponse closedWorkingTime
 ) {
 }

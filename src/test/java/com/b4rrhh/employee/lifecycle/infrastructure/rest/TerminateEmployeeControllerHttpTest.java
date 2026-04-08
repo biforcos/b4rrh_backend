@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,6 +72,13 @@ class TerminateEmployeeControllerHttpTest {
                         1,
                         "WC1",
                         LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        1,
+                        new BigDecimal("75"),
+                        new BigDecimal("30"),
+                        new BigDecimal("6"),
+                        new BigDecimal("130"),
+                        LocalDate.of(2026, 1, 1),
                         LocalDate.of(2026, 3, 31)
                 ));
 
@@ -95,6 +103,8 @@ class TerminateEmployeeControllerHttpTest {
                 .andExpect(jsonPath("$.closedContract.contractTypeCode").value("IND"))
                 .andExpect(jsonPath("$.closedLaborClassification.agreementCode").value("AGR"))
                 .andExpect(jsonPath("$.closedWorkCenter.workCenterAssignmentNumber").value(1))
+                .andExpect(jsonPath("$.closedWorkingTime.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.closedWorkingTime.workingTimePercentage").value(75))
                 .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<TerminateEmployeeCommand> captor = ArgumentCaptor.forClass(TerminateEmployeeCommand.class);
@@ -102,6 +112,55 @@ class TerminateEmployeeControllerHttpTest {
         assertEquals("ESP", captor.getValue().ruleSystemCode());
         assertEquals(LocalDate.of(2026, 3, 31), captor.getValue().terminationDate());
         assertEquals("vol", captor.getValue().exitReasonCode());
+    }
+
+    @Test
+    void terminateOmitsClosedWorkingTimeWhenNoWorkingTimeWasClosed() throws Exception {
+        when(terminateEmployeeUseCase.terminate(any(TerminateEmployeeCommand.class)))
+                .thenReturn(new TerminateEmployeeResult(
+                        "ESP",
+                        "INTERNAL",
+                        "EMP001",
+                        LocalDate.of(2026, 3, 31),
+                        "VOL",
+                        "TERMINATED",
+                        1,
+                        "COMP",
+                        "HIRE",
+                        "VOL",
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        "IND",
+                        "FT1",
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        "AGR",
+                        "CAT",
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        1,
+                        "WC1",
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/terminate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "terminationDate": "2026-03-31",
+                                  "exitReasonCode": "vol"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.closedWorkingTime").doesNotExist());
     }
 
     @Test

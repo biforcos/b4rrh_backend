@@ -6,6 +6,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeRequestIn
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.ClosedContractResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.ClosedLaborClassificationResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.ClosedPresenceResponse;
+import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.ClosedWorkingTimeResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.ClosedWorkCenterResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.TerminateEmployeeRequest;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.TerminateEmployeeResponse;
@@ -34,6 +35,20 @@ public class TerminateEmployeeWebMapper {
     }
 
     public TerminateEmployeeResponse toResponse(TerminateEmployeeResult result) {
+                ClosedWorkingTimeResponse closedWorkingTime = null;
+
+                if (result.closedWorkingTimeNumber() != null) {
+                        closedWorkingTime = new ClosedWorkingTimeResponse(
+                                        result.closedWorkingTimeNumber(),
+                                        result.closedWorkingTimePercentage(),
+                                        result.closedWorkingTimeWeeklyHours(),
+                                        result.closedWorkingTimeDailyHours(),
+                                        result.closedWorkingTimeMonthlyHours(),
+                                        result.closedWorkingTimeStartDate(),
+                                        result.closedWorkingTimeEndDate()
+                        );
+                }
+
         return new TerminateEmployeeResponse(
                 result.ruleSystemCode(),
                 result.employeeTypeCode(),
@@ -66,7 +81,8 @@ public class TerminateEmployeeWebMapper {
                         result.closedWorkCenterCode(),
                         result.closedWorkCenterStartDate(),
                         result.closedWorkCenterEndDate()
-                )
+                ),
+                closedWorkingTime
         );
     }
 }

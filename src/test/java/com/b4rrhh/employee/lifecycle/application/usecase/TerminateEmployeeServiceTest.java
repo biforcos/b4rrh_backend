@@ -22,6 +22,12 @@ import com.b4rrhh.employee.presence.application.usecase.ClosePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -35,6 +41,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +72,8 @@ class TerminateEmployeeServiceTest {
     @Mock
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
     @Mock
+        private ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase;
+        @Mock
     private CloseWorkCenterUseCase closeWorkCenterUseCase;
     @Mock
     private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
@@ -72,6 +82,8 @@ class TerminateEmployeeServiceTest {
     @Mock
     private ClosePresenceUseCase closePresenceUseCase;
     @Mock
+        private CloseWorkingTimeUseCase closeWorkingTimeUseCase;
+        @Mock
     private CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionUseCase;
 
     private TerminateEmployeeService service;
@@ -85,12 +97,17 @@ class TerminateEmployeeServiceTest {
                 listEmployeeContractsUseCase,
                 listEmployeeLaborClassificationsUseCase,
                 listEmployeeWorkCentersUseCase,
+                listEmployeeWorkingTimesUseCase,
                 closeWorkCenterUseCase,
                 closeLaborClassificationUseCase,
                 closeContractUseCase,
                 closePresenceUseCase,
+                closeWorkingTimeUseCase,
                 closeActiveCostCenterDistributionUseCase
         );
+
+        lenient().when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of());
     }
 
     @Test
@@ -104,6 +121,7 @@ class TerminateEmployeeServiceTest {
         Contract activeContract = activeContract();
         LaborClassification activeLaborClassification = activeLaborClassification();
         WorkCenter activeWorkCenter = activeWorkCenter();
+        WorkingTime activeWorkingTime = activeWorkingTime();
 
         Presence closedPresence = new Presence(
                 10L,
@@ -144,6 +162,7 @@ class TerminateEmployeeServiceTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+        WorkingTime closedWorkingTime = closedWorkingTime(LocalDate.of(2026, 3, 31));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(existing));
@@ -155,10 +174,13 @@ class TerminateEmployeeServiceTest {
                 .thenReturn(List.of(activeLaborClassification));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activeWorkCenter));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(activeWorkingTime));
         when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class))).thenReturn(closedWorkCenter);
         when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class))).thenReturn(closedLaborClassification);
         when(closeContractUseCase.close(any(CloseContractCommand.class))).thenReturn(closedContract);
         when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence);
+        when(closeWorkingTimeUseCase.close(any(CloseWorkingTimeCommand.class))).thenReturn(closedWorkingTime);
         when(employeeRepository.save(any(Employee.class))).thenReturn(terminated);
 
         TerminateEmployeeResult result = service.terminate(command);
@@ -173,12 +195,15 @@ class TerminateEmployeeServiceTest {
         assertEquals("IND", result.closedContractTypeCode());
         assertEquals("AGR", result.closedAgreementCode());
         assertEquals(1, result.closedWorkCenterAssignmentNumber());
+        assertEquals(1, result.closedWorkingTimeNumber());
+        assertEquals(new BigDecimal("75"), result.closedWorkingTimePercentage());
 
         InOrder inOrder = inOrder(
                 closePresenceUseCase,
                 closeWorkCenterUseCase,
                 closeLaborClassificationUseCase,
                 closeContractUseCase,
+                closeWorkingTimeUseCase,
                 closeActiveCostCenterDistributionUseCase,
                 employeeRepository,
                 listEmployeePresencesUseCase
@@ -187,6 +212,7 @@ class TerminateEmployeeServiceTest {
         inOrder.verify(closeWorkCenterUseCase).close(any(CloseWorkCenterCommand.class));
         inOrder.verify(closeLaborClassificationUseCase).close(any(CloseLaborClassificationCommand.class));
         inOrder.verify(closeContractUseCase).close(any(CloseContractCommand.class));
+        inOrder.verify(closeWorkingTimeUseCase).close(any(CloseWorkingTimeCommand.class));
         inOrder.verify(employeeRepository).save(any(Employee.class));
 
         ArgumentCaptor<ClosePresenceCommand> closePresenceCaptor = ArgumentCaptor.forClass(ClosePresenceCommand.class);
@@ -381,6 +407,7 @@ class TerminateEmployeeServiceTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+        WorkingTime closedWorkingTime = closedWorkingTime(LocalDate.of(2026, 3, 31));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(alreadyTerminated));
@@ -392,16 +419,20 @@ class TerminateEmployeeServiceTest {
                 .thenReturn(List.of(closedLabor));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedWorkCenter));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(closedWorkingTime));
 
         TerminateEmployeeResult result = service.terminate(command);
 
         assertEquals("TERMINATED", result.status());
         assertEquals(LocalDate.of(2026, 3, 31), result.terminationDate());
         assertEquals("VOL", result.exitReasonCode());
+        assertEquals(1, result.closedWorkingTimeNumber());
         verify(closeWorkCenterUseCase, never()).close(any(CloseWorkCenterCommand.class));
         verify(closeLaborClassificationUseCase, never()).close(any(CloseLaborClassificationCommand.class));
         verify(closeContractUseCase, never()).close(any(CloseContractCommand.class));
         verify(closePresenceUseCase, never()).close(any(ClosePresenceCommand.class));
+        verify(closeWorkingTimeUseCase, never()).close(any(CloseWorkingTimeCommand.class));
         verify(employeeRepository, never()).save(any(Employee.class));
     }
 
@@ -463,6 +494,21 @@ class TerminateEmployeeServiceTest {
                 LocalDate.of(2026, 4, 1),
                 null
         );
+        WorkingTime futureWorkingTime = WorkingTime.rehydrate(
+                30L,
+                100L,
+                1,
+                LocalDate.of(2026, 4, 1),
+                null,
+                new BigDecimal("75"),
+                new WorkingTimeDerivedHours(
+                        new BigDecimal("30"),
+                        new BigDecimal("6"),
+                        new BigDecimal("130")
+                ),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("ACTIVE")));
@@ -474,6 +520,8 @@ class TerminateEmployeeServiceTest {
                 .thenReturn(List.of());
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of());
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(futureWorkingTime));
         when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence);
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee("TERMINATED"));
 
@@ -482,9 +530,11 @@ class TerminateEmployeeServiceTest {
         assertEquals("TERMINATED", result.status());
         assertEquals(1, result.closedPresenceNumber());
         assertEquals(null, result.closedContractTypeCode());
+                assertEquals(null, result.closedWorkingTimeNumber());
         verify(closeContractUseCase, never()).close(any(CloseContractCommand.class));
         verify(closeLaborClassificationUseCase, never()).close(any(CloseLaborClassificationCommand.class));
         verify(closeWorkCenterUseCase, never()).close(any(CloseWorkCenterCommand.class));
+                verify(closeWorkingTimeUseCase, never()).close(any(CloseWorkingTimeCommand.class));
     }
 
     @Test
@@ -504,6 +554,65 @@ class TerminateEmployeeServiceTest {
 
         assertThrows(TerminateEmployeeConflictException.class, () -> service.terminate(command));
         verify(closeContractUseCase, never()).close(any(CloseContractCommand.class));
+    }
+
+    @Test
+    void terminatesWhenNoActiveWorkingTimeExists() {
+        TerminateEmployeeCommand command = validCommand();
+
+        Presence activePresence = activePresence();
+        Presence closedPresence = new Presence(
+                10L,
+                100L,
+                1,
+                "COMP",
+                "HIRE",
+                "VOL",
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 3, 31),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("ACTIVE")));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence, closedPresence));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of());
+        when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence);
+        when(employeeRepository.save(any(Employee.class))).thenReturn(employee("TERMINATED"));
+
+        TerminateEmployeeResult result = service.terminate(command);
+
+        assertEquals("TERMINATED", result.status());
+        assertEquals(null, result.closedWorkingTimeNumber());
+        verify(closeWorkingTimeUseCase, never()).close(any(CloseWorkingTimeCommand.class));
+    }
+
+    @Test
+    void failsWhenThereAreMultipleActiveWorkingTimes() {
+        TerminateEmployeeCommand command = validCommand();
+
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("ACTIVE")));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(activePresence()));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of());
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(activeWorkingTime(), activeWorkingTime()));
+
+        assertThrows(TerminateEmployeeConflictException.class, () -> service.terminate(command));
+        verify(closeWorkingTimeUseCase, never()).close(any(CloseWorkingTimeCommand.class));
     }
 
     @Test
@@ -604,4 +713,26 @@ class TerminateEmployeeServiceTest {
                 LocalDateTime.now()
         );
     }
+
+        private WorkingTime activeWorkingTime() {
+                return closedWorkingTime(null);
+        }
+
+        private WorkingTime closedWorkingTime(LocalDate endDate) {
+                return WorkingTime.rehydrate(
+                                30L,
+                                100L,
+                                1,
+                                LocalDate.of(2026, 1, 1),
+                                endDate,
+                                new BigDecimal("75"),
+                                new WorkingTimeDerivedHours(
+                                                new BigDecimal("30"),
+                                                new BigDecimal("6"),
+                                                new BigDecimal("130")
+                                ),
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
 }

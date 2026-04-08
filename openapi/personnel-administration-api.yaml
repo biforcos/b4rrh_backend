@@ -4344,6 +4344,7 @@ components:
         - closedContract
         - closedLaborClassification
         - closedWorkCenter
+        - closedWorkingTime
       properties:
         ruleSystemCode:
           type: string
@@ -4371,6 +4372,8 @@ components:
           $ref: "#/components/schemas/ClosedLaborClassificationResponse"
         closedWorkCenter:
           $ref: "#/components/schemas/ClosedWorkCenterResponse"
+        closedWorkingTime:
+          $ref: "#/components/schemas/ClosedWorkingTimeResponse"
 
     ClosedPresenceResponse:
       type: object
@@ -4457,6 +4460,35 @@ components:
         workCenterCode:
           type: string
           maxLength: 30
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ClosedWorkingTimeResponse:
+      type: object
+      required:
+        - workingTimeNumber
+        - workingTimePercentage
+        - weeklyHours
+        - dailyHours
+        - monthlyHours
+        - startDate
+        - endDate
+      properties:
+        workingTimeNumber:
+          type: integer
+          format: int32
+        workingTimePercentage:
+          type: number
+        weeklyHours:
+          type: number
+        dailyHours:
+          type: number
+        monthlyHours:
+          type: number
         startDate:
           type: string
           format: date

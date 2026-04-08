@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.application.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record TerminateEmployeeResult(
@@ -26,6 +27,13 @@ public record TerminateEmployeeResult(
         Integer closedWorkCenterAssignmentNumber,
         String closedWorkCenterCode,
         LocalDate closedWorkCenterStartDate,
-        LocalDate closedWorkCenterEndDate
+        LocalDate closedWorkCenterEndDate,
+        Integer closedWorkingTimeNumber,
+        BigDecimal closedWorkingTimePercentage,
+        BigDecimal closedWorkingTimeWeeklyHours,
+        BigDecimal closedWorkingTimeDailyHours,
+        BigDecimal closedWorkingTimeMonthlyHours,
+        LocalDate closedWorkingTimeStartDate,
+        LocalDate closedWorkingTimeEndDate
 ) {
 }
