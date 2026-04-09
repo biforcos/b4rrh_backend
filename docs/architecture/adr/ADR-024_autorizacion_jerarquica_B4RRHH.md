@@ -108,6 +108,31 @@ Campos principales:
 - `GROUP`
 - `ADMIN_RESOURCE`
 
+#### Sobre `resource_family_code`
+
+`resource_family_code` es un agrupador funcional de recursos. **No es jerarquía** (eso lo modela `parent_resource_code`) — es agrupación semántica transversal.
+
+**Para qué sirve:**
+- Simplificar autorización: en vez de definir 50 reglas por recurso, se definen 5 reglas por familia.
+- Evitar explosión de políticas: un rol puede autorizarse sobre una familia entera.
+- Permitir reglas transversales: "RRHH ve todo lo de datos de empleado", "Finanzas solo lo económico".
+
+**Familias iniciales recomendadas:**
+
+| `resource_family_code` | Recursos que agrupa |
+|------------------------|---------------------|
+| `EMPLOYEE_DATA` | employee, contact, identifier, address, contract, labor_classification, presence |
+| `ORGANIZATION` | work_center, cost_center |
+| `LIFECYCLE` | lifecycle, lifecycle.hire, lifecycle.terminate, lifecycle.rehire |
+| `MASTER_DATA` | rulesystem, rule_entity_type, rule_entity |
+| `ADMINISTRATION` | authorization y sus sub-recursos |
+
+**Reglas de uso:**
+- Todo `secured_resource` debe declarar su `resource_family_code`.
+- El catálogo de familias es cerrado y se gobierna mediante ADR o enum en código.
+- Las políticas pueden definirse sobre familias en el futuro (extensión de V1, no en V1).
+- En V1 `resource_family_code` es campo informativo/filtro de UI; la evaluación jerárquica no lo usa directamente.
+
 ### `authorization.action`
 Catálogo de acciones.
 
@@ -156,10 +181,10 @@ PK compuesta:
 - `THIS_RESOURCE_ONLY`
 - `THIS_RESOURCE_AND_CHILDREN`
 
-### `authorization.user_role_assignment` (opcional)
-Solo necesaria si B4RRHH persiste roles internos.
+### `authorization.user_role_assignment` (aplazado a V2)
+Solo necesaria si B4RRHH persiste roles internos. En V1 los roles del sujeto se extraen del JWT emitido por el IdP externo — B4RRHH no gestiona la asignación de roles, solo la lee del token.
 
-Campos principales:
+Campos principales (futuros):
 - `subject_code`
 - `role_code`
 - `assignment_origin`
@@ -168,10 +193,12 @@ Campos principales:
 ## Reglas de modelado
 - Todo recurso nuevo que requiera autorización debe registrarse en `authorization.secured_resource`.
 - Todo recurso debe declarar, siempre que exista, un `parent_resource_code`.
+- Todo recurso debe declarar su `resource_family_code`.
 - Los workflows se modelan como recursos de tipo `WORKFLOW`.
 - Las políticas se definen sobre recursos, no sobre endpoints.
 - La ausencia de permiso implica denegación.
-- En V1 no se introducen deny explícitos.
+- `NONE` es un perfil que no concede ninguna acción. No es un deny con precedencia sobre otros roles — si otro rol del sujeto concede la acción por otro camino del árbol, la evaluación devuelve ALLOW. `NONE` solo deniega cuando es el único perfil aplicable.
+- En V1 no se introducen deny explícitos con precedencia sobre grants de otros roles.
 - La autorización por campo queda fuera del modelo base.
 
 ## Algoritmo de evaluación
@@ -259,13 +286,21 @@ Cuando nazca una vertical nueva, por ejemplo `employee.bank_account`:
 
 ## Integración
 ### Backend
-- Spring Security valida autenticación externa
-- B4RRHH resuelve autorización por `resource_code + action_code`
-- La seguridad real vive en backend
+- Spring Security valida el JWT Bearer en cada request (Resource Server con clave simétrica HS256 en V1).
+- Los roles del sujeto se extraen del claim `roles` del JWT y se cargan como `GrantedAuthority` en el `SecurityContext`.
+- B4RRHH resuelve autorización por `resource_code + action_code` consultando su propio bounded context `authorization`.
+- Se expone `POST /authorization/evaluate` que recibe `{ resourceCode, actionCode }` y evalúa con los roles del JWT autenticado.
+- La seguridad real vive en backend.
 
 ### Frontend
-- Puede consumir capacidades derivadas como `canEditContacts` o `canExecuteTerminate`
-- La ocultación de acciones es UX, no seguridad real
+- Puede consultar `POST /authorization/evaluate` para derivar capacidades UI como `canEditContacts` o `canExecuteTerminate`.
+- La ocultación de acciones es UX, no seguridad real.
+
+## No objetivos de V1
+- CRUD API para gestionar roles, recursos, perfiles y políticas (se gestiona por Flyway).
+- Asignación de roles a sujetos desde la API (tabla `user_role_assignment` aplazada).
+- Deny explícito con precedencia sobre grants de otros roles.
+- Autorización aplicada automáticamente en los endpoints de `employee` (interceptores Spring Security). En V1 solo existe el endpoint de evaluación explícita.
 
 ## No objetivos
 - autorización contextual por instancia concreta
