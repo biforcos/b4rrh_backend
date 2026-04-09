@@ -17,7 +17,8 @@ public record HireEmployeeResponse(
         WorkCenterSummary initialWorkCenter,
         CostCenterDistributionWindowResponse costCenter,
         ContractSummary initialContract,
-        LaborClassificationSummary initialLaborClassification
+        LaborClassificationSummary initialLaborClassification,
+        HiredWorkingTimeResponse workingTime
 ) {
     public record PresenceSummary(
             Integer presenceNumber,

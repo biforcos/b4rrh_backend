@@ -17,7 +17,8 @@ public record HireEmployeeRequest(
         String workCenterCode,
         HireEmployeeCostCenterDistributionRequest costCenterDistribution,
         HireContractRequest contract,
-        HireLaborClassificationRequest laborClassification
+        HireLaborClassificationRequest laborClassification,
+        HireEmployeeWorkingTimeRequest workingTime
 ) {
     public record HireEmployeeCostCenterDistributionRequest(
             List<HireEmployeeCostCenterItemRequest> items

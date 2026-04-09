@@ -26,13 +26,23 @@ import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
@@ -55,6 +65,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+    private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
 
     public HireEmployeeService(
@@ -65,6 +76,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             CreateContractUseCase createContractUseCase,
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
+            CreateWorkingTimeUseCase createWorkingTimeUseCase,
             WorkCenterCompanyValidator workCenterCompanyValidator
     ) {
         this.employeeRepository = employeeRepository;
@@ -74,6 +86,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
+        this.createWorkingTimeUseCase = createWorkingTimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
     }
 
@@ -96,6 +109,10 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         String companyCode = normalizeRequiredCode("companyCode", command.companyCode(), false);
         String entryReasonCode = normalizeRequiredCode("entryReasonCode", command.entryReasonCode(), false);
         String workCenterCode = normalizeRequiredCode("workCenterCode", command.workCenterCode(), false);
+        HireEmployeeCommand.HireEmployeeContractCommand contract = normalizeRequiredContract(command.contract());
+        HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification =
+                normalizeRequiredLaborClassification(command.laborClassification());
+        HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime = normalizeRequiredWorkingTime(command.workingTime());
 
         if (employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
                 ruleSystemCode, employeeTypeCode, employeeNumber).isPresent()) {
@@ -103,10 +120,10 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         }
 
         workCenterCompanyValidator.validateBelongsToCompany(
-            ruleSystemCode,
-            workCenterCode,
-            companyCode,
-            hireDate
+                ruleSystemCode,
+                workCenterCode,
+                companyCode,
+                hireDate
         );
 
         Employee createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
@@ -118,6 +135,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         Contract createdContract;
         WorkCenter createdWorkCenter;
         CostCenterDistributionWindow createdCostCenter = null;
+        WorkingTime createdWorkingTime;
 
         try {
             createdPresence = createPresenceUseCase.create(new CreatePresenceCommand(
@@ -126,15 +144,15 @@ public class HireEmployeeService implements HireEmployeeUseCase {
 
             createdLaborClassification = createLaborClassificationUseCase.create(new CreateLaborClassificationCommand(
                     ruleSystemCode, employeeTypeCode, employeeNumber,
-                    command.laborClassification().agreementCode(),
-                    command.laborClassification().agreementCategoryCode(),
+                    laborClassification.agreementCode(),
+                    laborClassification.agreementCategoryCode(),
                     hireDate, null
             ));
 
             createdContract = createContractUseCase.create(new CreateContractCommand(
                     ruleSystemCode, employeeTypeCode, employeeNumber,
-                    command.contract().contractTypeCode(),
-                    command.contract().contractSubtypeCode(),
+                    contract.contractTypeCode(),
+                    contract.contractSubtypeCode(),
                     hireDate, null
             ));
 
@@ -150,6 +168,14 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                                 .collect(Collectors.toList())
                 ));
             }
+
+            createdWorkingTime = createWorkingTimeUseCase.create(new CreateWorkingTimeCommand(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    hireDate,
+                    workingTime.workingTimePercentage()
+            ));
         } catch (PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
                  | LaborClassificationCategoryInvalidException
@@ -162,6 +188,14 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         } catch (LaborClassificationAgreementCategoryRelationInvalidException
                  | ContractSubtypeRelationInvalidException ex) {
             throw new HireEmployeeDependentRelationInvalidException(ex.getMessage(), ex);
+        } catch (InvalidWorkingTimePercentageException
+                 | WorkingTimeOutsidePresencePeriodException
+                 | WorkingTimeOverlapException ex) {
+            throw new HireEmployeeBusinessValidationException(ex.getMessage(), ex);
+        } catch (WorkingTimeNumberConflictException ex) {
+            throw new HireEmployeeConflictException(ex.getMessage());
+        } catch (WorkingTimeEmployeeNotFoundException ex) {
+            throw new HireEmployeeConflictException("Created employee is not available for initial workingTime creation");
         }
 
         return new HireEmployeeResult(
@@ -208,7 +242,55 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                         createdLaborClassification.getStartDate(),
                         createdLaborClassification.getAgreementCode(),
                         createdLaborClassification.getAgreementCategoryCode()
+                ),
+                new HireEmployeeResult.WorkingTimeSummary(
+                        createdWorkingTime.getWorkingTimeNumber(),
+                        createdWorkingTime.getWorkingTimePercentage(),
+                        createdWorkingTime.getWeeklyHours(),
+                        createdWorkingTime.getDailyHours(),
+                        createdWorkingTime.getMonthlyHours(),
+                        createdWorkingTime.getStartDate(),
+                        createdWorkingTime.getEndDate()
                 )
+        );
+    }
+
+    private HireEmployeeCommand.HireEmployeeWorkingTimeCommand normalizeRequiredWorkingTime(
+            HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime
+    ) {
+        if (workingTime == null) {
+            throw new HireEmployeeRequestInvalidException("workingTime is required");
+        }
+        if (workingTime.workingTimePercentage() == null) {
+            throw new HireEmployeeRequestInvalidException("workingTime.workingTimePercentage is required");
+        }
+
+        return new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(workingTime.workingTimePercentage().stripTrailingZeros());
+    }
+
+    private HireEmployeeCommand.HireEmployeeContractCommand normalizeRequiredContract(
+            HireEmployeeCommand.HireEmployeeContractCommand contract
+    ) {
+        if (contract == null) {
+            throw new HireEmployeeRequestInvalidException("contract is required");
+        }
+
+        return new HireEmployeeCommand.HireEmployeeContractCommand(
+                normalizeRequiredCode("contract.contractTypeCode", contract.contractTypeCode(), false),
+                normalizeOptionalCode(contract.contractSubtypeCode())
+        );
+    }
+
+    private HireEmployeeCommand.HireEmployeeLaborClassificationCommand normalizeRequiredLaborClassification(
+            HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification
+    ) {
+        if (laborClassification == null) {
+            throw new HireEmployeeRequestInvalidException("laborClassification is required");
+        }
+
+        return new HireEmployeeCommand.HireEmployeeLaborClassificationCommand(
+                normalizeRequiredCode("laborClassification.agreementCode", laborClassification.agreementCode(), false),
+                normalizeRequiredCode("laborClassification.agreementCategoryCode", laborClassification.agreementCategoryCode(), false)
         );
     }
 
@@ -254,6 +336,13 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             return null;
         }
         return value.trim();
+    }
+
+    private String normalizeOptionalCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase();
     }
 
     private LocalDate normalizeRequiredDate(LocalDate value) {

@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.application.command;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,7 +18,8 @@ public record HireEmployeeCommand(
         String workCenterCode,
         HireEmployeeContractCommand contract,
         HireEmployeeLaborClassificationCommand laborClassification,
-        HireEmployeeCostCenterDistributionCommand costCenterDistribution
+        HireEmployeeCostCenterDistributionCommand costCenterDistribution,
+        HireEmployeeWorkingTimeCommand workingTime
 ) {
     public record HireEmployeeContractCommand(
             String contractTypeCode,
@@ -36,5 +38,9 @@ public record HireEmployeeCommand(
     public record HireEmployeeCostCenterItemCommand(
             String costCenterCode,
             Double allocationPercentage
+    ) {}
+
+    public record HireEmployeeWorkingTimeCommand(
+            BigDecimal workingTimePercentage
     ) {}
 }

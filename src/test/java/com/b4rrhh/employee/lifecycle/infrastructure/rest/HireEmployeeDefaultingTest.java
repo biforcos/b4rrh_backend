@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +26,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class HireEmployeeDefaultingTest {
+
+                private static final String REQUIRED_HIRE_BLOCKS = """
+                                                        \"hireDate\": \"2026-03-23\",
+                                                        \"companyCode\": \"COMP\",
+                                                        \"entryReasonCode\": \"HIRE\",
+                                                        \"workCenterCode\": \"WC1\",
+                                                        \"laborClassification\": {
+                                                                \"agreementCode\": \"AGR\",
+                                                                \"agreementCategoryCode\": \"CAT\"
+                                                        },
+                                                        \"contract\": {
+                                                                \"contractTypeCode\": \"CON\",
+                                                                \"contractSubtypeCode\": \"SUB\"
+                                                        },
+                                                        \"workingTime\": {
+                                                                \"workingTimePercentage\": 75
+                                                        }
+                                                """;
 
     @Mock
     private HireEmployeeUseCase hireEmployeeUseCase;
@@ -45,7 +64,16 @@ class HireEmployeeDefaultingTest {
                 new HireEmployeeResult.WorkCenterSummary(hireDate, "WC1", "WC1"),
                 null,
                 new HireEmployeeResult.ContractSummary(hireDate, "CON", "SUB"),
-                new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT")
+                new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT"),
+                new HireEmployeeResult.WorkingTimeSummary(
+                        1,
+                        new BigDecimal("75"),
+                        new BigDecimal("30.00"),
+                        new BigDecimal("6.00"),
+                        new BigDecimal("125.00"),
+                        hireDate,
+                        null
+                )
         );
     }
 
@@ -63,7 +91,7 @@ class HireEmployeeDefaultingTest {
                                   "employeeNumber": "E001",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23"
+                                """ + REQUIRED_HIRE_BLOCKS + """
                                 }
                                 """))
                 .andExpect(status().isCreated());
@@ -86,7 +114,7 @@ class HireEmployeeDefaultingTest {
                                   "employeeNumber": "E002",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23"
+                                """ + REQUIRED_HIRE_BLOCKS + """
                                 }
                                 """))
                 .andExpect(status().isCreated());
@@ -110,7 +138,7 @@ class HireEmployeeDefaultingTest {
                                   "employeeNumber": "E003",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23"
+                                """ + REQUIRED_HIRE_BLOCKS + """
                                 }
                                 """))
                 .andExpect(status().isCreated());
@@ -134,7 +162,7 @@ class HireEmployeeDefaultingTest {
                                   "employeeNumber": "E004",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23"
+                                """ + REQUIRED_HIRE_BLOCKS + """
                                 }
                                 """))
                 .andExpect(status().isCreated());
@@ -158,7 +186,7 @@ class HireEmployeeDefaultingTest {
                                   "employeeNumber": "E005",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
-                                  "hireDate": "2026-03-23"
+                                """ + REQUIRED_HIRE_BLOCKS + """
                                 }
                                 """))
                 .andExpect(status().isCreated());

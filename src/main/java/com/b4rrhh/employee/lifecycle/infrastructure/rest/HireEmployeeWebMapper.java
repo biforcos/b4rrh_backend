@@ -8,6 +8,8 @@ import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeRequest;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeResponse;
+import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeWorkingTimeRequest;
+import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HiredWorkingTimeResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -33,23 +35,81 @@ public class HireEmployeeWebMapper {
                 request.entryReasonCode(),
                 request.companyCode(),
                 request.workCenterCode(),
-                request.contract() != null ? new HireEmployeeCommand.HireEmployeeContractCommand(
-                        request.contract().contractTypeCode(),
-                        request.contract().contractSubtypeCode()
-                ) : null,
-                request.laborClassification() != null ? new HireEmployeeCommand.HireEmployeeLaborClassificationCommand(
-                        request.laborClassification().agreementCode(),
-                        request.laborClassification().agreementCategoryCode()
-                ) : null,
+                toContractCommand(request),
+                toLaborClassificationCommand(request),
                 request.costCenterDistribution() != null ? new HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand(
                         request.costCenterDistribution().items().stream()
                                 .map(item -> new HireEmployeeCommand.HireEmployeeCostCenterItemCommand(
-                                         item.costCenterCode(),
-                                         item.allocationPercentage()
+                                        item.costCenterCode(),
+                                        item.allocationPercentage()
                                 ))
                                 .collect(Collectors.toList())
-                ) : null
+                ) : null,
+                toWorkingTimeCommand(request.workingTime())
         );
+    }
+
+    private HireEmployeeCommand.HireEmployeeContractCommand toContractCommand(HireEmployeeRequest request) {
+        if (request.contract() == null) {
+            throw new HireEmployeeRequestInvalidException("contract is required");
+        }
+
+        String contractTypeCode = requireText("contract.contractTypeCode", request.contract().contractTypeCode());
+
+        return new HireEmployeeCommand.HireEmployeeContractCommand(
+                contractTypeCode,
+                normalizeNullableText(request.contract().contractSubtypeCode())
+        );
+    }
+
+    private HireEmployeeCommand.HireEmployeeLaborClassificationCommand toLaborClassificationCommand(HireEmployeeRequest request) {
+        if (request.laborClassification() == null) {
+            throw new HireEmployeeRequestInvalidException("laborClassification is required");
+        }
+
+        return new HireEmployeeCommand.HireEmployeeLaborClassificationCommand(
+                requireText("laborClassification.agreementCode", request.laborClassification().agreementCode()),
+                requireText("laborClassification.agreementCategoryCode", request.laborClassification().agreementCategoryCode())
+        );
+    }
+
+    private HireEmployeeCommand.HireEmployeeWorkingTimeCommand toWorkingTimeCommand(HireEmployeeWorkingTimeRequest request) {
+        if (request == null) {
+            throw new HireEmployeeRequestInvalidException("workingTime is required");
+        }
+        rejectDerivedHours(request);
+        if (request.workingTimePercentage() == null) {
+            throw new HireEmployeeRequestInvalidException("workingTime.workingTimePercentage is required");
+        }
+
+        return new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(request.workingTimePercentage());
+    }
+
+    private void rejectDerivedHours(HireEmployeeWorkingTimeRequest request) {
+        if (request.weeklyHours() != null) {
+            throw new HireEmployeeRequestInvalidException("workingTime.weeklyHours is not accepted");
+        }
+        if (request.dailyHours() != null) {
+            throw new HireEmployeeRequestInvalidException("workingTime.dailyHours is not accepted");
+        }
+        if (request.monthlyHours() != null) {
+            throw new HireEmployeeRequestInvalidException("workingTime.monthlyHours is not accepted");
+        }
+    }
+
+    private String requireText(String fieldName, String value) {
+        String normalized = normalizeNullableText(value);
+        if (normalized == null) {
+            throw new HireEmployeeRequestInvalidException(fieldName + " is required");
+        }
+        return normalized;
+    }
+
+    private String normalizeNullableText(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase();
     }
 
     private String normalizeCode(String value) {
@@ -81,9 +141,9 @@ public class HireEmployeeWebMapper {
                         result.presence().entryReasonCode()
                 ),
                 new HireEmployeeResponse.WorkCenterSummary(
-                         result.workCenter().startDate(),
-                         result.workCenter().workCenterCode(),
-                         result.workCenter().workCenterName()
+                        result.workCenter().startDate(),
+                        result.workCenter().workCenterCode(),
+                        result.workCenter().workCenterName()
                 ),
                 result.costCenter() != null ? new CostCenterDistributionWindowResponse(
                         result.costCenter().startDate(),
@@ -106,6 +166,15 @@ public class HireEmployeeWebMapper {
                         result.laborClassification().startDate(),
                         result.laborClassification().agreementCode(),
                         result.laborClassification().agreementCategoryCode()
+                ),
+                new HiredWorkingTimeResponse(
+                        result.workingTime().workingTimeNumber(),
+                        result.workingTime().workingTimePercentage(),
+                        result.workingTime().weeklyHours(),
+                        result.workingTime().dailyHours(),
+                        result.workingTime().monthlyHours(),
+                        result.workingTime().startDate(),
+                        result.workingTime().endDate()
                 )
         );
     }

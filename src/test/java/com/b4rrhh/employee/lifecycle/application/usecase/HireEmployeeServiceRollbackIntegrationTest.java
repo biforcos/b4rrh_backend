@@ -7,10 +7,13 @@ import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
@@ -27,6 +30,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,7 +93,8 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 "BAD_WC",
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
-                null
+                null,
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
         );
 
         assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
@@ -100,6 +105,39 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 "ESP",
                 "INTERNAL",
                 "EMP001"
+        );
+
+        assertEquals(0L, employeeCount);
+    }
+
+    @Test
+    void rollsBackCreatedEmployeeWhenWorkingTimeCreationFails() {
+        HireEmployeeCommand command = new HireEmployeeCommand(
+                "ESP",
+                "INTERNAL",
+                "EMP002",
+                "Ana",
+                "Lopez",
+                null,
+                "Ani",
+                LocalDate.of(2026, 3, 23),
+                "HIRE",
+                "COMP",
+                "WC1",
+                new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
+                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
+                null,
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("150"))
+        );
+
+        assertThrows(HireEmployeeBusinessValidationException.class, () -> service.hire(command));
+
+        Long employeeCount = jdbcTemplate.queryForObject(
+                "select count(*) from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
+                Long.class,
+                "ESP",
+                "INTERNAL",
+                "EMP002"
         );
 
         assertEquals(0L, employeeCount);
@@ -146,7 +184,8 @@ class HireEmployeeServiceRollbackIntegrationTest {
 
         @Bean
         WorkCenterCompanyLookupPort workCenterCompanyLookupPort() {
-            return (ruleSystemCode, workCenterCode, referenceDate) -> "BAD_WC".equals(workCenterCode)
+            return (ruleSystemCode, workCenterCode, referenceDate) ->
+                ("BAD_WC".equals(workCenterCode) || "WC1".equals(workCenterCode))
                     ? java.util.Optional.of("COMP")
                     : java.util.Optional.empty();
         }
@@ -169,6 +208,16 @@ class HireEmployeeServiceRollbackIntegrationTest {
         @Bean
         CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase() {
             return command -> null;
+        }
+
+        @Bean
+        CreateWorkingTimeUseCase createWorkingTimeUseCase() {
+            return command -> {
+                if (command.workingTimePercentage().compareTo(new BigDecimal("100")) > 0) {
+                    throw new InvalidWorkingTimePercentageException("workingTimePercentage must be greater than 0 and less than or equal to 100");
+                }
+                return null;
+            };
         }
     }
 }

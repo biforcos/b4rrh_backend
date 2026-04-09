@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
@@ -11,6 +12,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceRuleSystemNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
@@ -53,6 +55,12 @@ public class HireEmployeeExceptionHandler {
                 .body(new HireEmployeeErrorResponse("INVALID_DEPENDENT_RELATION", ex.getMessage(), null));
     }
 
+    @ExceptionHandler(HireEmployeeBusinessValidationException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleBusinessValidation(HireEmployeeBusinessValidationException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new HireEmployeeErrorResponse("HIRE_BUSINESS_VALIDATION_FAILED", ex.getMessage(), null));
+    }
+
     @ExceptionHandler(HireEmployeeRequestInvalidException.class)
     public ResponseEntity<HireEmployeeErrorResponse> handleRequestInvalid(HireEmployeeRequestInvalidException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -66,6 +74,7 @@ public class HireEmployeeExceptionHandler {
             PresenceEmployeeNotFoundException.class,
             LaborClassificationEmployeeNotFoundException.class,
             ContractEmployeeNotFoundException.class,
+                WorkingTimeEmployeeNotFoundException.class,
             WorkCenterRuleSystemNotFoundException.class,
             WorkCenterEmployeeNotFoundException.class
     })

@@ -4,6 +4,7 @@ import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -16,10 +17,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -52,7 +55,16 @@ class HireEmployeeControllerHttpTest {
                         new HireEmployeeResult.WorkCenterSummary(hireDate, "WC1", "WC1"),
                         null,
                         new HireEmployeeResult.ContractSummary(hireDate, "CON", "SUB"),
-                        new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT")
+                  new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT"),
+                  new HireEmployeeResult.WorkingTimeSummary(
+                    1,
+                    new BigDecimal("75"),
+                    new BigDecimal("30.00"),
+                    new BigDecimal("6.00"),
+                    new BigDecimal("125.00"),
+                    hireDate,
+                    null
+                  )
                 ));
 
         mockMvc.perform(post("/employees/hire")
@@ -72,6 +84,9 @@ class HireEmployeeControllerHttpTest {
                                     "agreementCode": "agr",
                                     "agreementCategoryCode": "cat"
                                   },
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
                                   "contract": {
                                     "contractTypeCode": "con",
                                     "contractSubtypeCode": "sub"
@@ -85,6 +100,15 @@ class HireEmployeeControllerHttpTest {
                 .andExpect(jsonPath("$.initialPresence.presenceNumber").value(1))
                 .andExpect(jsonPath("$.initialContract.contractTypeCode").value("CON"))
                 .andExpect(jsonPath("$.initialLaborClassification.agreementCode").value("AGR"))
+                .andExpect(jsonPath("$.workingTime.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.workingTime.workingTimePercentage").value(75))
+                .andExpect(jsonPath("$.workingTime.weeklyHours").value(30.0))
+                .andExpect(jsonPath("$.workingTime.dailyHours").value(6.0))
+                .andExpect(jsonPath("$.workingTime.monthlyHours").value(125.0))
+                .andExpect(jsonPath("$.workingTime.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.workingTime.startDate[1]").value(3))
+                .andExpect(jsonPath("$.workingTime.startDate[2]").value(23))
+                .andExpect(jsonPath("$.workingTime.endDate").isEmpty())
                 .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
@@ -111,6 +135,9 @@ class HireEmployeeControllerHttpTest {
                                   "companyCode": "BAD",
                                   "entryReasonCode": "HIRE",
                                   "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
                                   "laborClassification": {
                                     "agreementCode": "AGR",
                                     "agreementCategoryCode": "CAT"
@@ -143,6 +170,9 @@ class HireEmployeeControllerHttpTest {
                                   "companyCode": "COMP",
                                   "entryReasonCode": "HIRE",
                                   "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
                                   "laborClassification": {
                                     "agreementCode": "AGR",
                                     "agreementCategoryCode": "CAT"
@@ -155,5 +185,168 @@ class HireEmployeeControllerHttpTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_COMPANY_MISMATCH"));
+    }
+
+    @Test
+    void hireReturnsBadRequestWhenWorkingTimeIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("HIRE_REQUEST_INVALID"));
+
+                          verify(hireEmployeeUseCase, never()).hire(any(HireEmployeeCommand.class));
+    }
+
+    @Test
+    void hireReturnsBadRequestWhenWorkingTimeContainsDerivedHours() throws Exception {
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75,
+                                    "weeklyHours": 30
+                                  },
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("HIRE_REQUEST_INVALID"));
+
+        verify(hireEmployeeUseCase, never()).hire(any(HireEmployeeCommand.class));
+    }
+
+    @Test
+    void hireReturnsBadRequestWhenContractIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("HIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("contract is required"));
+
+        verify(hireEmployeeUseCase, never()).hire(any(HireEmployeeCommand.class));
+    }
+
+    @Test
+    void hireReturnsBadRequestWhenLaborClassificationIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("HIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("laborClassification is required"));
+
+        verify(hireEmployeeUseCase, never()).hire(any(HireEmployeeCommand.class));
+    }
+
+    @Test
+    void hireReturnsConflictWhenLifecycleUseCaseMapsWorkingTimeConflict() throws Exception {
+        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
+                .thenThrow(new HireEmployeeConflictException("Working time number 1 already exists"));
+
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2026-03-23",
+                                  "companyCode": "COMP",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "WC1",
+                                  "workingTime": {
+                                    "workingTimePercentage": 75
+                                  },
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("HIRE_CONFLICT"));
     }
 }

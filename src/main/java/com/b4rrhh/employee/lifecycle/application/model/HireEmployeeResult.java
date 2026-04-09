@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.application.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -9,7 +10,8 @@ public record HireEmployeeResult(
         WorkCenterSummary workCenter,
         CostCenterSummary costCenter,
         ContractSummary contract,
-        LaborClassificationSummary laborClassification
+        LaborClassificationSummary laborClassification,
+        WorkingTimeSummary workingTime
 ) {
     public record EmployeeSummary(
             String ruleSystemCode,
@@ -59,5 +61,15 @@ public record HireEmployeeResult(
             LocalDate startDate,
             String agreementCode,
             String agreementCategoryCode
+    ) {}
+
+    public record WorkingTimeSummary(
+            Integer workingTimeNumber,
+            BigDecimal workingTimePercentage,
+            BigDecimal weeklyHours,
+            BigDecimal dailyHours,
+            BigDecimal monthlyHours,
+            LocalDate startDate,
+            LocalDate endDate
     ) {}
 }

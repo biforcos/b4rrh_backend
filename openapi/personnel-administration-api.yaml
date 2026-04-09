@@ -3869,6 +3869,7 @@ components:
         - workCenterCode
         - contract
         - laborClassification
+        - workingTime
       properties:
         ruleSystemCode:
           type: string
@@ -3912,6 +3913,18 @@ components:
           $ref: "#/components/schemas/HireContractRequest"
         laborClassification:
           $ref: "#/components/schemas/HireLaborClassificationRequest"
+        workingTime:
+          $ref: "#/components/schemas/HireEmployeeWorkingTimeRequest"
+
+    HireEmployeeWorkingTimeRequest:
+      type: object
+      required:
+        - workingTimePercentage
+      properties:
+        workingTimePercentage:
+          type: number
+          minimum: 0.01
+          maximum: 100
 
     CreateCostCenterDistributionInWorkflowRequest:
       type: object
@@ -3954,49 +3967,48 @@ components:
     HireEmployeeResponse:
       type: object
       required:
-        - employee
-        - presence
-        - workCenter
-        - contract
-        - laborClassification
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - status
+        - hireDate
+        - initialPresence
+        - initialWorkCenter
+        - initialContract
+        - initialLaborClassification
+        - workingTime
       properties:
-        employee:
-          type: object
-          required:
-            - ruleSystemCode
-            - employeeTypeCode
-            - employeeNumber
-            - displayName
-            - status
-          properties:
-            ruleSystemCode:
-              type: string
-            employeeTypeCode:
-              type: string
-            employeeNumber:
-              type: string
-            displayName:
-              type: string
-            status:
-              type: string
-        presence:
-          type: object
-          required:
-            - presenceNumber
-            - startDate
-            - companyCode
-            - entryReasonCode
-          properties:
-            presenceNumber:
-              type: integer
-            startDate:
-              type: string
-              format: date
-            companyCode:
-              type: string
-            entryReasonCode:
-              type: string
-        workCenter:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        firstName:
+          type: string
+          maxLength: 100
+        lastName1:
+          type: string
+          maxLength: 100
+        lastName2:
+          type: string
+          maxLength: 100
+          nullable: true
+        preferredName:
+          type: string
+          maxLength: 300
+          nullable: true
+        status:
+          type: string
+        hireDate:
+          type: string
+          format: date
+        initialPresence:
+          $ref: "#/components/schemas/HiredPresenceResponse"
+        initialWorkCenter:
           type: object
           required:
             - startDate
@@ -4012,7 +4024,7 @@ components:
               nullable: true
         costCenter:
           $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
-        contract:
+        initialContract:
           type: object
           required:
             - startDate
@@ -4026,7 +4038,8 @@ components:
               type: string
             contractSubtypeCode:
               type: string
-        laborClassification:
+              nullable: true
+        initialLaborClassification:
           type: object
           required:
             - startDate
@@ -4040,6 +4053,34 @@ components:
               type: string
             agreementCategoryCode:
               type: string
+        workingTime:
+          type: object
+          required:
+            - workingTimeNumber
+            - workingTimePercentage
+            - weeklyHours
+            - dailyHours
+            - monthlyHours
+            - startDate
+            - endDate
+          properties:
+            workingTimeNumber:
+              type: integer
+            workingTimePercentage:
+              type: number
+            weeklyHours:
+              type: number
+            dailyHours:
+              type: number
+            monthlyHours:
+              type: number
+            startDate:
+              type: string
+              format: date
+            endDate:
+              type: string
+              format: date
+              nullable: true
 
     HiredPresenceResponse:
       type: object
