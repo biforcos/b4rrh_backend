@@ -15,11 +15,18 @@ import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborC
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -96,7 +103,7 @@ class RehireEmployeeServiceRollbackIntegrationTest {
     }
 
     @Test
-    void rollsBackEmployeeStatusWhenPostConditionFailsAfterRehire() {
+    void rollsBackEmployeeStatusWhenWorkingTimeCreationFailsAfterRehire() {
         RehireEmployeeCommand command = new RehireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
@@ -109,10 +116,11 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                 "CON",
                 "SUB",
                 "MADRID_01",
-                null
+                null,
+                new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(new java.math.BigDecimal("0"))
         );
 
-        assertThrows(RehireEmployeeConflictException.class, () -> service.rehire(command));
+            assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(command));
 
         String persistedStatus = jdbcTemplate.queryForObject(
                 "select status from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
@@ -190,6 +198,25 @@ class RehireEmployeeServiceRollbackIntegrationTest {
             ));
         }
 
+                @Bean
+                ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase() {
+                    return (ListEmployeeWorkingTimesCommand command) -> List.of(WorkingTime.rehydrate(
+                        30L,
+                        100L,
+                        1,
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 3, 31),
+                        new java.math.BigDecimal("100"),
+                        new WorkingTimeDerivedHours(
+                            new java.math.BigDecimal("40.00"),
+                            new java.math.BigDecimal("8.00"),
+                            new java.math.BigDecimal("166.67")
+                        ),
+                        LocalDateTime.now(),
+                        LocalDateTime.now()
+                    ));
+                }
+
         @Bean
         CreatePresenceUseCase createPresenceUseCase() {
             return command -> new Presence(
@@ -256,6 +283,15 @@ class RehireEmployeeServiceRollbackIntegrationTest {
         CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase() {
             return command -> {
                 throw new UnsupportedOperationException("Not expected in this rollback test");
+            };
+        }
+
+        @Bean
+        CreateWorkingTimeUseCase createWorkingTimeUseCase() {
+            return command -> {
+                throw new InvalidWorkingTimePercentageException(
+                        "workingTimePercentage must be greater than 0 and less than or equal to 100"
+                );
             };
         }
     }

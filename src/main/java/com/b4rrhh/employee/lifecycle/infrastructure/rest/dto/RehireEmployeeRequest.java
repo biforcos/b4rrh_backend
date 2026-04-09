@@ -11,7 +11,8 @@ public record RehireEmployeeRequest(
         RehireLaborClassificationRequest laborClassification,
         RehireContractRequest contract,
         RehireWorkCenterRequest workCenter,
-        RehireCostCenterDistributionRequest costCenterDistribution
+        RehireCostCenterDistributionRequest costCenterDistribution,
+        RehireEmployeeWorkingTimeRequest workingTime
 ) {
     public record RehireCostCenterDistributionRequest(
             List<RehireCostCenterItemRequest> items

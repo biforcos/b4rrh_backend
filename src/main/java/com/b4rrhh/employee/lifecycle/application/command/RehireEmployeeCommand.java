@@ -16,7 +16,8 @@ public record RehireEmployeeCommand(
         String contractTypeCode,
         String contractSubtypeCode,
         String workCenterCode,
-        RehireEmployeeCostCenterDistributionCommand costCenterDistribution
+        RehireEmployeeCostCenterDistributionCommand costCenterDistribution,
+        RehireEmployeeWorkingTimeCommand workingTime
 ) {
     public record RehireEmployeeCostCenterDistributionCommand(
             List<RehireEmployeeCostCenterItemCommand> items
@@ -25,5 +26,9 @@ public record RehireEmployeeCommand(
     public record RehireEmployeeCostCenterItemCommand(
             String costCenterCode,
             BigDecimal allocationPercentage
+    ) {}
+
+    public record RehireEmployeeWorkingTimeCommand(
+            BigDecimal workingTimePercentage
     ) {}
 }

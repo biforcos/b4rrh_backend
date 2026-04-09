@@ -23,6 +23,7 @@ public record RehireEmployeeResult(
         String newWorkCenterCode,
         LocalDate newWorkCenterStartDate,
         CostCenterSummary newCostCenter,
+        WorkingTimeSummary newWorkingTime,
         boolean created
 ) {
     public record CostCenterSummary(
@@ -35,5 +36,15 @@ public record RehireEmployeeResult(
             String costCenterCode,
             String costCenterName,
             Double allocationPercentage
+    ) {}
+
+    public record WorkingTimeSummary(
+            Integer workingTimeNumber,
+            java.math.BigDecimal workingTimePercentage,
+            java.math.BigDecimal weeklyHours,
+            java.math.BigDecimal dailyHours,
+            java.math.BigDecimal monthlyHours,
+            LocalDate startDate,
+            LocalDate endDate
     ) {}
 }

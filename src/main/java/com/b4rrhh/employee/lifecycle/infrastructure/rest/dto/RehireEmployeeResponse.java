@@ -14,6 +14,7 @@ public record RehireEmployeeResponse(
         RehiredContractResponse newContract,
         RehiredLaborClassificationResponse newLaborClassification,
         RehiredWorkCenterResponse newWorkCenter,
-        CostCenterDistributionWindowResponse newCostCenter
+        CostCenterDistributionWindowResponse newCostCenter,
+        RehiredWorkingTimeResponse newWorkingTime
 ) {
 }

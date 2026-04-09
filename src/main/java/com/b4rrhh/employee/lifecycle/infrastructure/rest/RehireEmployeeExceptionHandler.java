@@ -4,6 +4,7 @@ import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundExc
 import com.b4rrhh.employee.employee.domain.exception.EmployeeRuleSystemNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
@@ -46,6 +47,12 @@ public class RehireEmployeeExceptionHandler {
     public ResponseEntity<RehireEmployeeErrorResponse> handleDistributionInvalid(RehireEmployeeDistributionInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new RehireEmployeeErrorResponse("INVALID_DISTRIBUTION", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(RehireEmployeeBusinessValidationException.class)
+    public ResponseEntity<RehireEmployeeErrorResponse> handleBusinessValidation(RehireEmployeeBusinessValidationException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new RehireEmployeeErrorResponse("REHIRE_BUSINESS_VALIDATION", ex.getMessage(), null));
     }
 
     @ExceptionHandler(RehireEmployeeConflictException.class)

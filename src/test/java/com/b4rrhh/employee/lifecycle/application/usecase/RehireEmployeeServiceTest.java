@@ -20,6 +20,7 @@ import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployee
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
@@ -28,6 +29,13 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -49,10 +57,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,6 +83,8 @@ class RehireEmployeeServiceTest {
     private ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
     @Mock
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+        @Mock
+        private ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase;
     @Mock
     private CreatePresenceUseCase createPresenceUseCase;
     @Mock
@@ -82,6 +95,8 @@ class RehireEmployeeServiceTest {
     private CreateWorkCenterUseCase createWorkCenterUseCase;
     @Mock
     private CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+        @Mock
+        private CreateWorkingTimeUseCase createWorkingTimeUseCase;
         @Mock
         private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
@@ -98,13 +113,23 @@ class RehireEmployeeServiceTest {
                 listEmployeeContractsUseCase,
                 listEmployeeLaborClassificationsUseCase,
                 listEmployeeWorkCentersUseCase,
+                                listEmployeeWorkingTimesUseCase,
                 createPresenceUseCase,
                 createLaborClassificationUseCase,
                 createContractUseCase,
                 createWorkCenterUseCase,
                                 createCostCenterDistributionUseCase,
+                                createWorkingTimeUseCase,
                                 workCenterCompanyValidator
         );
+
+                lenient().when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                                .thenReturn(List.of());
+                lenient().when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                                .thenAnswer(invocation -> {
+                                        CreateWorkingTimeCommand command = invocation.getArgument(0);
+                                        return activeWorkingTime(2, command.startDate(), command.workingTimePercentage());
+                                });
     }
 
     @Test
@@ -118,6 +143,8 @@ class RehireEmployeeServiceTest {
         LaborClassification newLabor = activeLabor(LocalDate.of(2026, 4, 15));
         Contract newContract = activeContract(LocalDate.of(2026, 4, 15));
         WorkCenter newWorkCenter = activeWorkCenter(LocalDate.of(2026, 4, 15));
+        WorkingTime previousClosedWorkingTime = closedWorkingTime(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), new BigDecimal("50"));
+        WorkingTime newWorkingTime = activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(employee("TERMINATED")));
@@ -129,10 +156,13 @@ class RehireEmployeeServiceTest {
                 .thenReturn(List.of(new LaborClassification(1L, "AGR", "CAT", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31))));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(new WorkCenter(10L, 1L, 1, "WC1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), LocalDateTime.now(), LocalDateTime.now())));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(previousClosedWorkingTime));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(newPresence);
         when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(newLabor);
         when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(newContract);
         when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(newWorkCenter);
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class))).thenReturn(newWorkingTime);
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
@@ -144,7 +174,14 @@ class RehireEmployeeServiceTest {
         assertEquals("METAL", result.newAgreementCode());
         assertEquals(1, result.newWorkCenterAssignmentNumber());
         assertNull(result.newCostCenter());
-        assertEquals(true, result.created());
+        assertTrue(result.created());
+        assertNotNull(result.newWorkingTime());
+        assertEquals(2, result.newWorkingTime().workingTimeNumber());
+        assertEquals(0, new BigDecimal("80").compareTo(result.newWorkingTime().workingTimePercentage()));
+        assertEquals(new BigDecimal("32.00"), result.newWorkingTime().weeklyHours());
+        assertEquals(LocalDate.of(2026, 4, 15), result.newWorkingTime().startDate());
+        assertNull(result.newWorkingTime().endDate());
+        assertFalse(previousClosedWorkingTime.getWorkingTimeNumber().equals(result.newWorkingTime().workingTimeNumber()));
 
         ArgumentCaptor<CreatePresenceCommand> presenceCaptor = ArgumentCaptor.forClass(CreatePresenceCommand.class);
         verify(createPresenceUseCase).create(presenceCaptor.capture());
@@ -162,7 +199,85 @@ class RehireEmployeeServiceTest {
         verify(createWorkCenterUseCase).create(workCenterCaptor.capture());
         assertEquals(LocalDate.of(2026, 4, 15), workCenterCaptor.getValue().startDate());
 
+        ArgumentCaptor<CreateWorkingTimeCommand> workingTimeCaptor = ArgumentCaptor.forClass(CreateWorkingTimeCommand.class);
+        verify(createWorkingTimeUseCase).create(workingTimeCaptor.capture());
+        assertEquals(LocalDate.of(2026, 4, 15), workingTimeCaptor.getValue().startDate());
+        assertEquals(0, new BigDecimal("80").compareTo(workingTimeCaptor.getValue().workingTimePercentage()));
+
         verify(createCostCenterDistributionUseCase, never()).create(any(CreateCostCenterDistributionCommand.class));
+    }
+
+    @Test
+    void failsWhenWorkingTimeBlockIsMissing() {
+        RehireEmployeeCommand command = new RehireEmployeeCommand(
+                "esp",
+                "internal",
+                "EMP001",
+                LocalDate.of(2026, 4, 15),
+                "rehire",
+                "es01",
+                "metal",
+                "oficial_1",
+                "con",
+                "sub",
+                "madrid_01",
+                null,
+                null
+        );
+
+        assertThrows(com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException.class, () -> service.rehire(command));
+        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+    }
+
+    @Test
+    void failsWhenWorkingTimePercentageIsMissing() {
+        RehireEmployeeCommand command = new RehireEmployeeCommand(
+                "esp",
+                "internal",
+                "EMP001",
+                LocalDate.of(2026, 4, 15),
+                "rehire",
+                "es01",
+                "metal",
+                "oficial_1",
+                "con",
+                "sub",
+                "madrid_01",
+                null,
+                new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(null)
+        );
+
+        assertThrows(com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException.class, () -> service.rehire(command));
+        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+    }
+
+    @Test
+    void failsWhenWorkingTimePercentageIsInvalid() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
+
+        Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
+        Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
+
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("TERMINATED")));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(closedPresence), List.of(newPresence));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of(new Contract(1L, "CON", "SUB", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31))));
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of(new LaborClassification(1L, "AGR", "CAT", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31))));
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(new WorkCenter(10L, 1L, 1, "WC1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), LocalDateTime.now(), LocalDateTime.now())));
+        when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(newPresence);
+        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(activeLabor(LocalDate.of(2026, 4, 15)));
+        when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(activeContract(LocalDate.of(2026, 4, 15)));
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(activeWorkCenter(LocalDate.of(2026, 4, 15)));
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenThrow(new InvalidWorkingTimePercentageException("workingTimePercentage must be greater than 0 and less than or equal to 100"));
+
+        assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(validCommand()));
+        verify(employeeRepository, never()).save(any(Employee.class));
     }
 
     @Test
@@ -174,16 +289,16 @@ class RehireEmployeeServiceTest {
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
     }
 
-        @Test
-        void failsFastWhenWorkCenterDoesNotBelongToCompany() {
-                when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                                .thenReturn(Optional.of(employee("TERMINATED")));
-                when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
-                        .thenReturn(Optional.of("OTHER"));
+    @Test
+    void failsFastWhenWorkCenterDoesNotBelongToCompany() {
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("TERMINATED")));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("OTHER"));
 
-                assertThrows(WorkCenterCompanyMismatchException.class, () -> service.rehire(validCommand()));
-                verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
-        }
+        assertThrows(WorkCenterCompanyMismatchException.class, () -> service.rehire(validCommand()));
+        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+    }
 
     @Test
     void failsIfActivePresenceAlreadyExists() {
@@ -199,6 +314,8 @@ class RehireEmployeeServiceTest {
                 .thenReturn(List.of(activeLabor(LocalDate.of(2026, 4, 15))));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activeWorkCenter(LocalDate.of(2026, 4, 15))));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"))));
 
         assertThrows(RehireEmployeeConflictException.class, () -> service.rehire(validCommand()));
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
@@ -249,7 +366,8 @@ class RehireEmployeeServiceTest {
                 "esp", "internal", "EMP001",
                 LocalDate.of(2026, 3, 1),
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
-                null
+                null,
+                workingTimeCommand(new BigDecimal("80"))
         );
 
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 3, 1)))
@@ -286,12 +404,16 @@ class RehireEmployeeServiceTest {
                 .thenReturn(List.of(activeLabor(LocalDate.of(2026, 4, 15))));
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activeWorkCenter(LocalDate.of(2026, 4, 15))));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"))));
 
         RehireEmployeeResult result = service.rehire(validCommand());
 
         assertEquals("ACTIVE", result.status());
         assertEquals(1, result.newPresenceNumber());
-        assertEquals(false, result.created());
+        assertFalse(result.created());
+        assertNotNull(result.newWorkingTime());
+        assertEquals(0, new BigDecimal("80").compareTo(result.newWorkingTime().workingTimePercentage()));
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -314,6 +436,8 @@ class RehireEmployeeServiceTest {
                         LocalDate.of(2026, 4, 15), null,
                         LocalDateTime.now(), LocalDateTime.now()
                 )));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"))));
 
         assertThrows(RehireEmployeeConflictException.class, () -> service.rehire(validCommand()));
     }
@@ -324,7 +448,8 @@ class RehireEmployeeServiceTest {
                 "esp", "internal", "EMP001",
                 LocalDate.of(2026, 6, 1),
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
-                null
+                null,
+                workingTimeCommand(new BigDecimal("80"))
         );
 
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 6, 1)))
@@ -365,6 +490,11 @@ class RehireEmployeeServiceTest {
                         new WorkCenter(30L, 100L, 1, "MADRID_01", LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31), LocalDateTime.now(), LocalDateTime.now()),
                         new WorkCenter(31L, 100L, 2, "MADRID_01", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31), LocalDateTime.now(), LocalDateTime.now())
                 ));
+        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
+                .thenReturn(List.of(
+                        closedWorkingTime(1, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31), new BigDecimal("100")),
+                        closedWorkingTime(2, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31), new BigDecimal("60"))
+                ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(thirdCycleActive);
         when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(activeLabor(LocalDate.of(2026, 6, 1)));
         when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(activeContract(LocalDate.of(2026, 6, 1)));
@@ -373,6 +503,8 @@ class RehireEmployeeServiceTest {
                 LocalDate.of(2026, 6, 1), null,
                 LocalDateTime.now(), LocalDateTime.now()
         ));
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenReturn(activeWorkingTime(3, LocalDate.of(2026, 6, 1), new BigDecimal("80")));
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
@@ -380,7 +512,8 @@ class RehireEmployeeServiceTest {
         assertEquals(LocalDate.of(2026, 6, 1), result.rehireDate());
         assertEquals(3, result.newPresenceNumber());
         assertEquals(3, result.newWorkCenterAssignmentNumber());
-        assertEquals(true, result.created());
+        assertTrue(result.created());
+        assertEquals(3, result.newWorkingTime().workingTimeNumber());
     }
 
     @Test
@@ -389,7 +522,8 @@ class RehireEmployeeServiceTest {
                 "esp", "internal", "EMP001",
                 LocalDate.of(2026, 4, 1),
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
-                null
+                null,
+                workingTimeCommand(new BigDecimal("80"))
         );
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 1)))
                 .thenReturn(Optional.of("ES01"));
@@ -431,7 +565,8 @@ class RehireEmployeeServiceTest {
                                 new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand("CC1", new BigDecimal("60.0")),
                                 new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand("CC2", new BigDecimal("40.0"))
                         )
-                )
+                ),
+                workingTimeCommand(new BigDecimal("80"))
         );
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
@@ -462,6 +597,8 @@ class RehireEmployeeServiceTest {
         when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(activeContract(LocalDate.of(2026, 4, 15)));
         when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(activeWorkCenter(LocalDate.of(2026, 4, 15)));
         when(createCostCenterDistributionUseCase.create(any(CreateCostCenterDistributionCommand.class))).thenReturn(costCenterWindow);
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenReturn(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80")));
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
@@ -489,7 +626,8 @@ class RehireEmployeeServiceTest {
                                 new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand("CC1", new BigDecimal("80.0")),
                                 new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand("CC2", new BigDecimal("80.0"))
                         )
-                )
+                ),
+                workingTimeCommand(new BigDecimal("80"))
         );
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
@@ -559,7 +697,8 @@ class RehireEmployeeServiceTest {
                         List.of(
                                 new RehireEmployeeCommand.RehireEmployeeCostCenterItemCommand("CC1", null)
                         )
-                )
+                ),
+                workingTimeCommand(new BigDecimal("80"))
         );
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
@@ -591,7 +730,8 @@ class RehireEmployeeServiceTest {
                 "esp", "internal", "EMP001",
                 LocalDate.of(2026, 4, 15),
                 "rehire", "es01", "metal", "oficial_1", "con", "sub", "madrid_01",
-                new RehireEmployeeCommand.RehireEmployeeCostCenterDistributionCommand(List.of())
+                new RehireEmployeeCommand.RehireEmployeeCostCenterDistributionCommand(List.of()),
+                workingTimeCommand(new BigDecimal("80"))
         );
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
@@ -630,9 +770,14 @@ class RehireEmployeeServiceTest {
                 "con",
                 "sub",
                 "madrid_01",
-                null
+                                null,
+                                workingTimeCommand(new BigDecimal("80"))
         );
     }
+
+        private RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand workingTimeCommand(BigDecimal percentage) {
+                return new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(percentage);
+        }
 
     private Employee employee(String status) {
         return new Employee(
@@ -681,4 +826,35 @@ class RehireEmployeeServiceTest {
                 LocalDateTime.now(), LocalDateTime.now()
         );
     }
+
+        private WorkingTime closedWorkingTime(int workingTimeNumber, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
+                return workingTime(workingTimeNumber, startDate, endDate, percentage);
+        }
+
+        private WorkingTime activeWorkingTime(int workingTimeNumber, LocalDate startDate, BigDecimal percentage) {
+                return workingTime(workingTimeNumber, startDate, null, percentage);
+        }
+
+        private WorkingTime workingTime(int workingTimeNumber, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
+                return WorkingTime.rehydrate(
+                                (long) workingTimeNumber,
+                                100L,
+                                workingTimeNumber,
+                                startDate,
+                                endDate,
+                                percentage,
+                                deriveHours(percentage),
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                );
+        }
+
+        private WorkingTimeDerivedHours deriveHours(BigDecimal percentage) {
+                BigDecimal factor = percentage.divide(new BigDecimal("100"));
+                return new WorkingTimeDerivedHours(
+                                factor.multiply(new BigDecimal("40")).setScale(2, java.math.RoundingMode.HALF_UP),
+                                factor.multiply(new BigDecimal("8")).setScale(2, java.math.RoundingMode.HALF_UP),
+                                factor.multiply(new BigDecimal("166.67")).setScale(2, java.math.RoundingMode.HALF_UP)
+                );
+        }
 }

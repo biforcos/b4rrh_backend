@@ -7,9 +7,11 @@ import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeRequest;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeResponse;
+import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeWorkingTimeRequest;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredContractResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredLaborClassificationResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredPresenceResponse;
+import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredWorkingTimeResponse;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehiredWorkCenterResponse;
 import org.springframework.stereotype.Component;
 
@@ -59,9 +61,34 @@ public class RehireEmployeeWebMapper {
                                         ))
                                         .collect(Collectors.toList())
                           )
-                        : null
+                                                : null,
+                                toWorkingTimeCommand(request.workingTime())
         );
     }
+
+        private RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand toWorkingTimeCommand(RehireEmployeeWorkingTimeRequest request) {
+                if (request == null) {
+                        throw new RehireEmployeeRequestInvalidException("workingTime is required");
+                }
+                rejectDerivedHours(request);
+                if (request.workingTimePercentage() == null) {
+                        throw new RehireEmployeeRequestInvalidException("workingTime.workingTimePercentage is required");
+                }
+
+                return new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(request.workingTimePercentage());
+        }
+
+        private void rejectDerivedHours(RehireEmployeeWorkingTimeRequest request) {
+                if (request.weeklyHours() != null) {
+                        throw new RehireEmployeeRequestInvalidException("workingTime.weeklyHours is not accepted");
+                }
+                if (request.dailyHours() != null) {
+                        throw new RehireEmployeeRequestInvalidException("workingTime.dailyHours is not accepted");
+                }
+                if (request.monthlyHours() != null) {
+                        throw new RehireEmployeeRequestInvalidException("workingTime.monthlyHours is not accepted");
+                }
+        }
 
     public RehireEmployeeResponse toResponse(RehireEmployeeResult result) {
         return new RehireEmployeeResponse(
@@ -104,7 +131,16 @@ public class RehireEmployeeWebMapper {
                                         ))
                                         .collect(Collectors.toList())
                           )
-                        : null
+                        : null,
+                new RehiredWorkingTimeResponse(
+                        result.newWorkingTime().workingTimeNumber(),
+                        result.newWorkingTime().workingTimePercentage(),
+                        result.newWorkingTime().weeklyHours(),
+                        result.newWorkingTime().dailyHours(),
+                        result.newWorkingTime().monthlyHours(),
+                        result.newWorkingTime().startDate(),
+                        result.newWorkingTime().endDate()
+                )
         );
     }
 }

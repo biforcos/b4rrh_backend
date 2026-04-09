@@ -36,6 +36,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
@@ -50,6 +51,16 @@ import com.b4rrhh.employee.presence.domain.exception.InvalidPresenceDateRangeExc
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceOverlapException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -78,11 +89,13 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final ListEmployeeContractsUseCase listEmployeeContractsUseCase;
     private final ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
+    private final ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase;
     private final CreatePresenceUseCase createPresenceUseCase;
     private final CreateLaborClassificationUseCase createLaborClassificationUseCase;
     private final CreateContractUseCase createContractUseCase;
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
+    private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
 
     public RehireEmployeeService(
@@ -92,12 +105,14 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             ListEmployeeContractsUseCase listEmployeeContractsUseCase,
             ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase,
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
+            ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase,
             CreatePresenceUseCase createPresenceUseCase,
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
             CreateContractUseCase createContractUseCase,
             CreateWorkCenterUseCase createWorkCenterUseCase,
-                CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
-                WorkCenterCompanyValidator workCenterCompanyValidator
+            CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
+            CreateWorkingTimeUseCase createWorkingTimeUseCase,
+            WorkCenterCompanyValidator workCenterCompanyValidator
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -105,11 +120,13 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.listEmployeeContractsUseCase = listEmployeeContractsUseCase;
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
+        this.listEmployeeWorkingTimesUseCase = listEmployeeWorkingTimesUseCase;
         this.createPresenceUseCase = createPresenceUseCase;
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
         this.createContractUseCase = createContractUseCase;
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
+        this.createWorkingTimeUseCase = createWorkingTimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
     }
 
@@ -131,6 +148,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         String contractTypeCode = normalizeRequiredCode("contractTypeCode", command.contractTypeCode(), false);
         String contractSubtypeCode = normalizeRequiredCode("contractSubtypeCode", command.contractSubtypeCode(), false);
         String workCenterCode = normalizeRequiredCode("workCenterCode", command.workCenterCode(), false);
+        RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand workingTime = normalizeRequiredWorkingTime(command.workingTime());
 
         Employee employee = getEmployeeByBusinessKeyUseCase
                 .getByBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
@@ -157,6 +175,9 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         );
         List<WorkCenter> workCenterHistory = listEmployeeWorkCentersUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
+        List<WorkingTime> workingTimeHistory = listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(
+            new ListEmployeeWorkingTimesCommand(ruleSystemCode, employeeTypeCode, employeeNumber)
+        );
 
         List<Presence> activePresences = presenceHistory.stream().filter(Presence::isActive).toList();
         if (!activePresences.isEmpty()) {
@@ -173,7 +194,9 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     activePresences,
                     contractHistory,
                     laborHistory,
-                    workCenterHistory
+                    workCenterHistory,
+                    workingTimeHistory,
+                    workingTime.workingTimePercentage()
             );
         }
 
@@ -206,6 +229,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         Contract createdContract;
         WorkCenter createdWorkCenter;
         CostCenterDistributionWindow createdCostCenter = null;
+        WorkingTime createdWorkingTime;
 
         try {
             createdPresence = createPresenceUseCase.create(new CreatePresenceCommand(
@@ -263,6 +287,14 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                                 .collect(Collectors.toList())
                 ));
             }
+
+            createdWorkingTime = createWorkingTimeUseCase.create(new CreateWorkingTimeCommand(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    rehireDate,
+                    workingTime.workingTimePercentage()
+            ));
         } catch (PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
                  | LaborClassificationCategoryInvalidException
@@ -276,6 +308,14 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         } catch (LaborClassificationAgreementCategoryRelationInvalidException
                  | ContractSubtypeRelationInvalidException ex) {
             throw new RehireEmployeeDependentRelationInvalidException(ex.getMessage(), ex);
+        } catch (InvalidWorkingTimePercentageException
+                 | WorkingTimeOutsidePresencePeriodException
+                 | WorkingTimeOverlapException ex) {
+            throw new RehireEmployeeBusinessValidationException(ex.getMessage(), ex);
+        } catch (WorkingTimeNumberConflictException ex) {
+            throw new RehireEmployeeConflictException(ex.getMessage(), ex);
+        } catch (WorkingTimeEmployeeNotFoundException ex) {
+            throw new RehireEmployeeConflictException("Employee is not available for rehire workingTime creation", ex);
         } catch (ActivePresenceAlreadyExistsException
                  | PresenceOverlapException
                  | InvalidPresenceDateRangeException
@@ -328,6 +368,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 createdWorkCenter.getWorkCenterCode(),
                 createdWorkCenter.getStartDate(),
                 buildCostCenterSummary(createdCostCenter),
+                toWorkingTimeSummary(createdWorkingTime),
                 true
         );
     }
@@ -345,7 +386,9 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             List<Presence> activePresences,
             List<Contract> contractHistory,
             List<LaborClassification> laborHistory,
-            List<WorkCenter> workCenterHistory
+                List<WorkCenter> workCenterHistory,
+                List<WorkingTime> workingTimeHistory,
+                java.math.BigDecimal workingTimePercentage
     ) {
         if (!employee.isActive()) {
             throw new RehireEmployeeConflictException("Active presence exists but employee status is not ACTIVE");
@@ -393,6 +436,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         }
 
         WorkCenter activeWorkCenter = requireExactlyOneActive("work center", workCenterHistory, WorkCenter::isActive);
+        WorkingTime activeWorkingTime = requireExactlyOneActive("working time", workingTimeHistory, WorkingTime::isActive);
         if (!isEquivalentActiveCycle(
                 rehireDate,
                 entryReasonCode,
@@ -402,10 +446,12 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 contractTypeCode,
                 contractSubtypeCode,
                 workCenterCode,
+            workingTimePercentage,
                 activePresence,
                 activeContract,
                 activeLaborClassification,
-                activeWorkCenter
+            activeWorkCenter,
+            activeWorkingTime
         )) {
             throw new RehireEmployeeConflictException("Active employee cycle is not equivalent to rehire request");
         }
@@ -430,6 +476,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 activeWorkCenter.getWorkCenterCode(),
                 activeWorkCenter.getStartDate(),
                 null,
+                toWorkingTimeSummary(activeWorkingTime),
                 false
         );
     }
@@ -443,10 +490,12 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             String contractTypeCode,
             String contractSubtypeCode,
             String workCenterCode,
+                java.math.BigDecimal workingTimePercentage,
             Presence activePresence,
             Contract activeContract,
             LaborClassification activeLaborClassification,
-            WorkCenter activeWorkCenter
+                WorkCenter activeWorkCenter,
+                WorkingTime activeWorkingTime
     ) {
         return rehireDate.equals(activePresence.getStartDate())
                 && entryReasonCode.equals(activePresence.getEntryReasonCode())
@@ -458,7 +507,25 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 && agreementCode.equals(activeLaborClassification.getAgreementCode())
                 && agreementCategoryCode.equals(activeLaborClassification.getAgreementCategoryCode())
                 && rehireDate.equals(activeWorkCenter.getStartDate())
-                && workCenterCode.equals(activeWorkCenter.getWorkCenterCode());
+                && workCenterCode.equals(activeWorkCenter.getWorkCenterCode())
+                && rehireDate.equals(activeWorkingTime.getStartDate())
+                && activeWorkingTime.getEndDate() == null
+                && activeWorkingTime.getWorkingTimePercentage().compareTo(workingTimePercentage) == 0;
+    }
+
+    private RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand normalizeRequiredWorkingTime(
+            RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand workingTime
+    ) {
+        if (workingTime == null) {
+            throw new RehireEmployeeRequestInvalidException("workingTime is required");
+        }
+        if (workingTime.workingTimePercentage() == null) {
+            throw new RehireEmployeeRequestInvalidException("workingTime.workingTimePercentage is required");
+        }
+
+        return new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(
+                workingTime.workingTimePercentage().stripTrailingZeros()
+        );
     }
 
     private <T> T requireExactlyOneActive(String label, List<T> occurrences, Predicate<T> isActive) {
@@ -488,6 +555,18 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                                 item.getAllocationPercentage().doubleValue()
                         ))
                         .collect(Collectors.toList())
+        );
+    }
+
+    private RehireEmployeeResult.WorkingTimeSummary toWorkingTimeSummary(WorkingTime workingTime) {
+        return new RehireEmployeeResult.WorkingTimeSummary(
+                workingTime.getWorkingTimeNumber(),
+                workingTime.getWorkingTimePercentage(),
+                workingTime.getWeeklyHours(),
+                workingTime.getDailyHours(),
+                workingTime.getMonthlyHours(),
+                workingTime.getStartDate(),
+                workingTime.getEndDate()
         );
     }
 

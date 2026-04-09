@@ -2,6 +2,7 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.application.usecase.RehireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
@@ -18,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,6 +72,15 @@ class RehireEmployeeControllerHttpTest {
                         "MADRID_01",
                         LocalDate.of(2026, 4, 15),
                         null,
+                        new RehireEmployeeResult.WorkingTimeSummary(
+                          3,
+                          new BigDecimal("80"),
+                          new BigDecimal("32.00"),
+                          new BigDecimal("6.40"),
+                          new BigDecimal("133.34"),
+                          LocalDate.of(2026, 4, 15),
+                          null
+                        ),
                         true
                 ));
 
@@ -90,6 +101,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "madrid_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -105,13 +119,21 @@ class RehireEmployeeControllerHttpTest {
                 .andExpect(jsonPath("$.newContract.contractTypeCode").value("PERMANENT"))
                 .andExpect(jsonPath("$.newLaborClassification.agreementCode").value("METAL"))
                 .andExpect(jsonPath("$.newWorkCenter.workCenterAssignmentNumber").value(2))
-                .andExpect(jsonPath("$.newCostCenter").doesNotExist());
+                .andExpect(jsonPath("$.newCostCenter").doesNotExist())
+                .andExpect(jsonPath("$.newWorkingTime.workingTimeNumber").value(3))
+                .andExpect(jsonPath("$.newWorkingTime.workingTimePercentage").value(80))
+                .andExpect(jsonPath("$.newWorkingTime.weeklyHours").value(32.0))
+                .andExpect(jsonPath("$.newWorkingTime.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.newWorkingTime.endDate").isEmpty())
+                .andExpect(jsonPath("$.employeeId").doesNotExist())
+                .andExpect(jsonPath("$.newWorkingTime.id").doesNotExist());
 
         ArgumentCaptor<RehireEmployeeCommand> captor = ArgumentCaptor.forClass(RehireEmployeeCommand.class);
         verify(rehireEmployeeUseCase).rehire(captor.capture());
         assertEquals("ESP", captor.getValue().ruleSystemCode());
         assertEquals(LocalDate.of(2026, 4, 15), captor.getValue().rehireDate());
         assertEquals("rehire", captor.getValue().entryReasonCode());
+        assertEquals(0, new BigDecimal("80").compareTo(captor.getValue().workingTime().workingTimePercentage()));
     }
 
     @Test
@@ -137,6 +159,15 @@ class RehireEmployeeControllerHttpTest {
                         "MADRID_01",
                         LocalDate.of(2026, 4, 15),
                         null,
+                        new RehireEmployeeResult.WorkingTimeSummary(
+                          3,
+                          new BigDecimal("80"),
+                          new BigDecimal("32.00"),
+                          new BigDecimal("6.40"),
+                          new BigDecimal("133.34"),
+                          LocalDate.of(2026, 4, 15),
+                          null
+                        ),
                         false
                 ));
 
@@ -157,6 +188,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -186,11 +220,49 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("REHIRE_CONFLICT"));
+    }
+
+    @Test
+    void rehireReturnsUnprocessableEntityOnInvalidWorkingTimePercentage() throws Exception {
+        when(rehireEmployeeUseCase.rehire(any(RehireEmployeeCommand.class)))
+                .thenThrow(new RehireEmployeeBusinessValidationException(
+                        "workingTimePercentage must be greater than 0 and less than or equal to 100",
+                        null
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 0
+                                  }
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("REHIRE_BUSINESS_VALIDATION"));
     }
 
     @Test
@@ -215,6 +287,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -245,6 +320,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -274,6 +352,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   },
                                   "costCenterDistribution": {
                                     "items": [
@@ -309,6 +390,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -331,6 +415,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -354,6 +441,9 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
@@ -378,11 +468,100 @@ class RehireEmployeeControllerHttpTest {
                                   "contract": {
                                     "contractTypeCode": "PERMANENT",
                                     "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
                                   }
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
                 .andExpect(jsonPath("$.message").value("workCenter is required"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenWorkingTimeBlockIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("workingTime is required"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenWorkingTimePercentageIsMissing() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {}
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("workingTime.workingTimePercentage is required"));
+    }
+
+    @Test
+    void rehireReturnsBadRequestWhenDerivedWorkingTimeHoursAreSent() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80,
+                                    "weeklyHours": 32
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REHIRE_REQUEST_INVALID"))
+                .andExpect(jsonPath("$.message").value("workingTime.weeklyHours is not accepted"));
     }
 }

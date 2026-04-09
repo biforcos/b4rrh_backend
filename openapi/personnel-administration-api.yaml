@@ -4178,6 +4178,7 @@ components:
         - laborClassification
         - contract
         - workCenter
+        - workingTime
       properties:
         rehireDate:
           type: string
@@ -4196,6 +4197,18 @@ components:
           $ref: "#/components/schemas/RehireWorkCenterRequest"
         costCenterDistribution:
           $ref: "#/components/schemas/CreateCostCenterDistributionInWorkflowRequest"
+        workingTime:
+          $ref: "#/components/schemas/RehireEmployeeWorkingTimeRequest"
+
+    RehireEmployeeWorkingTimeRequest:
+      type: object
+      required:
+        - workingTimePercentage
+      properties:
+        workingTimePercentage:
+          type: number
+          minimum: 0.01
+          maximum: 100
 
     RehireLaborClassificationRequest:
       type: object
@@ -4244,6 +4257,7 @@ components:
         - newContract
         - newLaborClassification
         - newWorkCenter
+        - newWorkingTime
       properties:
         ruleSystemCode:
           type: string
@@ -4271,6 +4285,8 @@ components:
         newCostCenter:
           $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
           nullable: true
+        newWorkingTime:
+          $ref: "#/components/schemas/RehiredWorkingTimeResponse"
 
     RehiredPresenceResponse:
       type: object
@@ -4343,6 +4359,36 @@ components:
         startDate:
           type: string
           format: date
+
+    RehiredWorkingTimeResponse:
+      type: object
+      required:
+        - workingTimeNumber
+        - workingTimePercentage
+        - weeklyHours
+        - dailyHours
+        - monthlyHours
+        - startDate
+        - endDate
+      properties:
+        workingTimeNumber:
+          type: integer
+          format: int32
+        workingTimePercentage:
+          type: number
+        weeklyHours:
+          type: number
+        dailyHours:
+          type: number
+        monthlyHours:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
 
     RehireEmployeeErrorResponse:
       type: object
