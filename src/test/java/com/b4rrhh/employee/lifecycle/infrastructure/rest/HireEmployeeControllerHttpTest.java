@@ -5,6 +5,7 @@ import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -137,6 +138,41 @@ class HireEmployeeControllerHttpTest {
                                   "workCenterCode": "WC1",
                                   "workingTime": {
                                     "workingTimePercentage": 75
+                                  },
+                                  "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("INVALID_CATALOG_VALUE"));
+    }
+
+    @Test
+    void hireReturnsUnprocessableEntityWhenWorkCenterCatalogValueIsInvalid() throws Exception {
+        when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
+                .thenThrow(new WorkCenterCatalogValueInvalidException("workCenterCode", "REMOTE"));
+
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ruleSystemCode": "ESP",
+                                  "employeeTypeCode": "INTERNAL",
+                                  "employeeNumber": "EMP001",
+                                  "firstName": "Ana",
+                                  "lastName1": "Lopez",
+                                  "hireDate": "2020-01-05",
+                                  "companyCode": "ES01",
+                                  "entryReasonCode": "HIRE",
+                                  "workCenterCode": "REMOTE",
+                                  "workingTime": {
+                                    "workingTimePercentage": 100
                                   },
                                   "laborClassification": {
                                     "agreementCode": "AGR",

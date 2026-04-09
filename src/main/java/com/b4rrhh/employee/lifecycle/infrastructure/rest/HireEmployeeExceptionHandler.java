@@ -13,6 +13,7 @@ import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundExc
 import com.b4rrhh.employee.presence.domain.exception.PresenceRuleSystemNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
@@ -45,6 +46,12 @@ public class HireEmployeeExceptionHandler {
 
     @ExceptionHandler(HireEmployeeCatalogValueInvalidException.class)
     public ResponseEntity<HireEmployeeErrorResponse> handleInvalidCatalog(HireEmployeeCatalogValueInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new HireEmployeeErrorResponse("INVALID_CATALOG_VALUE", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(WorkCenterCatalogValueInvalidException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleWorkCenterCatalogInvalid(WorkCenterCatalogValueInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new HireEmployeeErrorResponse("INVALID_CATALOG_VALUE", ex.getMessage(), null));
     }

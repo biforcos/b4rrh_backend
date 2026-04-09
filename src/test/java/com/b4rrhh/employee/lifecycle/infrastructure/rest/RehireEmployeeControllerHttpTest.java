@@ -8,6 +8,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeCatalogValue
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -287,6 +288,38 @@ class RehireEmployeeControllerHttpTest {
                                   },
                                   "workCenter": {
                                     "workCenterCode": "MADRID_01"
+                                  },
+                                  "workingTime": {
+                                    "workingTimePercentage": 80
+                                  }
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("INVALID_CATALOG_VALUE"));
+    }
+
+    @Test
+    void rehireReturnsUnprocessableEntityOnInvalidWorkCenterCatalogValue() throws Exception {
+        when(rehireEmployeeUseCase.rehire(any(RehireEmployeeCommand.class)))
+                .thenThrow(new WorkCenterCatalogValueInvalidException("workCenterCode", "REMOTE"));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/rehire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rehireDate": "2026-04-15",
+                                  "entryReasonCode": "REHIRE",
+                                  "companyCode": "ES01",
+                                  "laborClassification": {
+                                    "agreementCode": "METAL",
+                                    "agreementCategoryCode": "OFICIAL_1"
+                                  },
+                                  "contract": {
+                                    "contractTypeCode": "PERMANENT",
+                                    "contractSubtypeCode": "ORDINARY"
+                                  },
+                                  "workCenter": {
+                                    "workCenterCode": "REMOTE"
                                   },
                                   "workingTime": {
                                     "workingTimePercentage": 80

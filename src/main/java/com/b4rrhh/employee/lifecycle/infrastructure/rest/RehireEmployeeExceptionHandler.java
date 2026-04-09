@@ -14,6 +14,7 @@ import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeError
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceRuleSystemNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleSystemNotFoundException;
@@ -33,6 +34,12 @@ public class RehireEmployeeExceptionHandler {
 
     @ExceptionHandler(RehireEmployeeCatalogValueInvalidException.class)
     public ResponseEntity<RehireEmployeeErrorResponse> handleCatalogInvalid(RehireEmployeeCatalogValueInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new RehireEmployeeErrorResponse("INVALID_CATALOG_VALUE", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(WorkCenterCatalogValueInvalidException.class)
+    public ResponseEntity<RehireEmployeeErrorResponse> handleWorkCenterCatalogInvalid(WorkCenterCatalogValueInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new RehireEmployeeErrorResponse("INVALID_CATALOG_VALUE", ex.getMessage(), null));
     }
