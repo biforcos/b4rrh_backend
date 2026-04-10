@@ -55,6 +55,7 @@ class EvaluatePermissionServiceTest {
         assertTrue(decision.isAllowed());
         assertTrue(decision.reason().contains("HR_MANAGER"));
         assertTrue(decision.reason().contains("SLOT_MAINTAINER"));
+        assertTrue(decision.reason().contains("exact resource policy"));
     }
 
     @Test
@@ -71,7 +72,27 @@ class EvaluatePermissionServiceTest {
 
         assertTrue(decision.isAllowed());
         assertTrue(decision.reason().contains("EMPLOYEE.LIFECYCLE"));
+        assertTrue(decision.reason().contains("inherited ancestor policy"));
     }
+
+        @Test
+        void allowsWhenOneRoleGrantsAndNoDenyExists() {
+        stubResource("EMPLOYEE.CONTACT", "EMPLOYEE");
+        stubResource("EMPLOYEE", null);
+        when(policyRepository.findByRoleCodeAndResourceCode("HR_VIEWER", "EMPLOYEE.CONTACT"))
+            .thenReturn(Optional.empty());
+        when(policyRepository.findByRoleCodeAndResourceCode("HR_VIEWER", "EMPLOYEE"))
+            .thenReturn(Optional.empty());
+        when(policyRepository.findByRoleCodeAndResourceCode("AUDITOR", "EMPLOYEE.CONTACT"))
+            .thenReturn(Optional.empty());
+        stubPolicy("AUDITOR", "EMPLOYEE", "READ_ONLY", PolicyEffect.ALLOW, PropagationMode.THIS_RESOURCE_AND_CHILDREN, true);
+        stubProfile("READ_ONLY", Set.of("READ"));
+
+        PermissionDecision decision = service.evaluate(command(List.of("HR_VIEWER", "AUDITOR"), "EMPLOYEE.CONTACT", "READ"));
+
+        assertTrue(decision.isAllowed());
+        assertTrue(decision.reason().contains("AUDITOR"));
+        }
 
     @Test
     void deniesWhenAncestorPolicyHasThisResourceOnlyPropagation() {
@@ -97,6 +118,22 @@ class EvaluatePermissionServiceTest {
 
         assertFalse(decision.isAllowed());
         assertTrue(decision.reason().contains("no applicable policy"));
+    }
+
+    @Test
+    void deniesWhenNoApplicablePolicyExists() {
+        stubResource("EMPLOYEE.CONTACT", "EMPLOYEE");
+        stubResource("EMPLOYEE", null);
+        when(policyRepository.findByRoleCodeAndResourceCode("CATALOG_MANAGER", "EMPLOYEE.CONTACT"))
+                .thenReturn(Optional.empty());
+        when(policyRepository.findByRoleCodeAndResourceCode("CATALOG_MANAGER", "EMPLOYEE"))
+                .thenReturn(Optional.empty());
+
+        PermissionDecision decision = service.evaluate(command(List.of("CATALOG_MANAGER"), "EMPLOYEE.CONTACT", "READ"));
+
+        assertFalse(decision.isAllowed());
+        assertTrue(decision.reason().contains("no applicable policy"));
+        assertTrue(decision.reason().contains("CATALOG_MANAGER"));
     }
 
     @Test
@@ -148,6 +185,24 @@ class EvaluatePermissionServiceTest {
         assertFalse(decision.isAllowed());
         assertTrue(decision.reason().contains("explicit DENY"));
         assertTrue(decision.reason().contains("EMPLOYEE.LIFECYCLE.TERMINATE"));
+        assertTrue(decision.reason().contains("exact resource policy"));
+    }
+
+    @Test
+    void inheritedDenyFromParentOverridesChildAccess() {
+        stubResource("EMPLOYEE.LIFECYCLE.TERMINATE", "EMPLOYEE.LIFECYCLE");
+        stubResource("EMPLOYEE.LIFECYCLE", "EMPLOYEE");
+        stubResource("EMPLOYEE", null);
+        when(policyRepository.findByRoleCodeAndResourceCode("HR_OPERATOR", "EMPLOYEE.LIFECYCLE.TERMINATE"))
+                .thenReturn(Optional.empty());
+        stubPolicy("HR_OPERATOR", "EMPLOYEE.LIFECYCLE", "NONE", PolicyEffect.DENY, PropagationMode.THIS_RESOURCE_AND_CHILDREN, true);
+
+        PermissionDecision decision = service.evaluate(command(List.of("HR_OPERATOR"), "EMPLOYEE.LIFECYCLE.TERMINATE", "EXECUTE"));
+
+        assertFalse(decision.isAllowed());
+        assertTrue(decision.reason().contains("explicit DENY"));
+        assertTrue(decision.reason().contains("EMPLOYEE.LIFECYCLE"));
+        assertTrue(decision.reason().contains("inherited ancestor policy"));
     }
 
     @Test

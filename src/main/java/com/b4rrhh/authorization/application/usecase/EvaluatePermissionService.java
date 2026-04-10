@@ -144,6 +144,7 @@ public class EvaluatePermissionService implements EvaluatePermissionUseCase {
                 return RoleEvaluation.explicitDeny(
                         "Denied because role '" + roleCode + "' has an explicit DENY policy on resource '"
                                 + node.code() + "' that applies to requested resource '" + requestedResourceCode + "'"
+                                + policyOriginDescription(isExactResource, node.code())
                 );
             }
 
@@ -152,6 +153,7 @@ public class EvaluatePermissionService implements EvaluatePermissionUseCase {
                 return RoleEvaluation.deny(
                         "Denied because permission profile '" + policy.permissionProfileCode()
                                 + "' was not found for role '" + roleCode + "' on resource '" + node.code() + "'"
+                                + policyOriginDescription(isExactResource, node.code())
                 );
             }
 
@@ -160,12 +162,14 @@ public class EvaluatePermissionService implements EvaluatePermissionUseCase {
                 return RoleEvaluation.deny(
                         "Denied because action '" + actionCode + "' is not granted by permission profile '"
                                 + profile.code() + "' for role '" + roleCode + "' on resource '" + node.code() + "'"
+                                + policyOriginDescription(isExactResource, node.code())
                 );
             }
 
             return RoleEvaluation.allow(
                     "Granted to subject '" + subject + "' by role '" + roleCode + "' using profile '"
                             + profile.code() + "' on resource '" + node.code() + "'"
+                            + policyOriginDescription(isExactResource, node.code())
             );
         }
 
@@ -180,6 +184,13 @@ public class EvaluatePermissionService implements EvaluatePermissionUseCase {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return value.trim().toUpperCase();
+    }
+
+    private String policyOriginDescription(boolean exactResource, String policyResourceCode) {
+        if (exactResource) {
+            return " from exact resource policy";
+        }
+        return " from inherited ancestor policy '" + policyResourceCode + "'";
     }
 
     private record ResolvedAncestorPath(List<SecuredResource> ancestorPath, String failureReason) {
