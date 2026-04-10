@@ -36,3 +36,7 @@ management:
 logging:
   level:
     org.flywaydb: info
+
+app:
+  jwt:
+    secret: "b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm"
