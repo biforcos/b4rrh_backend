@@ -2,6 +2,7 @@ package com.b4rrhh.authorization.infrastructure.web;
 
 import com.b4rrhh.authorization.application.usecase.EvaluatePermissionCommand;
 import com.b4rrhh.authorization.application.usecase.EvaluatePermissionUseCase;
+import com.b4rrhh.authorization.application.usecase.ResolveSubjectRolesUseCase;
 import com.b4rrhh.authorization.domain.model.PermissionDecision;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,13 +34,18 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
 
     @Mock
     private EvaluatePermissionUseCase evaluatePermissionUseCase;
+        @Mock
+        private ResolveSubjectRolesUseCase resolveSubjectRolesUseCase;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        PermissionEvaluationBusinessKeyController controller = new PermissionEvaluationBusinessKeyController(evaluatePermissionUseCase);
+        PermissionEvaluationBusinessKeyController controller = new PermissionEvaluationBusinessKeyController(
+                evaluatePermissionUseCase,
+                resolveSubjectRolesUseCase
+        );
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setControllerAdvice(new PermissionEvaluationExceptionHandler())
@@ -49,6 +54,8 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
 
     @Test
     void returnsAllowWhenPermissionGranted() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1"))
+                .thenReturn(List.of("HR_MANAGER"));
         when(evaluatePermissionUseCase.evaluate(any()))
                 .thenReturn(PermissionDecision.allow("Granted by role HR_MANAGER"));
 
@@ -57,7 +64,7 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
                         .content("""
                                 {"resourceCode": "EMPLOYEE.CONTACT", "actionCode": "READ"}
                                 """)
-                        .principal(jwtToken("user1", List.of("HR_MANAGER"))))
+                        .principal(jwtToken("user1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.decision").value("ALLOW"))
                 .andExpect(jsonPath("$.reason").value("Granted by role HR_MANAGER"));
@@ -65,6 +72,8 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
 
     @Test
     void returnsDenyWhenPermissionNotGranted() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1"))
+                .thenReturn(List.of("HR_OPERATOR"));
         when(evaluatePermissionUseCase.evaluate(any()))
                 .thenReturn(PermissionDecision.deny("No role grants action"));
 
@@ -73,14 +82,16 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
                         .content("""
                                 {"resourceCode": "EMPLOYEE.LIFECYCLE.TERMINATE", "actionCode": "EXECUTE"}
                                 """)
-                        .principal(jwtToken("user1", List.of("HR_OPERATOR"))))
+                        .principal(jwtToken("user1")))
                 .andExpect(status().isOk())
                         .andExpect(jsonPath("$.decision").value("DENY"))
                         .andExpect(jsonPath("$.reason").value("No role grants action"));
     }
 
     @Test
-    void passesSubjectAndRolesFromAuthenticationToCommand() throws Exception {
+        void resolvesRolesFromSubjectAndPassesThemToCommand() throws Exception {
+                when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("jdoe"))
+                                .thenReturn(List.of("HR_MANAGER", "AUDITOR"));
         when(evaluatePermissionUseCase.evaluate(any()))
                 .thenReturn(PermissionDecision.allow("ok"));
 
@@ -89,7 +100,7 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
                         .content("""
                                 {"resourceCode": "EMPLOYEE.CONTACT", "actionCode": "READ"}
                                 """)
-                        .principal(jwtToken("jdoe", List.of("HR_MANAGER", "AUDITOR"))))
+                        .principal(jwtToken("jdoe")))
                 .andExpect(status().isOk());
 
         ArgumentCaptor<EvaluatePermissionCommand> captor = ArgumentCaptor.forClass(EvaluatePermissionCommand.class);
@@ -104,6 +115,8 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
 
     @Test
     void returnsDenyWhenResourceNotFound() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1"))
+                .thenReturn(List.of("HR_MANAGER"));
         when(evaluatePermissionUseCase.evaluate(any()))
                 .thenReturn(PermissionDecision.deny("Denied because secured resource 'UNKNOWN' was not found"));
 
@@ -112,7 +125,7 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
                         .content("""
                                 {"resourceCode": "UNKNOWN", "actionCode": "READ"}
                                 """)
-                        .principal(jwtToken("user1", List.of("HR_MANAGER"))))
+                        .principal(jwtToken("user1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.decision").value("DENY"))
                 .andExpect(jsonPath("$.reason").value("Denied because secured resource 'UNKNOWN' was not found"));
@@ -120,6 +133,8 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
 
     @Test
     void returns400WhenResourceCodeIsBlank() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1"))
+                .thenReturn(List.of("HR_MANAGER"));
         when(evaluatePermissionUseCase.evaluate(any()))
                 .thenThrow(new IllegalArgumentException("resourceCode is required"));
 
@@ -128,24 +143,65 @@ class PermissionEvaluationBusinessKeyControllerHttpTest {
                         .content("""
                                 {"resourceCode": "", "actionCode": "READ"}
                                 """)
-                        .principal(jwtToken("user1", List.of("HR_MANAGER"))))
+                        .principal(jwtToken("user1")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("resourceCode is required"));
     }
 
-    private JwtAuthenticationToken jwtToken(String subject, List<String> roles) {
+    @Test
+    void passesEmptyRoleListWhenSubjectHasNoAssignments() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1"))
+                .thenReturn(List.of());
+        when(evaluatePermissionUseCase.evaluate(any()))
+                .thenReturn(PermissionDecision.deny("Denied because subject 'user1' has no roles to evaluate action 'READ' on resource 'EMPLOYEE.CONTACT'"));
+
+        mockMvc.perform(post("/authorization/evaluate")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"resourceCode": "EMPLOYEE.CONTACT", "actionCode": "READ"}
+                                """)
+                        .principal(jwtToken("user1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.decision").value("DENY"));
+
+        ArgumentCaptor<EvaluatePermissionCommand> captor = ArgumentCaptor.forClass(EvaluatePermissionCommand.class);
+        verify(evaluatePermissionUseCase).evaluate(captor.capture());
+
+        assertThat(captor.getValue().roleCodes()).isEmpty();
+    }
+
+    @Test
+    void preservesAuthenticatedSubjectCaseWhenResolvingInternalRoles() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("BiFor"))
+                .thenReturn(List.of("ADMIN"));
+        when(evaluatePermissionUseCase.evaluate(any()))
+                .thenReturn(PermissionDecision.allow("ok"));
+
+        mockMvc.perform(post("/authorization/evaluate")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"resourceCode": "EMPLOYEE.CONTACT", "actionCode": "READ"}
+                                """)
+                        .principal(jwtToken("BiFor")))
+                .andExpect(status().isOk());
+
+        verify(resolveSubjectRolesUseCase).resolveActiveRoleCodes("BiFor");
+
+        ArgumentCaptor<EvaluatePermissionCommand> captor = ArgumentCaptor.forClass(EvaluatePermissionCommand.class);
+        verify(evaluatePermissionUseCase).evaluate(captor.capture());
+
+        assertThat(captor.getValue().subject()).isEqualTo("BiFor");
+        assertThat(captor.getValue().roleCodes()).containsExactly("ADMIN");
+    }
+
+    private JwtAuthenticationToken jwtToken(String subject) {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "HS256")
                 .subject(subject)
-                .claim("roles", roles)
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
 
-        List<SimpleGrantedAuthority> authorities = roles.stream()
-                .map(SimpleGrantedAuthority::new)
-                .toList();
-
-        return new JwtAuthenticationToken(jwt, authorities);
+        return new JwtAuthenticationToken(jwt);
     }
 }

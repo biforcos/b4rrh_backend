@@ -1,6 +1,7 @@
 package com.b4rrhh.shared.infrastructure.config;
 
 import com.b4rrhh.authorization.application.usecase.EvaluatePermissionUseCase;
+import com.b4rrhh.authorization.application.usecase.ResolveSubjectRolesUseCase;
 import com.b4rrhh.authorization.domain.model.PermissionDecision;
 import com.b4rrhh.authorization.infrastructure.web.PermissionEvaluationBusinessKeyController;
 import com.b4rrhh.authorization.infrastructure.web.PermissionEvaluationExceptionHandler;
@@ -22,8 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -44,6 +43,9 @@ class SecurityConfigTest {
     @MockBean
     private EvaluatePermissionUseCase evaluatePermissionUseCase;
 
+    @MockBean
+    private ResolveSubjectRolesUseCase resolveSubjectRolesUseCase;
+
     @Test
     void requiresAuthenticationByDefault() throws Exception {
         mockMvc.perform(get("/employees"))
@@ -58,6 +60,7 @@ class SecurityConfigTest {
 
     @Test
     void allowsAuthenticatedAuthorizationEvaluation() throws Exception {
+        when(resolveSubjectRolesUseCase.resolveActiveRoleCodes("user1")).thenReturn(java.util.List.of("HR_MANAGER"));
         when(evaluatePermissionUseCase.evaluate(any())).thenReturn(PermissionDecision.allow("ok"));
 
         mockMvc.perform(post("/authorization/evaluate")
@@ -65,7 +68,7 @@ class SecurityConfigTest {
                         .content("""
                                 {"resourceCode": "EMPLOYEE.CONTACT", "actionCode": "READ"}
                                 """)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken("user1", List.of("HR_MANAGER"))))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken("user1")))
                 .andExpect(status().isOk());
     }
 
@@ -79,13 +82,22 @@ class SecurityConfigTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    private String jwtToken(String subject, List<String> roles) throws JOSEException {
+    @Test
+    void keepsDevAuthEndpointClosedOutsideLocalProfile() throws Exception {
+        mockMvc.perform(post("/dev/auth/token")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"subject": "bifor"}
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private String jwtToken(String subject) throws JOSEException {
         Instant now = Instant.now();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(subject)
                 .issueTime(Date.from(now))
                 .expirationTime(Date.from(now.plusSeconds(3600)))
-                .claim("roles", roles)
                 .build();
 
         SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);

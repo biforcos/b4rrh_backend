@@ -56,3 +56,6 @@ Negativas:
 
 ## Evolución futura
 Integración con proveedor externo manteniendo autorización interna.
+
+## Sobre subjeect_code
+subject_code representa la identidad autenticada del actor y se trata como identificador opaco; no se normaliza por case y no se interpreta como business key.

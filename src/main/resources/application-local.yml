@@ -1,0 +1,4 @@
+app:
+  dev-auth:
+    enabled: true
+    default-expires-in-minutes: 60

@@ -2,6 +2,7 @@ package com.b4rrhh.authorization.infrastructure.web;
 
 import com.b4rrhh.authorization.application.usecase.EvaluatePermissionCommand;
 import com.b4rrhh.authorization.application.usecase.EvaluatePermissionUseCase;
+import com.b4rrhh.authorization.application.usecase.ResolveSubjectRolesUseCase;
 import com.b4rrhh.authorization.domain.model.PermissionDecision;
 import com.b4rrhh.authorization.infrastructure.web.dto.EvaluatePermissionRequest;
 import com.b4rrhh.authorization.infrastructure.web.dto.EvaluatePermissionResponse;
@@ -19,9 +20,14 @@ import java.util.List;
 public class PermissionEvaluationBusinessKeyController {
 
     private final EvaluatePermissionUseCase evaluatePermissionUseCase;
+        private final ResolveSubjectRolesUseCase resolveSubjectRolesUseCase;
 
-    public PermissionEvaluationBusinessKeyController(EvaluatePermissionUseCase evaluatePermissionUseCase) {
+        public PermissionEvaluationBusinessKeyController(
+                        EvaluatePermissionUseCase evaluatePermissionUseCase,
+                        ResolveSubjectRolesUseCase resolveSubjectRolesUseCase
+        ) {
         this.evaluatePermissionUseCase = evaluatePermissionUseCase;
+                this.resolveSubjectRolesUseCase = resolveSubjectRolesUseCase;
     }
 
     @PostMapping("/evaluate")
@@ -29,13 +35,12 @@ public class PermissionEvaluationBusinessKeyController {
             @RequestBody EvaluatePermissionRequest request,
             Authentication authentication
     ) {
-        List<String> roleCodes = authentication.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
-                .toList();
+        String subjectCode = authentication.getName();
+        List<String> roleCodes = resolveSubjectRolesUseCase.resolveActiveRoleCodes(subjectCode);
 
         PermissionDecision decision = evaluatePermissionUseCase.evaluate(
                 new EvaluatePermissionCommand(
-                        authentication.getName(),
+                        subjectCode,
                         roleCodes,
                         request.resourceCode(),
                         request.actionCode()

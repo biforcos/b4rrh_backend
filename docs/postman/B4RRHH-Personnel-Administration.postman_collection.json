@@ -247,6 +247,60 @@
       ]
     },
     {
+      "name": "Development Auth",
+      "item": [
+        {
+          "name": "Issue Dev JWT Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains bearer token', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.tokenType).to.eql('Bearer');",
+                  "    pm.expect(body.token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('bearerToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"{{devAuthSubject}}\",\n  \"expiresInMinutes\": {{devAuthExpiresInMinutes}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dev/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dev",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "POST /dev/auth/token. Available only with local profile and app.dev-auth.enabled=true. Stores the returned JWT in collection variable bearerToken."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Presences (Business Key API)",
       "item": [
         {
@@ -2629,6 +2683,18 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:8080"
+    },
+    {
+      "key": "devAuthSubject",
+      "value": "bifor"
+    },
+    {
+      "key": "devAuthExpiresInMinutes",
+      "value": "120"
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
     },
     {
       "key": "ruleSystemCode",
