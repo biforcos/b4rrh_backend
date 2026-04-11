@@ -219,6 +219,26 @@ Migration rules:
 - Existing migrations must not be edited after being applied
 - Schema evolution must be deliberate and versioned
 
+### ESP Baseline Seed
+
+Fresh installations include a minimal ESP baseline seed through these migrations:
+
+- `V49__seed_esp_baseline_rule_system.sql`
+- `V50__seed_esp_baseline_catalogs.sql`
+- `V51__seed_esp_baseline_organization.sql`
+- `V52__seed_esp_baseline_relationships.sql`
+
+The baseline is intentionally small and is meant to support employee creation, core lifecycle flows, and workforce loader simulations with coherent business-key combinations.
+
+| Scenario | Rule system | Company | Work center | Agreement | Agreement category | Contract | Contract subtype | Employee type | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Base office indefinite | ESP | ES01 | MAIN_OFFICE | AGR_OFFICE | CAT_ADMIN | IND | FT1 | INTERNAL | Default office happy path |
+| Scenario A technical employee | ESP | ES01 | BRANCH_NORTH | AGR_TECH | CAT_TECH_1 | IND | FT1 | INTERNAL | Technical branch assignment in ES01 |
+| Scenario B temporary part time | ESP | ES01 | MAIN_OFFICE | AGR_OFFICE | CAT_ADMIN | TMP | PT1 | INTERNAL | Temporary and part-time office path |
+| Scenario C second company | ESP | ES02 | BRANCH_SOUTH | AGR_TECH | CAT_TECH_2 | IND | FT1 | INTERNAL | Happy path covering the second seeded company |
+
+The integration coverage for these combinations is exercised in `HireEmployeeBaselineFlywayIntegrationTest`.
+
 JPA/Hibernate is used only as a persistence adapter.
 
 The database schema is considered a **first-class architectural artifact**, not a byproduct of ORM mapping.

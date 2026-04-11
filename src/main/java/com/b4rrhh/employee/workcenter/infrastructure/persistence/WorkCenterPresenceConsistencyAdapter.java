@@ -26,7 +26,7 @@ public class WorkCenterPresenceConsistencyAdapter implements WorkCenterPresenceC
         LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
 
         Object result = entityManager.createNativeQuery("""
-                select case when count(p) > 0 then true else false end
+                select case when count(*) > 0 then true else false end
                 from employee.presence p
                 where p.employee_id = :employeeId
                   and p.start_date <= :startDate
@@ -51,7 +51,7 @@ public class WorkCenterPresenceConsistencyAdapter implements WorkCenterPresenceC
     @Override
     public boolean existsPresenceStartingAt(Long employeeId, LocalDate startDate) {
         Object result = entityManager.createNativeQuery("""
-                select case when count(p) > 0 then true else false end
+                select case when count(*) > 0 then true else false end
                 from employee.presence p
                 where p.employee_id = :employeeId
                   and p.start_date = :startDate
