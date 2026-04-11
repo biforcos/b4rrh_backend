@@ -1,0 +1,175 @@
+package com.b4rrhh.payroll.infrastructure.web;
+
+import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.CalculatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
+import com.b4rrhh.payroll.application.usecase.InvalidatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.InvalidatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
+import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollConcept;
+import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
+import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class PayrollControllerTest {
+
+    @Mock
+    private CalculatePayrollUseCase calculatePayrollUseCase;
+    @Mock
+    private GetPayrollByBusinessKeyUseCase getPayrollByBusinessKeyUseCase;
+    @Mock
+    private InvalidatePayrollUseCase invalidatePayrollUseCase;
+    @Mock
+    private ValidatePayrollUseCase validatePayrollUseCase;
+    @Mock
+    private FinalizePayrollUseCase finalizePayrollUseCase;
+
+    private PayrollController controller;
+
+    @BeforeEach
+    void setUp() {
+        controller = new PayrollController(
+                calculatePayrollUseCase,
+                getPayrollByBusinessKeyUseCase,
+                invalidatePayrollUseCase,
+                validatePayrollUseCase,
+                finalizePayrollUseCase,
+                new PayrollResponseAssembler()
+        );
+    }
+
+    @Test
+    void calculatesPayrollFromRequestBody() {
+        when(calculatePayrollUseCase.calculate(any(CalculatePayrollCommand.class))).thenReturn(payroll(PayrollStatus.CALCULATED, null));
+
+        ResponseEntity<PayrollResponse> response = controller.calculateTemporaryStub(new CalculatePayrollRequest(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                1,
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                "ENGINE",
+                "1.0",
+                List.of(new PayrollConceptRequest(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollContextSnapshotRequest("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}"))
+        ));
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("ESP", response.getBody().ruleSystemCode());
+        assertEquals(PayrollStatus.CALCULATED, response.getBody().status());
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+        assertEquals("ORD", captor.getValue().payrollTypeCode());
+        assertEquals(1, captor.getValue().concepts().size());
+    }
+
+    @Test
+    void getsPayrollByBusinessKey() {
+        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+                .thenReturn(Optional.of(payroll(PayrollStatus.CALCULATED, null)));
+
+        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("202501", response.getBody().payrollPeriodCode());
+    }
+
+    @Test
+    void invalidatesPayrollByBusinessKey() {
+        when(invalidatePayrollUseCase.invalidate(any(InvalidatePayrollCommand.class)))
+                .thenReturn(payroll(PayrollStatus.NOT_VALID, "USER_INVALIDATED"));
+
+        ResponseEntity<PayrollResponse> response = controller.invalidate(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                1,
+                new InvalidatePayrollRequest("USER_INVALIDATED")
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(PayrollStatus.NOT_VALID, response.getBody().status());
+        assertEquals("USER_INVALIDATED", response.getBody().statusReasonCode());
+    }
+
+    @Test
+    void validatesPayrollByBusinessKey() {
+        when(validatePayrollUseCase.validate(any(ValidatePayrollCommand.class)))
+                .thenReturn(payroll(PayrollStatus.EXPLICIT_VALIDATED, null));
+
+        ResponseEntity<PayrollResponse> response = controller.validate("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(PayrollStatus.EXPLICIT_VALIDATED, response.getBody().status());
+    }
+
+    @Test
+    void finalizesPayrollByBusinessKey() {
+        when(finalizePayrollUseCase.finalizePayroll(any(FinalizePayrollCommand.class)))
+                .thenReturn(payroll(PayrollStatus.DEFINITIVE, null));
+
+        ResponseEntity<PayrollResponse> response = controller.finalizePayroll("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(PayrollStatus.DEFINITIVE, response.getBody().status());
+    }
+
+    private Payroll payroll(PayrollStatus status, String statusReasonCode) {
+        return Payroll.rehydrate(
+                7L,
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                1,
+                status,
+                statusReasonCode,
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                "ENGINE",
+                "1.0",
+                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+}

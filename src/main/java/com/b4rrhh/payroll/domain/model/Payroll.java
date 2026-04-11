@@ -1,0 +1,304 @@
+package com.b4rrhh.payroll.domain.model;
+
+import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
+import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionException;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class Payroll {
+
+    private final Long id;
+    private final String ruleSystemCode;
+    private final String employeeTypeCode;
+    private final String employeeNumber;
+    private final String payrollPeriodCode;
+    private final String payrollTypeCode;
+    private final Integer presenceNumber;
+    private final PayrollStatus status;
+    private final String statusReasonCode;
+    private final LocalDateTime calculatedAt;
+    private final String calculationEngineCode;
+    private final String calculationEngineVersion;
+    private final List<PayrollConcept> concepts;
+    private final List<PayrollContextSnapshot> contextSnapshots;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
+
+    private Payroll(
+            Long id,
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this.id = id;
+        this.ruleSystemCode = requireCode(ruleSystemCode, "ruleSystemCode", 5);
+        this.employeeTypeCode = requireCode(employeeTypeCode, "employeeTypeCode", 30);
+        this.employeeNumber = requireText(employeeNumber, "employeeNumber", 15);
+        this.payrollPeriodCode = requireCode(payrollPeriodCode, "payrollPeriodCode", 30);
+        this.payrollTypeCode = requireCode(payrollTypeCode, "payrollTypeCode", 30);
+        this.presenceNumber = requirePositive(presenceNumber, "presenceNumber");
+        this.status = requireStatus(status);
+        this.statusReasonCode = normalizeReason(statusReasonCode);
+        this.calculatedAt = requireCalculatedAt(calculatedAt);
+        this.calculationEngineCode = requireCode(calculationEngineCode, "calculationEngineCode", 50);
+        this.calculationEngineVersion = requireText(calculationEngineVersion, "calculationEngineVersion", 50);
+        this.concepts = copyConcepts(concepts);
+        this.contextSnapshots = copySnapshots(contextSnapshots);
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public static Payroll create(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots
+    ) {
+        return new Payroll(
+                null,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber,
+                status,
+                statusReasonCode,
+                calculatedAt,
+                calculationEngineCode,
+                calculationEngineVersion,
+                concepts,
+                contextSnapshots,
+                null,
+                null
+        );
+    }
+
+    public static Payroll rehydrate(
+            Long id,
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        return new Payroll(
+                id,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber,
+                status,
+                statusReasonCode,
+                calculatedAt,
+                calculationEngineCode,
+                calculationEngineVersion,
+                concepts,
+                contextSnapshots,
+                createdAt,
+                updatedAt
+        );
+    }
+
+    public Payroll invalidate(String statusReasonCode) {
+        if (status != PayrollStatus.CALCULATED && status != PayrollStatus.EXPLICIT_VALIDATED) {
+            throw new PayrollInvalidStateTransitionException(status, "invalidate");
+        }
+        return withStatus(PayrollStatus.NOT_VALID, requireCode(statusReasonCode, "statusReasonCode", 50));
+    }
+
+    public Payroll validateExplicitly() {
+        if (status != PayrollStatus.CALCULATED) {
+            throw new PayrollInvalidStateTransitionException(status, "validate");
+        }
+        return withStatus(PayrollStatus.EXPLICIT_VALIDATED, statusReasonCode);
+    }
+
+    public Payroll finalizePayroll() {
+        if (status != PayrollStatus.CALCULATED && status != PayrollStatus.EXPLICIT_VALIDATED) {
+            throw new PayrollInvalidStateTransitionException(status, "finalize");
+        }
+        return withStatus(PayrollStatus.DEFINITIVE, statusReasonCode);
+    }
+
+    private Payroll withStatus(PayrollStatus nextStatus, String nextStatusReasonCode) {
+        return new Payroll(
+                null,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber,
+                nextStatus,
+                nextStatusReasonCode,
+                calculatedAt,
+                calculationEngineCode,
+                calculationEngineVersion,
+                concepts,
+                contextSnapshots,
+                null,
+                null
+        );
+    }
+
+    private static PayrollStatus requireStatus(PayrollStatus value) {
+        if (value == null) {
+            throw new InvalidPayrollArgumentException("status is required");
+        }
+        return value;
+    }
+
+    private static LocalDateTime requireCalculatedAt(LocalDateTime value) {
+        if (value == null) {
+            throw new InvalidPayrollArgumentException("calculatedAt is required");
+        }
+        return value;
+    }
+
+    private static Integer requirePositive(Integer value, String fieldName) {
+        if (value == null || value <= 0) {
+            throw new InvalidPayrollArgumentException(fieldName + " must be a positive integer");
+        }
+        return value;
+    }
+
+    private static String requireCode(String value, String fieldName, int maxLength) {
+        String normalized = requireText(value, fieldName, maxLength);
+        return normalized.toUpperCase();
+    }
+
+    private static String requireText(String value, String fieldName, int maxLength) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new InvalidPayrollArgumentException(fieldName + " is required");
+        }
+        String normalized = value.trim();
+        if (normalized.length() > maxLength) {
+            throw new InvalidPayrollArgumentException(fieldName + " exceeds max length " + maxLength);
+        }
+        return normalized;
+    }
+
+    private static String normalizeReason(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return requireCode(value, "statusReasonCode", 50);
+    }
+
+    private static List<PayrollConcept> copyConcepts(List<PayrollConcept> concepts) {
+        if (concepts == null) {
+            throw new InvalidPayrollArgumentException("concepts is required");
+        }
+        return List.copyOf(concepts);
+    }
+
+    private static List<PayrollContextSnapshot> copySnapshots(List<PayrollContextSnapshot> contextSnapshots) {
+        if (contextSnapshots == null) {
+            throw new InvalidPayrollArgumentException("contextSnapshots is required");
+        }
+        return List.copyOf(contextSnapshots);
+    }
+
+    public boolean canBeRecalculated() {
+        return status.canBeRecalculated();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getRuleSystemCode() {
+        return ruleSystemCode;
+    }
+
+    public String getEmployeeTypeCode() {
+        return employeeTypeCode;
+    }
+
+    public String getEmployeeNumber() {
+        return employeeNumber;
+    }
+
+    public String getPayrollPeriodCode() {
+        return payrollPeriodCode;
+    }
+
+    public String getPayrollTypeCode() {
+        return payrollTypeCode;
+    }
+
+    public Integer getPresenceNumber() {
+        return presenceNumber;
+    }
+
+    public PayrollStatus getStatus() {
+        return status;
+    }
+
+    public String getStatusReasonCode() {
+        return statusReasonCode;
+    }
+
+    public LocalDateTime getCalculatedAt() {
+        return calculatedAt;
+    }
+
+    public String getCalculationEngineCode() {
+        return calculationEngineCode;
+    }
+
+    public String getCalculationEngineVersion() {
+        return calculationEngineVersion;
+    }
+
+    public List<PayrollConcept> getConcepts() {
+        return concepts;
+    }
+
+    public List<PayrollContextSnapshot> getContextSnapshots() {
+        return contextSnapshots;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+}

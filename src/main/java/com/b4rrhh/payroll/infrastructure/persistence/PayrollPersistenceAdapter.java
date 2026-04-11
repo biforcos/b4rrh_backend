@@ -1,0 +1,138 @@
+package com.b4rrhh.payroll.infrastructure.persistence;
+
+import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollConcept;
+import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import org.springframework.stereotype.Component;
+
+import java.util.Comparator;
+import java.util.Optional;
+
+@Component
+public class PayrollPersistenceAdapter implements PayrollRepository {
+
+    private final SpringDataPayrollRepository springDataPayrollRepository;
+
+    public PayrollPersistenceAdapter(SpringDataPayrollRepository springDataPayrollRepository) {
+        this.springDataPayrollRepository = springDataPayrollRepository;
+    }
+
+    @Override
+    public Optional<Payroll> findByBusinessKey(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber
+    ) {
+        return springDataPayrollRepository
+                .findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumberAndPayrollPeriodCodeAndPayrollTypeCodeAndPresenceNumber(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        payrollPeriodCode,
+                        payrollTypeCode,
+                        presenceNumber
+                )
+                .map(this::toDomain);
+    }
+
+    @Override
+    public Payroll save(Payroll payroll) {
+        PayrollEntity entity = toEntity(payroll);
+        return toDomain(springDataPayrollRepository.save(entity));
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        springDataPayrollRepository.deleteById(id);
+    }
+
+    private Payroll toDomain(PayrollEntity entity) {
+        return Payroll.rehydrate(
+                entity.getId(),
+                entity.getRuleSystemCode(),
+                entity.getEmployeeTypeCode(),
+                entity.getEmployeeNumber(),
+                entity.getPayrollPeriodCode(),
+                entity.getPayrollTypeCode(),
+                entity.getPresenceNumber(),
+                entity.getStatus(),
+                entity.getStatusReasonCode(),
+                entity.getCalculatedAt(),
+                entity.getCalculationEngineCode(),
+                entity.getCalculationEngineVersion(),
+                entity.getConcepts().stream()
+                        .sorted(Comparator.comparing(PayrollConceptEntity::getDisplayOrder)
+                                .thenComparing(PayrollConceptEntity::getLineNumber))
+                        .map(concept -> new PayrollConcept(
+                                concept.getLineNumber(),
+                                concept.getConceptCode(),
+                                concept.getConceptLabel(),
+                                concept.getAmount(),
+                                concept.getQuantity(),
+                                concept.getRate(),
+                                concept.getConceptNatureCode(),
+                                concept.getOriginPeriodCode(),
+                                concept.getDisplayOrder()
+                        ))
+                        .toList(),
+                entity.getContextSnapshots().stream()
+                        .map(snapshot -> new PayrollContextSnapshot(
+                                snapshot.getSnapshotTypeCode(),
+                                snapshot.getSourceVerticalCode(),
+                                snapshot.getSourceBusinessKeyJson(),
+                                snapshot.getSnapshotPayloadJson()
+                        ))
+                        .toList(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
+
+    private PayrollEntity toEntity(Payroll payroll) {
+        PayrollEntity entity = new PayrollEntity();
+        entity.setId(payroll.getId());
+        entity.setRuleSystemCode(payroll.getRuleSystemCode());
+        entity.setEmployeeTypeCode(payroll.getEmployeeTypeCode());
+        entity.setEmployeeNumber(payroll.getEmployeeNumber());
+        entity.setPayrollPeriodCode(payroll.getPayrollPeriodCode());
+        entity.setPayrollTypeCode(payroll.getPayrollTypeCode());
+        entity.setPresenceNumber(payroll.getPresenceNumber());
+        entity.setStatus(payroll.getStatus());
+        entity.setStatusReasonCode(payroll.getStatusReasonCode());
+        entity.setCalculatedAt(payroll.getCalculatedAt());
+        entity.setCalculationEngineCode(payroll.getCalculationEngineCode());
+        entity.setCalculationEngineVersion(payroll.getCalculationEngineVersion());
+        entity.setCreatedAt(payroll.getCreatedAt());
+        entity.setUpdatedAt(payroll.getUpdatedAt());
+        entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
+        entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
+        return entity;
+    }
+
+    private PayrollConceptEntity toConceptEntity(PayrollConcept concept) {
+        PayrollConceptEntity entity = new PayrollConceptEntity();
+        entity.setLineNumber(concept.getLineNumber());
+        entity.setConceptCode(concept.getConceptCode());
+        entity.setConceptLabel(concept.getConceptLabel());
+        entity.setAmount(concept.getAmount());
+        entity.setQuantity(concept.getQuantity());
+        entity.setRate(concept.getRate());
+        entity.setConceptNatureCode(concept.getConceptNatureCode());
+        entity.setOriginPeriodCode(concept.getOriginPeriodCode());
+        entity.setDisplayOrder(concept.getDisplayOrder());
+        return entity;
+    }
+
+    private PayrollContextSnapshotEntity toSnapshotEntity(PayrollContextSnapshot snapshot) {
+        PayrollContextSnapshotEntity entity = new PayrollContextSnapshotEntity();
+        entity.setSnapshotTypeCode(snapshot.getSnapshotTypeCode());
+        entity.setSourceVerticalCode(snapshot.getSourceVerticalCode());
+        entity.setSourceBusinessKeyJson(snapshot.getSourceBusinessKeyJson());
+        entity.setSnapshotPayloadJson(snapshot.getSnapshotPayloadJson());
+        return entity;
+    }
+}

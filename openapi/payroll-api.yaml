@@ -1,0 +1,455 @@
+openapi: 3.0.3
+info:
+  title: B4RRHH Payroll API
+  version: 0.1.0
+
+tags:
+  - name: Payroll
+    description: Payroll materialized result management by business key.
+
+paths:
+  /payrolls/calculate:
+    post:
+      operationId: calculatePayroll
+      summary: Temporary stub endpoint to materialize a payroll result
+      description: Temporary pipeline-validation stub endpoint. This endpoint is not the final payroll engine API and is only used to materialize payroll results during the pre-launch phase. Clients currently provide concepts and context snapshots explicitly so the payroll vertical can be exercised end-to-end before launch orchestration, fake calculator generation, and the real calculation engine are introduced.
+      tags:
+        - Payroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatePayrollRequest"
+      responses:
+        "201":
+          description: Payroll calculated and created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "404":
+          description: Employee presence not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Payroll recalculation is not allowed for the current status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}:
+    get:
+      operationId: getPayrollByBusinessKey
+      summary: Get payroll by business key
+      tags:
+        - Payroll
+      parameters:
+        - $ref: "#/components/parameters/RuleSystemCode"
+        - $ref: "#/components/parameters/EmployeeTypeCode"
+        - $ref: "#/components/parameters/EmployeeNumber"
+        - $ref: "#/components/parameters/PayrollPeriodCode"
+        - $ref: "#/components/parameters/PayrollTypeCode"
+        - $ref: "#/components/parameters/PresenceNumber"
+      responses:
+        "200":
+          description: Payroll found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/invalidate:
+    post:
+      operationId: invalidatePayroll
+      summary: Invalidate payroll and mark it as NOT_VALID
+      tags:
+        - Payroll
+      parameters:
+        - $ref: "#/components/parameters/RuleSystemCode"
+        - $ref: "#/components/parameters/EmployeeTypeCode"
+        - $ref: "#/components/parameters/EmployeeNumber"
+        - $ref: "#/components/parameters/PayrollPeriodCode"
+        - $ref: "#/components/parameters/PayrollTypeCode"
+        - $ref: "#/components/parameters/PresenceNumber"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvalidatePayrollRequest"
+      responses:
+        "200":
+          description: Payroll invalidated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Payroll cannot be invalidated from its current status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/validate:
+    post:
+      operationId: validatePayroll
+      summary: Explicitly validate payroll
+      tags:
+        - Payroll
+      parameters:
+        - $ref: "#/components/parameters/RuleSystemCode"
+        - $ref: "#/components/parameters/EmployeeTypeCode"
+        - $ref: "#/components/parameters/EmployeeNumber"
+        - $ref: "#/components/parameters/PayrollPeriodCode"
+        - $ref: "#/components/parameters/PayrollTypeCode"
+        - $ref: "#/components/parameters/PresenceNumber"
+      responses:
+        "200":
+          description: Payroll explicitly validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Payroll cannot be validated from its current status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/finalize:
+    post:
+      operationId: finalizePayroll
+      summary: Finalize payroll and make it definitive
+      tags:
+        - Payroll
+      parameters:
+        - $ref: "#/components/parameters/RuleSystemCode"
+        - $ref: "#/components/parameters/EmployeeTypeCode"
+        - $ref: "#/components/parameters/EmployeeNumber"
+        - $ref: "#/components/parameters/PayrollPeriodCode"
+        - $ref: "#/components/parameters/PayrollTypeCode"
+        - $ref: "#/components/parameters/PresenceNumber"
+      responses:
+        "200":
+          description: Payroll finalized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Payroll cannot be finalized from its current status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+components:
+  parameters:
+    RuleSystemCode:
+      in: path
+      name: ruleSystemCode
+      required: true
+      schema:
+        type: string
+        maxLength: 5
+    EmployeeTypeCode:
+      in: path
+      name: employeeTypeCode
+      required: true
+      schema:
+        type: string
+        maxLength: 30
+    EmployeeNumber:
+      in: path
+      name: employeeNumber
+      required: true
+      schema:
+        type: string
+        maxLength: 15
+    PayrollPeriodCode:
+      in: path
+      name: payrollPeriodCode
+      required: true
+      schema:
+        type: string
+        maxLength: 30
+    PayrollTypeCode:
+      in: path
+      name: payrollTypeCode
+      required: true
+      schema:
+        type: string
+        maxLength: 30
+    PresenceNumber:
+      in: path
+      name: presenceNumber
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+
+  schemas:
+    PayrollStatus:
+      type: string
+      enum:
+        - NOT_VALID
+        - CALCULATED
+        - EXPLICIT_VALIDATED
+        - DEFINITIVE
+
+    PayrollConceptRequest:
+      type: object
+      required:
+        - lineNumber
+        - conceptCode
+        - conceptLabel
+        - amount
+        - conceptNatureCode
+        - displayOrder
+      properties:
+        lineNumber:
+          type: integer
+          format: int32
+          minimum: 1
+        conceptCode:
+          type: string
+          maxLength: 30
+        conceptLabel:
+          type: string
+          maxLength: 200
+        amount:
+          type: number
+          format: double
+        quantity:
+          type: number
+          format: double
+          nullable: true
+        rate:
+          type: number
+          format: double
+          nullable: true
+        conceptNatureCode:
+          type: string
+          maxLength: 30
+        originPeriodCode:
+          type: string
+          maxLength: 30
+          nullable: true
+        displayOrder:
+          type: integer
+          format: int32
+          minimum: 1
+
+    PayrollContextSnapshotRequest:
+      type: object
+      required:
+        - snapshotTypeCode
+        - sourceVerticalCode
+        - sourceBusinessKeyJson
+        - snapshotPayloadJson
+      properties:
+        snapshotTypeCode:
+          type: string
+          maxLength: 30
+        sourceVerticalCode:
+          type: string
+          maxLength: 30
+        sourceBusinessKeyJson:
+          type: string
+          description: JSON serialized business key of the source context.
+        snapshotPayloadJson:
+          type: string
+          description: JSON serialized snapshot payload.
+
+    CalculatePayrollRequest:
+      type: object
+      description: Temporary stub request used to materialize a payroll result during the pre-launch phase. This schema is intentionally transitional and will be replaced when the real payroll engine input contract is defined.
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - payrollPeriodCode
+        - payrollTypeCode
+        - presenceNumber
+        - status
+        - calculatedAt
+        - calculationEngineCode
+        - calculationEngineVersion
+        - concepts
+        - contextSnapshots
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+        payrollPeriodCode:
+          type: string
+          maxLength: 30
+        payrollTypeCode:
+          type: string
+          maxLength: 30
+        presenceNumber:
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/PayrollStatus"
+          description: Initial implementation only accepts CALCULATED or NOT_VALID for calculation output.
+        statusReasonCode:
+          type: string
+          maxLength: 50
+          nullable: true
+        calculatedAt:
+          type: string
+          format: date-time
+        calculationEngineCode:
+          type: string
+          maxLength: 50
+        calculationEngineVersion:
+          type: string
+          maxLength: 50
+        concepts:
+          type: array
+          description: Temporary stub-provided payroll concepts. In the final calculation flow these lines are expected to be produced by the payroll engine rather than sent as a stable public API payload.
+          items:
+            $ref: "#/components/schemas/PayrollConceptRequest"
+        contextSnapshots:
+          type: array
+          description: Temporary stub-provided context snapshots used to persist supporting payroll context during pipeline validation. This is not the final public engine input shape.
+          items:
+            $ref: "#/components/schemas/PayrollContextSnapshotRequest"
+
+    InvalidatePayrollRequest:
+      type: object
+      required:
+        - statusReasonCode
+      properties:
+        statusReasonCode:
+          type: string
+          maxLength: 50
+
+    PayrollConceptResponse:
+      allOf:
+        - $ref: "#/components/schemas/PayrollConceptRequest"
+
+    PayrollContextSnapshotResponse:
+      allOf:
+        - $ref: "#/components/schemas/PayrollContextSnapshotRequest"
+
+    PayrollResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - employeeTypeCode
+        - employeeNumber
+        - payrollPeriodCode
+        - payrollTypeCode
+        - presenceNumber
+        - status
+        - calculatedAt
+        - calculationEngineCode
+        - calculationEngineVersion
+        - concepts
+        - contextSnapshots
+      properties:
+        ruleSystemCode:
+          type: string
+        employeeTypeCode:
+          type: string
+        employeeNumber:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        presenceNumber:
+          type: integer
+          format: int32
+        status:
+          $ref: "#/components/schemas/PayrollStatus"
+        statusReasonCode:
+          type: string
+          nullable: true
+        calculatedAt:
+          type: string
+          format: date-time
+        calculationEngineCode:
+          type: string
+        calculationEngineVersion:
+          type: string
+        concepts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayrollConceptResponse"
+        contextSnapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayrollContextSnapshotResponse"
+
+    PayrollErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string

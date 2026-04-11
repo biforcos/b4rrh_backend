@@ -1,0 +1,94 @@
+package com.b4rrhh.payroll.infrastructure.persistence;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+import java.math.BigDecimal;
+import java.util.Objects;
+
+@Entity
+@Table(name = "payroll_concept", schema = "payroll")
+public class PayrollConceptEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "payroll_id", nullable = false)
+    private PayrollEntity payroll;
+
+    @Column(name = "line_number", nullable = false)
+    private Integer lineNumber;
+
+    @Column(name = "concept_code", nullable = false, length = 30)
+    private String conceptCode;
+
+    @Column(name = "concept_label", nullable = false, length = 200)
+    private String conceptLabel;
+
+    @Column(name = "amount", nullable = false, precision = 19, scale = 6)
+    private BigDecimal amount;
+
+    @Column(name = "quantity", precision = 19, scale = 6)
+    private BigDecimal quantity;
+
+    @Column(name = "rate", precision = 19, scale = 6)
+    private BigDecimal rate;
+
+    @Column(name = "concept_nature_code", nullable = false, length = 30)
+    private String conceptNatureCode;
+
+    @Column(name = "origin_period_code", length = 30)
+    private String originPeriodCode;
+
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public PayrollEntity getPayroll() { return payroll; }
+    public void setPayroll(PayrollEntity payroll) { this.payroll = payroll; }
+    public Integer getLineNumber() { return lineNumber; }
+    public void setLineNumber(Integer lineNumber) { this.lineNumber = lineNumber; }
+    public String getConceptCode() { return conceptCode; }
+    public void setConceptCode(String conceptCode) { this.conceptCode = conceptCode; }
+    public String getConceptLabel() { return conceptLabel; }
+    public void setConceptLabel(String conceptLabel) { this.conceptLabel = conceptLabel; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public BigDecimal getQuantity() { return quantity; }
+    public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
+    public BigDecimal getRate() { return rate; }
+    public void setRate(BigDecimal rate) { this.rate = rate; }
+    public String getConceptNatureCode() { return conceptNatureCode; }
+    public void setConceptNatureCode(String conceptNatureCode) { this.conceptNatureCode = conceptNatureCode; }
+    public String getOriginPeriodCode() { return originPeriodCode; }
+    public void setOriginPeriodCode(String originPeriodCode) { this.originPeriodCode = originPeriodCode; }
+    public Integer getDisplayOrder() { return displayOrder; }
+    public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof PayrollConceptEntity that)) {
+            return false;
+        }
+        return Objects.equals(payroll, that.payroll)
+                && Objects.equals(lineNumber, that.lineNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(payroll, lineNumber);
+    }
+}
