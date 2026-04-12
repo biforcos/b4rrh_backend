@@ -4,6 +4,8 @@ import com.b4rrhh.payroll.domain.model.CalculationRunMessage;
 import com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class CalculationRunMessagePersistenceAdapter implements CalculationRunMessageRepository {
 
@@ -30,7 +32,24 @@ public class CalculationRunMessagePersistenceAdapter implements CalculationRunMe
         entity.setPresenceNumber(calculationRunMessage.presenceNumber());
         entity.setCreatedAt(calculationRunMessage.createdAt());
 
-        CalculationRunMessageEntity saved = springDataCalculationRunMessageRepository.save(entity);
+        return toDomain(springDataCalculationRunMessageRepository.save(entity));
+    }
+
+    @Override
+    public List<CalculationRunMessage> findByRunIdOrderByCreatedAtAscIdAsc(Long runId) {
+        return springDataCalculationRunMessageRepository.findByCalculationRunIdOrderByCreatedAtAscIdAsc(runId)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    private CalculationRunEntity runReference(Long runId) {
+        CalculationRunEntity run = new CalculationRunEntity();
+        run.setId(runId);
+        return run;
+    }
+
+    private CalculationRunMessage toDomain(CalculationRunMessageEntity saved) {
         return new CalculationRunMessage(
                 saved.getId(),
                 saved.getCalculationRun().getId(),
@@ -46,11 +65,5 @@ public class CalculationRunMessagePersistenceAdapter implements CalculationRunMe
                 saved.getPresenceNumber(),
                 saved.getCreatedAt()
         );
-    }
-
-    private CalculationRunEntity runReference(Long runId) {
-        CalculationRunEntity run = new CalculationRunEntity();
-        run.setId(runId);
-        return run;
     }
 }

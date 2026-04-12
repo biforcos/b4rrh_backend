@@ -44,7 +44,6 @@ public class InvalidatePayrollService implements InvalidatePayrollUseCase {
                 ));
 
         Payroll invalidated = existing.invalidate(command.statusReasonCode());
-        payrollRepository.deleteById(existing.getId());
         return payrollRepository.save(invalidated);
     }
 

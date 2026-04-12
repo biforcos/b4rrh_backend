@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +39,7 @@ class InvalidatePayrollServiceTest {
     }
 
     @Test
-    void invalidatesCalculatedPayrollUsingDeleteAndCreate() {
+    void invalidatesExistingPayrollPreservingIdentity() {
         Payroll existing = payroll(PayrollStatus.CALCULATED);
         when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
                 .thenReturn(Optional.of(existing));
@@ -54,10 +55,12 @@ class InvalidatePayrollServiceTest {
                 "USER_INVALIDATED"
         ));
 
+        assertEquals(7L, invalidated.getId());
         assertEquals(PayrollStatus.NOT_VALID, invalidated.getStatus());
         assertEquals("USER_INVALIDATED", invalidated.getStatusReasonCode());
-        verify(payrollRepository).deleteById(7L);
         verify(payrollRepository).save(any(Payroll.class));
+        verify(payrollRepository, never()).deleteById(any());
+        verify(payrollRepository, never()).flush();
     }
 
     @Test

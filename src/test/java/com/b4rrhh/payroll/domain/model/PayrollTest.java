@@ -17,10 +17,11 @@ class PayrollTest {
 
     @Test
     void invalidateMovesCalculatedPayrollToNotValid() {
-        Payroll payroll = payroll(PayrollStatus.CALCULATED);
+        Payroll payroll = persistedPayroll(PayrollStatus.CALCULATED);
 
         Payroll invalidated = payroll.invalidate("USER_INVALIDATED");
 
+        assertEquals(7L, invalidated.getId());
         assertEquals(PayrollStatus.NOT_VALID, invalidated.getStatus());
         assertEquals("USER_INVALIDATED", invalidated.getStatusReasonCode());
         assertTrue(invalidated.canBeRecalculated());
@@ -28,20 +29,22 @@ class PayrollTest {
 
     @Test
     void validateMovesCalculatedPayrollToExplicitValidated() {
-        Payroll payroll = payroll(PayrollStatus.CALCULATED);
+        Payroll payroll = persistedPayroll(PayrollStatus.CALCULATED);
 
         Payroll validated = payroll.validateExplicitly();
 
+        assertEquals(7L, validated.getId());
         assertEquals(PayrollStatus.EXPLICIT_VALIDATED, validated.getStatus());
         assertFalse(validated.canBeRecalculated());
     }
 
     @Test
     void finalizeMovesExplicitValidatedPayrollToDefinitive() {
-        Payroll payroll = payroll(PayrollStatus.EXPLICIT_VALIDATED);
+        Payroll payroll = persistedPayroll(PayrollStatus.EXPLICIT_VALIDATED);
 
         Payroll definitive = payroll.finalizePayroll();
 
+        assertEquals(7L, definitive.getId());
         assertEquals(PayrollStatus.DEFINITIVE, definitive.getStatus());
         assertFalse(definitive.canBeRecalculated());
     }
@@ -112,6 +115,28 @@ class PayrollTest {
                                 "{\"companyCode\":\"ES01\"}"
                         )
                 )
+        );
+    }
+
+    private Payroll persistedPayroll(PayrollStatus status) {
+        Payroll transientPayroll = payroll(status);
+        return Payroll.rehydrate(
+                7L,
+                transientPayroll.getRuleSystemCode(),
+                transientPayroll.getEmployeeTypeCode(),
+                transientPayroll.getEmployeeNumber(),
+                transientPayroll.getPayrollPeriodCode(),
+                transientPayroll.getPayrollTypeCode(),
+                transientPayroll.getPresenceNumber(),
+                transientPayroll.getStatus(),
+                transientPayroll.getStatusReasonCode(),
+                transientPayroll.getCalculatedAt(),
+                transientPayroll.getCalculationEngineCode(),
+                transientPayroll.getCalculationEngineVersion(),
+                transientPayroll.getConcepts(),
+                transientPayroll.getContextSnapshots(),
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                LocalDateTime.of(2026, 1, 31, 10, 15)
         );
     }
 }

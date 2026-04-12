@@ -50,6 +50,11 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         springDataPayrollRepository.deleteById(id);
     }
 
+    @Override
+    public void flush() {
+        springDataPayrollRepository.flush();
+    }
+
     private Payroll toDomain(PayrollEntity entity) {
         return Payroll.rehydrate(
                 entity.getId(),

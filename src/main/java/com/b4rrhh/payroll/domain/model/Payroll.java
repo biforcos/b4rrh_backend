@@ -157,7 +157,7 @@ public class Payroll {
 
     private Payroll withStatus(PayrollStatus nextStatus, String nextStatusReasonCode) {
         return new Payroll(
-                null,
+                id,
                 ruleSystemCode,
                 employeeTypeCode,
                 employeeNumber,
@@ -171,8 +171,8 @@ public class Payroll {
                 calculationEngineVersion,
                 concepts,
                 contextSnapshots,
-                null,
-                null
+                createdAt,
+                updatedAt == null ? null : LocalDateTime.now()
         );
     }
 

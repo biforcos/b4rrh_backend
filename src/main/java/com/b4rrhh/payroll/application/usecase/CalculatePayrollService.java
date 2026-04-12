@@ -70,6 +70,7 @@ public class CalculatePayrollService implements CalculatePayrollUseCase {
                         );
                     }
                     payrollRepository.deleteById(existing.getId());
+                    payrollRepository.flush();
                 });
 
         Payroll payroll = Payroll.create(

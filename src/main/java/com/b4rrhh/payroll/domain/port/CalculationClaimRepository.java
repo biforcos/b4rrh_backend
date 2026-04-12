@@ -7,4 +7,6 @@ public interface CalculationClaimRepository {
     CalculationClaim save(CalculationClaim calculationClaim);
 
     void deleteById(Long id);
+
+    void deleteByRunId(Long runId);
 }

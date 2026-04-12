@@ -1,0 +1,67 @@
+package com.b4rrhh.payroll.application.usecase;
+
+import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ValidatePayrollServiceTest {
+
+    @Mock
+    private PayrollRepository payrollRepository;
+
+    private ValidatePayrollService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ValidatePayrollService(payrollRepository);
+    }
+
+    @Test
+    void validatesExistingPayrollPreservingIdentity() {
+        Payroll existing = Payroll.rehydrate(
+                7L,
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                1,
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                "ENGINE",
+                "1.0",
+                List.of(),
+                List.of(),
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                LocalDateTime.of(2026, 1, 31, 10, 15)
+        );
+
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+                .thenReturn(Optional.of(existing));
+        when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Payroll validated = service.validate(new ValidatePayrollCommand("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1));
+
+        assertEquals(7L, validated.getId());
+        assertEquals(PayrollStatus.EXPLICIT_VALIDATED, validated.getStatus());
+        verify(payrollRepository).save(any(Payroll.class));
+        verify(payrollRepository, never()).deleteById(any());
+    }
+}

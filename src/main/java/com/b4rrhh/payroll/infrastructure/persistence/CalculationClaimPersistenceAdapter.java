@@ -47,6 +47,11 @@ public class CalculationClaimPersistenceAdapter implements CalculationClaimRepos
         springDataCalculationClaimRepository.deleteById(id);
     }
 
+    @Override
+    public void deleteByRunId(Long runId) {
+        springDataCalculationClaimRepository.deleteByCalculationRunId(runId);
+    }
+
     private CalculationRunEntity runReference(Long runId) {
         CalculationRunEntity run = new CalculationRunEntity();
         run.setId(runId);

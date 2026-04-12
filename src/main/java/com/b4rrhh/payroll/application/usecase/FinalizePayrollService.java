@@ -44,7 +44,6 @@ public class FinalizePayrollService implements FinalizePayrollUseCase {
                 ));
 
         Payroll definitive = existing.finalizePayroll();
-        payrollRepository.deleteById(existing.getId());
         return payrollRepository.save(definitive);
     }
 

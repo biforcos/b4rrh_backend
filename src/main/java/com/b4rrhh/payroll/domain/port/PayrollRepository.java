@@ -18,4 +18,7 @@ public interface PayrollRepository {
     Payroll save(Payroll payroll);
 
     void deleteById(Long id);
+
+    void flush();
+
 }

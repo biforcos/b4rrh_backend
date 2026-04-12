@@ -1,0 +1,77 @@
+package com.b4rrhh.payroll.application.usecase;
+
+import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class CalculatePayrollUnitServiceTest {
+
+    @Mock
+    private CalculatePayrollUseCase calculatePayrollUseCase;
+
+    @Test
+    void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(calculatePayrollUseCase);
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+                .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                2,
+                "ENGINE",
+                "1.0"
+        ));
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+
+        CalculatePayrollCommand command = captor.getValue();
+        assertEquals(PayrollStatus.CALCULATED, command.status());
+        assertEquals(2, command.concepts().size());
+        assertEquals("BASE_FAKE", command.concepts().get(0).getConceptCode());
+        assertEquals("NET_FAKE", command.concepts().get(1).getConceptCode());
+        assertEquals(1, command.contextSnapshots().size());
+        assertEquals("EMPLOYEE_PAYROLL_CONTEXT", command.contextSnapshots().get(0).getSnapshotTypeCode());
+        assertEquals("PAYROLL_LAUNCH", command.contextSnapshots().get(0).getSourceVerticalCode());
+        assertTrue(command.contextSnapshots().get(0).getSourceBusinessKeyJson().contains("EMP001"));
+        assertTrue(command.contextSnapshots().get(0).getSnapshotPayloadJson().contains("DETERMINISTIC_FAKE"));
+    }
+
+    private Payroll payroll() {
+        return Payroll.rehydrate(
+                1L,
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                2,
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.of(2026, 4, 11, 10, 0),
+                "ENGINE",
+                "1.0",
+                List.of(),
+                List.of(),
+                LocalDateTime.of(2026, 4, 11, 10, 0),
+                LocalDateTime.of(2026, 4, 11, 10, 0)
+        );
+    }
+}

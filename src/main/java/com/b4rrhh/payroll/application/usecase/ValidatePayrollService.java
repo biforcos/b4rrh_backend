@@ -44,7 +44,6 @@ public class ValidatePayrollService implements ValidatePayrollUseCase {
                 ));
 
         Payroll validated = existing.validateExplicitly();
-        payrollRepository.deleteById(existing.getId());
         return payrollRepository.save(validated);
     }
 

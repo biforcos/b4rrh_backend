@@ -19,5 +19,13 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("Temporary stub request used to materialize a payroll result during the pre-launch phase"));
         assertTrue(contract.contains("Temporary stub-provided payroll concepts"));
         assertTrue(contract.contains("Temporary stub-provided context snapshots"));
+        assertTrue(contract.contains("/payroll/calculation-runs/launch:"));
+        assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
+        assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
+        assertTrue(contract.contains("Launch payroll calculation workflow synchronously"));
+        assertTrue(contract.contains("PayrollLaunchTargetSelectionRequest"));
+        assertTrue(contract.contains("List persisted operational messages for a payroll calculation run"));
+        assertTrue(contract.contains("PayrollCalculationRunMessagesResponse"));
+        assertTrue(contract.contains("Payroll calculation run not found"));
     }
 }

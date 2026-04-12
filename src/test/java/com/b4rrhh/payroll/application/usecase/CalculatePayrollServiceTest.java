@@ -12,7 +12,7 @@ import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,46 +47,59 @@ class CalculatePayrollServiceTest {
     @Test
     void calculatesPayrollWhenPresenceExistsAndNoCurrentPayrollExists() {
         CalculatePayrollCommand command = command(PayrollStatus.CALCULATED);
-
         when(payrollEmployeePresenceLookupPort.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(new PayrollEmployeePresenceContext(10L, 20L, "ESP", "INTERNAL", "EMP001", 1)));
         when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
                 .thenReturn(Optional.empty());
-        when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> {
-            Payroll input = invocation.getArgument(0);
-            return Payroll.rehydrate(
-                    99L,
-                    input.getRuleSystemCode(),
-                    input.getEmployeeTypeCode(),
-                    input.getEmployeeNumber(),
-                    input.getPayrollPeriodCode(),
-                    input.getPayrollTypeCode(),
-                    input.getPresenceNumber(),
-                    input.getStatus(),
-                    input.getStatusReasonCode(),
-                    input.getCalculatedAt(),
-                    input.getCalculationEngineCode(),
-                    input.getCalculationEngineVersion(),
-                    input.getConcepts(),
-                    input.getContextSnapshots(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
-            );
-        });
+        when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Payroll payroll = service.calculate(command);
 
-        assertEquals(99L, payroll.getId());
         assertEquals(PayrollStatus.CALCULATED, payroll.getStatus());
-
-        ArgumentCaptor<Payroll> captor = ArgumentCaptor.forClass(Payroll.class);
-        verify(payrollRepository).save(captor.capture());
-        assertEquals("ESP", captor.getValue().getRuleSystemCode());
-        assertEquals("ORD", captor.getValue().getPayrollTypeCode());
+        verify(payrollRepository).save(any(Payroll.class));
+        verify(payrollRepository, never()).deleteById(any());
+        verify(payrollRepository, never()).flush();
     }
 
     @Test
-    void rejectsRecalculationWhenCurrentPayrollIsNotNotValid() {
+    void recalculatesNotValidPayrollUsingDeleteFlushSaveSequence() {
+        CalculatePayrollCommand command = command(PayrollStatus.CALCULATED);
+        Payroll existing = Payroll.rehydrate(
+                7L,
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                1,
+                PayrollStatus.NOT_VALID,
+                "USER_INVALIDATED",
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                "ENGINE",
+                "1.0",
+                command.concepts(),
+                command.contextSnapshots(),
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                LocalDateTime.of(2026, 1, 31, 10, 15)
+        );
+
+        when(payrollEmployeePresenceLookupPort.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001", 1))
+                .thenReturn(Optional.of(new PayrollEmployeePresenceContext(10L, 20L, "ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+                .thenReturn(Optional.of(existing));
+        when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.calculate(command);
+
+        InOrder inOrder = inOrder(payrollRepository);
+        inOrder.verify(payrollRepository).findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        inOrder.verify(payrollRepository).deleteById(7L);
+        inOrder.verify(payrollRepository).flush();
+        inOrder.verify(payrollRepository).save(any(Payroll.class));
+    }
+
+    @Test
+    void rejectsRecalculationWhenCurrentPayrollCannotBeRecalculated() {
         CalculatePayrollCommand command = command(PayrollStatus.CALCULATED);
         Payroll existing = Payroll.rehydrate(
                 7L,
@@ -113,6 +127,7 @@ class CalculatePayrollServiceTest {
 
         assertThrows(PayrollRecalculationNotAllowedException.class, () -> service.calculate(command));
         verify(payrollRepository, never()).deleteById(any());
+        verify(payrollRepository, never()).flush();
         verify(payrollRepository, never()).save(any());
     }
 

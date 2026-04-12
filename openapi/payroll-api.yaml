@@ -6,8 +6,88 @@ info:
 tags:
   - name: Payroll
     description: Payroll materialized result management by business key.
+  - name: PayrollCalculationRun
+    description: Payroll calculation launch workflow and persisted run summary.
 
 paths:
+  /payroll/calculation-runs/launch:
+    post:
+      operationId: launchPayrollCalculation
+      summary: Launch payroll calculation workflow synchronously
+      description: Starts a synchronous payroll launch workflow for an explicit target selection. This V1 contract supports only a single employee or an explicit employee list and requires payrollPeriodCode in YYYYMM format so the backend can resolve relevant employee presences by month overlap. totalCandidates represents expanded presence-based calculation units that overlap at least one day of the payroll month, not the raw number of requested employees. This endpoint coordinates launch execution and persists a calculation run; it is not the final payroll engine API.
+      tags:
+        - PayrollCalculationRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchPayrollCalculationRequest"
+      responses:
+        "201":
+          description: Payroll calculation run launched and completed synchronously
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollCalculationRunResponse"
+        "400":
+          description: Invalid launch request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payroll/calculation-runs/{runId}:
+    get:
+      operationId: getPayrollCalculationRunById
+      summary: Get persisted payroll calculation run by technical run identifier
+      tags:
+        - PayrollCalculationRun
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Persisted payroll calculation run found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollCalculationRunResponse"
+        "404":
+          description: Payroll calculation run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payroll/calculation-runs/{runId}/messages:
+    get:
+      operationId: listPayrollCalculationRunMessages
+      summary: List persisted operational messages for a payroll calculation run
+      description: Returns persisted operational launch messages for the specified payroll calculation run, ordered by createdAt ascending and id ascending.
+      tags:
+        - PayrollCalculationRun
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Persisted payroll calculation run messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollCalculationRunMessagesResponse"
+        "400":
+          description: Invalid run identifier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "404":
+          description: Payroll calculation run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
   /payrolls/calculate:
     post:
       operationId: calculatePayroll
@@ -242,8 +322,234 @@ components:
         type: integer
         format: int32
         minimum: 1
+    RunId:
+      in: path
+      name: runId
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
 
   schemas:
+    PayrollLaunchTargetSelectionType:
+      type: string
+      enum:
+        - SINGLE_EMPLOYEE
+        - EMPLOYEE_LIST
+
+    PayrollLaunchEmployeeTargetRequest:
+      type: object
+      required:
+        - employeeTypeCode
+        - employeeNumber
+      properties:
+        employeeTypeCode:
+          type: string
+          maxLength: 30
+        employeeNumber:
+          type: string
+          maxLength: 15
+
+    PayrollLaunchTargetSelectionRequest:
+      type: object
+      required:
+        - selectionType
+      properties:
+        selectionType:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionType"
+        employee:
+          allOf:
+            - $ref: "#/components/schemas/PayrollLaunchEmployeeTargetRequest"
+          nullable: true
+          description: Required when selectionType is SINGLE_EMPLOYEE.
+        employees:
+          type: array
+          nullable: true
+          description: Required when selectionType is EMPLOYEE_LIST.
+          items:
+            $ref: "#/components/schemas/PayrollLaunchEmployeeTargetRequest"
+
+    LaunchPayrollCalculationRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - calculationEngineCode
+        - calculationEngineVersion
+        - targetSelection
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        payrollPeriodCode:
+          type: string
+          maxLength: 30
+          description: V1 launch requires YYYYMM format to resolve relevant employee presences by monthly overlap.
+        payrollTypeCode:
+          type: string
+          maxLength: 30
+        calculationEngineCode:
+          type: string
+          maxLength: 50
+        calculationEngineVersion:
+          type: string
+          maxLength: 50
+        targetSelection:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
+
+    PayrollCalculationRunResponse:
+      type: object
+      required:
+        - runId
+        - status
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - calculationEngineCode
+        - calculationEngineVersion
+        - totalCandidates
+        - totalEligible
+        - totalClaimed
+        - totalSkippedNotEligible
+        - totalSkippedAlreadyClaimed
+        - totalCalculated
+        - totalNotValid
+        - totalErrors
+        - requestedAt
+      properties:
+        runId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+            - REQUESTED
+            - RUNNING
+            - COMPLETED
+            - COMPLETED_WITH_ERRORS
+            - FAILED
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        calculationEngineCode:
+          type: string
+        calculationEngineVersion:
+          type: string
+        totalCandidates:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Expanded candidate calculation units after presence overlap resolution for the payroll month.
+        totalEligible:
+          type: integer
+          format: int32
+          minimum: 0
+        totalClaimed:
+          type: integer
+          format: int32
+          minimum: 0
+        totalSkippedNotEligible:
+          type: integer
+          format: int32
+          minimum: 0
+        totalSkippedAlreadyClaimed:
+          type: integer
+          format: int32
+          minimum: 0
+        totalCalculated:
+          type: integer
+          format: int32
+          minimum: 0
+        totalNotValid:
+          type: integer
+          format: int32
+          minimum: 0
+        totalErrors:
+          type: integer
+          format: int32
+          minimum: 0
+        requestedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PayrollCalculationRunMessagesResponse:
+      type: object
+      required:
+        - runId
+        - items
+      properties:
+        runId:
+          type: integer
+          format: int64
+          minimum: 1
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayrollCalculationRunMessageResponse"
+
+    PayrollCalculationRunMessageResponse:
+      type: object
+      required:
+        - messageCode
+        - severityCode
+        - message
+        - createdAt
+      properties:
+        messageCode:
+          type: string
+          maxLength: 100
+        severityCode:
+          type: string
+          maxLength: 30
+        message:
+          type: string
+          maxLength: 500
+        detailsJson:
+          type: string
+          nullable: true
+          description: JSON payload serialized as string with technical details for diagnostics.
+        ruleSystemCode:
+          type: string
+          nullable: true
+          maxLength: 5
+        employeeTypeCode:
+          type: string
+          nullable: true
+          maxLength: 30
+        employeeNumber:
+          type: string
+          nullable: true
+          maxLength: 15
+        payrollPeriodCode:
+          type: string
+          nullable: true
+          maxLength: 30
+        payrollTypeCode:
+          type: string
+          nullable: true
+          maxLength: 30
+        presenceNumber:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+
     PayrollStatus:
       type: string
       enum:

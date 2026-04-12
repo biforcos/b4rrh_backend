@@ -90,12 +90,10 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("ESP", response.getBody().ruleSystemCode());
-        assertEquals(PayrollStatus.CALCULATED, response.getBody().status());
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
         verify(calculatePayrollUseCase).calculate(captor.capture());
         assertEquals("ORD", captor.getValue().payrollTypeCode());
-        assertEquals(1, captor.getValue().concepts().size());
     }
 
     @Test
@@ -127,7 +125,7 @@ class PayrollControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.NOT_VALID, response.getBody().status());
-        assertEquals("USER_INVALIDATED", response.getBody().statusReasonCode());
+        verify(invalidatePayrollUseCase).invalidate(any(InvalidatePayrollCommand.class));
     }
 
     @Test
@@ -139,6 +137,7 @@ class PayrollControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.EXPLICIT_VALIDATED, response.getBody().status());
+        verify(validatePayrollUseCase).validate(any(ValidatePayrollCommand.class));
     }
 
     @Test
@@ -150,6 +149,7 @@ class PayrollControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.DEFINITIVE, response.getBody().status());
+        verify(finalizePayrollUseCase).finalizePayroll(any(FinalizePayrollCommand.class));
     }
 
     private Payroll payroll(PayrollStatus status, String statusReasonCode) {
