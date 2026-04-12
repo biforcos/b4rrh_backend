@@ -89,6 +89,7 @@ public class PayrollController {
                 request.calculatedAt(),
                 request.calculationEngineCode(),
                 request.calculationEngineVersion(),
+                java.util.List.of(),
                 request.concepts().stream()
                         .map(concept -> new PayrollConcept(
                                 concept.lineNumber(),

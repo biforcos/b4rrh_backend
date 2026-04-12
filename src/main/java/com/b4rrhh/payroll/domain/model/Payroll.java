@@ -76,6 +76,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots
     ) {
@@ -92,13 +93,46 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
-                List.of(),
+                warnings,
                 concepts,
                 contextSnapshots,
                 null,
                 null
         );
     }
+
+            public static Payroll create(
+                String ruleSystemCode,
+                String employeeTypeCode,
+                String employeeNumber,
+                String payrollPeriodCode,
+                String payrollTypeCode,
+                Integer presenceNumber,
+                PayrollStatus status,
+                String statusReasonCode,
+                LocalDateTime calculatedAt,
+                String calculationEngineCode,
+                String calculationEngineVersion,
+                List<PayrollConcept> concepts,
+                List<PayrollContextSnapshot> contextSnapshots
+            ) {
+            return create(
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber,
+                status,
+                statusReasonCode,
+                calculatedAt,
+                calculationEngineCode,
+                calculationEngineVersion,
+                List.of(),
+                concepts,
+                contextSnapshots
+            );
+            }
 
     public static Payroll rehydrate(
             Long id,

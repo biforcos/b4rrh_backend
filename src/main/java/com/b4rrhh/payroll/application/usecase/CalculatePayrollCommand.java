@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.domain.model.PayrollWarning;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +20,7 @@ public record CalculatePayrollCommand(
         LocalDateTime calculatedAt,
         String calculationEngineCode,
         String calculationEngineVersion,
+        List<PayrollWarning> warnings,
         List<PayrollConcept> concepts,
         List<PayrollContextSnapshot> contextSnapshots
 ) {

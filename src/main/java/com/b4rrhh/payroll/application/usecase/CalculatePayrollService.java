@@ -85,6 +85,7 @@ public class CalculatePayrollService implements CalculatePayrollUseCase {
                 command.calculatedAt(),
                 command.calculationEngineCode(),
                 command.calculationEngineVersion(),
+                command.warnings(),
                 command.concepts(),
                 command.contextSnapshots()
         );
