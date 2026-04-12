@@ -43,6 +43,7 @@ class SpringDataPayrollRepositoryFlywayIntegrationTest {
         Path migrationDirectory = Files.createDirectories(tempDir.resolve("flyway-payroll"));
         copyMigration(migrationDirectory, "V53__create_payroll_tables.sql");
         copyMigration(migrationDirectory, "V54__add_payroll_child_unique_constraints.sql");
+        copyMigration(migrationDirectory, "V55__create_payroll_launch_persistence_model.sql");
 
         registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDirectory.toAbsolutePath());
     }

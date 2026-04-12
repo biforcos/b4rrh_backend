@@ -42,7 +42,11 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
 
     @Override
     public Payroll save(Payroll payroll) {
-        PayrollEntity entity = toEntity(payroll);
+        PayrollEntity entity = payroll.getId() == null
+            ? toNewEntity(payroll)
+            : springDataPayrollRepository.findById(payroll.getId())
+                .map(existing -> applyMutableFields(existing, payroll))
+                .orElseGet(() -> toNewEntity(payroll));
         return toDomain(springDataPayrollRepository.save(entity));
     }
 
@@ -108,9 +112,22 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         );
     }
 
-    private PayrollEntity toEntity(Payroll payroll) {
+    private PayrollEntity toNewEntity(Payroll payroll) {
         PayrollEntity entity = new PayrollEntity();
         entity.setId(payroll.getId());
+        applyScalarFields(entity, payroll);
+        entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
+        entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
+        entity.replaceWarnings(payroll.getWarnings().stream().map(this::toWarningEntity).toList());
+        return entity;
+    }
+
+    private PayrollEntity applyMutableFields(PayrollEntity entity, Payroll payroll) {
+        applyScalarFields(entity, payroll);
+        return entity;
+    }
+
+    private void applyScalarFields(PayrollEntity entity, Payroll payroll) {
         entity.setRuleSystemCode(payroll.getRuleSystemCode());
         entity.setEmployeeTypeCode(payroll.getEmployeeTypeCode());
         entity.setEmployeeNumber(payroll.getEmployeeNumber());
@@ -124,10 +141,6 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.setCalculationEngineVersion(payroll.getCalculationEngineVersion());
         entity.setCreatedAt(payroll.getCreatedAt());
         entity.setUpdatedAt(payroll.getUpdatedAt());
-        entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
-        entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
-        entity.replaceWarnings(payroll.getWarnings().stream().map(this::toWarningEntity).toList());
-        return entity;
     }
 
     private PayrollConceptEntity toConceptEntity(PayrollConcept concept) {
