@@ -1,5 +1,8 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
+import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
+import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
@@ -7,14 +10,20 @@ import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.PayrollLaunchEmployeeTarget;
+import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +43,7 @@ public class PayrollController {
     private final InvalidatePayrollUseCase invalidatePayrollUseCase;
     private final ValidatePayrollUseCase validatePayrollUseCase;
     private final FinalizePayrollUseCase finalizePayrollUseCase;
+    private final BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
     private final PayrollResponseAssembler payrollResponseAssembler;
 
     public PayrollController(
@@ -42,6 +52,7 @@ public class PayrollController {
             InvalidatePayrollUseCase invalidatePayrollUseCase,
             ValidatePayrollUseCase validatePayrollUseCase,
             FinalizePayrollUseCase finalizePayrollUseCase,
+            BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase,
             PayrollResponseAssembler payrollResponseAssembler
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
@@ -49,6 +60,7 @@ public class PayrollController {
         this.invalidatePayrollUseCase = invalidatePayrollUseCase;
         this.validatePayrollUseCase = validatePayrollUseCase;
         this.finalizePayrollUseCase = finalizePayrollUseCase;
+        this.bulkInvalidatePayrollUseCase = bulkInvalidatePayrollUseCase;
         this.payrollResponseAssembler = payrollResponseAssembler;
     }
 
@@ -179,5 +191,49 @@ public class PayrollController {
         ));
 
         return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
+    }
+
+    @PostMapping("/invalidate-bulk")
+    public ResponseEntity<BulkInvalidatePayrollResponse> invalidateBulk(
+            @RequestBody BulkInvalidatePayrollRequest request
+    ) {
+        BulkInvalidatePayrollResult result = bulkInvalidatePayrollUseCase.invalidateBulk(
+                new BulkInvalidatePayrollCommand(
+                        request.ruleSystemCode(),
+                        request.payrollPeriodCode(),
+                        request.payrollTypeCode(),
+                        request.statusReasonCode(),
+                        toTargetSelection(request.targetSelection())
+                )
+        );
+
+        return ResponseEntity.ok(new BulkInvalidatePayrollResponse(
+                result.ruleSystemCode(),
+                result.payrollPeriodCode(),
+                result.payrollTypeCode(),
+                result.totalCandidates(),
+                result.totalFound(),
+                result.totalInvalidated(),
+                result.totalSkippedAlreadyNotValid(),
+                result.totalSkippedProtected(),
+                result.totalSkippedNotFound(),
+                result.statusReasonCode()
+        ));
+    }
+
+    private PayrollLaunchTargetSelection toTargetSelection(PayrollLaunchTargetSelectionRequest request) {
+        if (request == null) {
+            return null;
+        }
+        return new PayrollLaunchTargetSelection(
+                request.selectionType(),
+                request.employee() == null ? null : new PayrollLaunchEmployeeTarget(
+                        request.employee().employeeTypeCode(),
+                        request.employee().employeeNumber()
+                ),
+                request.employees() == null ? null : request.employees().stream()
+                        .map(e -> new PayrollLaunchEmployeeTarget(e.employeeTypeCode(), e.employeeNumber()))
+                        .toList()
+        );
     }
 }

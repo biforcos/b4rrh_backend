@@ -14,7 +14,7 @@ paths:
     post:
       operationId: launchPayrollCalculation
       summary: Launch payroll calculation workflow synchronously
-      description: Starts a synchronous payroll launch workflow for an explicit target selection. This V1 contract supports only a single employee or an explicit employee list and requires payrollPeriodCode in YYYYMM format so the backend can resolve relevant employee presences by month overlap. totalCandidates represents expanded presence-based calculation units that overlap at least one day of the payroll month, not the raw number of requested employees. This endpoint coordinates launch execution and persists a calculation run; it is not the final payroll engine API.
+      description: Starts a synchronous payroll launch workflow for an explicit target selection. This V1 contract supports SINGLE_EMPLOYEE, EMPLOYEE_LIST, and ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, and requires payrollPeriodCode in YYYYMM format so the backend can resolve relevant employee presences by month overlap. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, target employees are resolved from the backend as all employees with at least one overlapping presence in the payroll month. totalCandidates represents expanded presence-based calculation units that overlap at least one day of the payroll month, not the raw number of requested or resolved employees. This endpoint coordinates launch execution and persists a calculation run; it is not the final payroll engine API.
       tags:
         - PayrollCalculationRun
       requestBody:
@@ -83,6 +83,39 @@ paths:
                 $ref: "#/components/schemas/PayrollErrorResponse"
         "404":
           description: Payroll calculation run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/invalidate-bulk:
+    post:
+      operationId: invalidatePayrollBulk
+      summary: Bulk invalidation workflow for payroll results
+      description: >
+        Synchronous bulk invalidation workflow. Resolves a target employee population, expands to
+        presence-based candidate units, and invalidates all existing CALCULATED payrolls for those
+        units. Protected payrolls (EXPLICIT_VALIDATED or DEFINITIVE) are skipped and counted separately.
+        Already NOT_VALID payrolls are also skipped without error. targetSelection semantics mirror
+        those of the payroll launch endpoint. totalCandidates represents expanded presence-based units,
+        not the raw number of target employees.
+      tags:
+        - Payroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkInvalidatePayrollRequest"
+      responses:
+        "200":
+          description: Bulk invalidation completed synchronously, summary returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkInvalidatePayrollResponse"
+        "400":
+          description: Invalid bulk invalidation request
           content:
             application/json:
               schema:
@@ -337,6 +370,7 @@ components:
       enum:
         - SINGLE_EMPLOYEE
         - EMPLOYEE_LIST
+        - ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD
 
     PayrollLaunchEmployeeTargetRequest:
       type: object
@@ -355,6 +389,7 @@ components:
       type: object
       required:
         - selectionType
+      description: Target selection payload. employee is required only for SINGLE_EMPLOYEE. employees is required only for EMPLOYEE_LIST. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD both employee and employees must be null or omitted.
       properties:
         selectionType:
           $ref: "#/components/schemas/PayrollLaunchTargetSelectionType"
@@ -693,6 +728,94 @@ components:
         statusReasonCode:
           type: string
           maxLength: 50
+
+    BulkInvalidatePayrollRequest:
+      type: object
+      description: >
+        Request for bulk payroll invalidation workflow. targetSelection semantics mirror those of
+        the payroll launch endpoint. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, both employee and
+        employees must be null or omitted. payrollPeriodCode must be in YYYYMM format.
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - statusReasonCode
+        - targetSelection
+      properties:
+        ruleSystemCode:
+          type: string
+          maxLength: 5
+        payrollPeriodCode:
+          type: string
+          maxLength: 30
+          description: Must be in YYYYMM format. Used to resolve presence overlaps for the payroll month.
+        payrollTypeCode:
+          type: string
+          maxLength: 30
+        statusReasonCode:
+          type: string
+          maxLength: 50
+          description: Reason code applied to all invalidated payrolls.
+        targetSelection:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
+
+    BulkInvalidatePayrollResponse:
+      type: object
+      description: >
+        Summary of a completed bulk invalidation workflow. totalCandidates counts presence-based
+        expanded units, not raw target employees. totalFound counts payroll rows actually found
+        for those units. Skipped counters are mutually exclusive.
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - totalCandidates
+        - totalFound
+        - totalInvalidated
+        - totalSkippedAlreadyNotValid
+        - totalSkippedProtected
+        - totalSkippedNotFound
+        - statusReasonCode
+      properties:
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        totalCandidates:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Total presence-based candidate units expanded from the target population.
+        totalFound:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Payroll rows found in persistence for the candidate units.
+        totalInvalidated:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Payrolls successfully transitioned from CALCULATED to NOT_VALID.
+        totalSkippedAlreadyNotValid:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Payrolls already in NOT_VALID status, skipped without error.
+        totalSkippedProtected:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Payrolls in EXPLICIT_VALIDATED or DEFINITIVE status, protected from bulk invalidation.
+        totalSkippedNotFound:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Candidate units for which no payroll row was found in persistence.
+        statusReasonCode:
+          type: string
+          description: Status reason code applied to all invalidated payrolls.
 
     PayrollConceptResponse:
       allOf:

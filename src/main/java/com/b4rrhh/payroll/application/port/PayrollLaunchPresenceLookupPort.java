@@ -5,6 +5,12 @@ import java.util.List;
 
 public interface PayrollLaunchPresenceLookupPort {
 
+    List<PayrollLaunchEmployeeContext> findEmployeesWithPresenceInPeriod(
+            String ruleSystemCode,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    );
+
     List<PayrollLaunchPresenceContext> findRelevantPresences(
             String ruleSystemCode,
             String employeeTypeCode,

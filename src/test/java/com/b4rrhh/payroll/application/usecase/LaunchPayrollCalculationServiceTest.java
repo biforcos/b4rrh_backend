@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.domain.model.CalculationRunMessage;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -265,6 +267,59 @@ class LaunchPayrollCalculationServiceTest {
         verify(calculationClaimRepository).deleteByRunId(1L);
     }
 
+    @Test
+    void launchAllEmployeesWithPresenceInPeriodResolvesPopulationAndKeepsPresenceBasedCandidates() {
+        when(payrollLaunchPresenceLookupPort.findEmployeesWithPresenceInPeriod(eq("ESP"), any(), any()))
+                .thenReturn(List.of(
+                        new PayrollLaunchEmployeeContext("INTERNAL", "EMP001"),
+                        new PayrollLaunchEmployeeContext("INTERNAL", "EMP002")
+                ));
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(
+                        new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1),
+                        new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 2)
+                ));
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP002"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP002", 1)));
+        when(payrollRepository.findByBusinessKey(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(
+                        new CalculationClaim(21L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null),
+                        new CalculationClaim(22L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2, LocalDateTime.now(), null),
+                        new CalculationClaim(23L, 1L, "ESP", "INTERNAL", "EMP002", "202501", "ORD", 1, LocalDateTime.now(), null)
+                );
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED));
+
+        CalculationRun run = service.launch(allEmployeesWithPresenceCommand());
+
+        assertEquals(CalculationRunStatuses.COMPLETED, run.status());
+        assertEquals(3, run.totalCandidates());
+        assertEquals(3, run.totalCalculated());
+        verify(payrollLaunchPresenceLookupPort).findEmployeesWithPresenceInPeriod(eq("ESP"), any(), any());
+    }
+
+    @Test
+    void launchAllEmployeesWithPresenceInPeriodExcludesEmployeesOutsideResolvedPopulation() {
+        when(payrollLaunchPresenceLookupPort.findEmployeesWithPresenceInPeriod(eq("ESP"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchEmployeeContext("INTERNAL", "EMP001")));
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(24L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED));
+
+        CalculationRun run = service.launch(allEmployeesWithPresenceCommand());
+
+        assertEquals(1, run.totalCandidates());
+        verify(payrollLaunchPresenceLookupPort).findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any());
+        verify(payrollLaunchPresenceLookupPort, never()).findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP999"), any(), any());
+    }
+
     private LaunchPayrollCalculationCommand singleEmployeeCommand() {
         return new LaunchPayrollCalculationCommand(
                 "ESP",
@@ -275,6 +330,21 @@ class LaunchPayrollCalculationServiceTest {
                 new PayrollLaunchTargetSelection(
                         PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTarget("INTERNAL", "EMP001"),
+                        null
+                )
+        );
+    }
+
+    private LaunchPayrollCalculationCommand allEmployeesWithPresenceCommand() {
+        return new LaunchPayrollCalculationCommand(
+                "ESP",
+                "202501",
+                "ORD",
+                "ENGINE",
+                "1.0",
+                new PayrollLaunchTargetSelection(
+                        PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
+                        null,
                         null
                 )
         );

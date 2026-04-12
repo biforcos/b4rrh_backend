@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
+import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
+import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
@@ -15,6 +17,8 @@ import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptRequest;
@@ -53,6 +57,8 @@ class PayrollControllerTest {
     private ValidatePayrollUseCase validatePayrollUseCase;
     @Mock
     private FinalizePayrollUseCase finalizePayrollUseCase;
+    @Mock
+    private BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
 
     private PayrollController controller;
 
@@ -64,6 +70,7 @@ class PayrollControllerTest {
                 invalidatePayrollUseCase,
                 validatePayrollUseCase,
                 finalizePayrollUseCase,
+                bulkInvalidatePayrollUseCase,
                 new PayrollResponseAssembler()
         );
     }
@@ -177,6 +184,38 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.DEFINITIVE, response.getBody().status());
         verify(finalizePayrollUseCase).finalizePayroll(any(FinalizePayrollCommand.class));
+    }
+
+    @Test
+    void bulkInvalidatesPayrolls() {
+        BulkInvalidatePayrollResult result = new BulkInvalidatePayrollResult(
+                "ESP", "202501", "ORD", 3, 3, 2, 1, 0, 0, "BULK_RESET"
+        );
+        when(bulkInvalidatePayrollUseCase.invalidateBulk(any())).thenReturn(result);
+
+        ResponseEntity<BulkInvalidatePayrollResponse> response = controller.invalidateBulk(
+                new BulkInvalidatePayrollRequest(
+                        "ESP",
+                        "202501",
+                        "ORD",
+                        "BULK_RESET",
+                        new com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest(
+                                com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
+                                new com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest("INTERNAL", "EMP001"),
+                                null
+                        )
+                )
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("ESP", response.getBody().ruleSystemCode());
+        assertEquals(3, response.getBody().totalCandidates());
+        assertEquals(2, response.getBody().totalInvalidated());
+        assertEquals(1, response.getBody().totalSkippedAlreadyNotValid());
+        assertEquals(0, response.getBody().totalSkippedProtected());
+        assertEquals("BULK_RESET", response.getBody().statusReasonCode());
+        verify(bulkInvalidatePayrollUseCase).invalidateBulk(any());
     }
 
     private Payroll payroll(PayrollStatus status, String statusReasonCode) {

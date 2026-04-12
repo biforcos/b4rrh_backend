@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -93,6 +94,28 @@ class PayrollLaunchPresenceLookupAdapterIntegrationTest {
         assertPresenceNumbers("EMP006", 6, 7);
     }
 
+    @Test
+    void findsDistinctEmployeesWithPresenceInPeriodForBulkPopulation() {
+        long employeeAId = insertEmployee("EMP007");
+        long employeeBId = insertEmployee("EMP008");
+        long employeeOutsideId = insertEmployee("EMP009");
+
+        insertPresence(employeeAId, 1, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 10));
+        insertPresence(employeeAId, 2, LocalDate.of(2025, 1, 15), null);
+        insertPresence(employeeBId, 1, LocalDate.of(2024, 12, 25), LocalDate.of(2025, 1, 5));
+        insertPresence(employeeOutsideId, 1, LocalDate.of(2025, 2, 1), LocalDate.of(2025, 2, 10));
+
+        PayrollLaunchPresenceLookupAdapter adapter = new PayrollLaunchPresenceLookupAdapter(entityManager);
+        List<PayrollLaunchEmployeeContext> results = adapter.findEmployeesWithPresenceInPeriod(
+                "ESP",
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 1, 31)
+        );
+
+        assertEquals(List.of("INTERNAL|EMP007", "INTERNAL|EMP008"),
+                results.stream().map(item -> item.employeeTypeCode() + "|" + item.employeeNumber()).toList());
+    }
+
     private void assertPresenceNumbers(String employeeNumber, Integer... expectedPresenceNumbers) {
         PayrollLaunchPresenceLookupAdapter adapter = new PayrollLaunchPresenceLookupAdapter(entityManager);
         List<PayrollLaunchPresenceContext> results = adapter.findRelevantPresences(
@@ -107,13 +130,20 @@ class PayrollLaunchPresenceLookupAdapterIntegrationTest {
     }
 
     private long insertEmployee(String employeeNumber) {
-        jdbcTemplate.update(
+        Integer existingRuleSystem = jdbcTemplate.queryForObject(
+            "select count(*) from rulesystem.rule_system where code = ?",
+            Integer.class,
+            "ESP"
+        );
+        if (existingRuleSystem == null || existingRuleSystem == 0) {
+            jdbcTemplate.update(
                 "insert into rulesystem.rule_system (code, name, country_code, active) values (?, ?, ?, ?)",
                 "ESP",
                 "Spain",
                 "ESP",
                 true
-        );
+            );
+        }
 
         jdbcTemplate.update(
                 "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status) values (?, ?, ?, ?, ?, ?)",

@@ -24,11 +24,37 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
         assertTrue(contract.contains("Launch payroll calculation workflow synchronously"));
         assertTrue(contract.contains("PayrollLaunchTargetSelectionRequest"));
+        assertTrue(contract.contains("ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD"));
+        assertTrue(contract.contains("employee is required only for SINGLE_EMPLOYEE"));
+        assertTrue(contract.contains("employees is required only for EMPLOYEE_LIST"));
         assertTrue(contract.contains("List persisted operational messages for a payroll calculation run"));
         assertTrue(contract.contains("PayrollCalculationRunMessagesResponse"));
         assertTrue(contract.contains("Payroll calculation run not found"));
         assertTrue(contract.contains("PayrollWarningResponse"));
         assertTrue(contract.contains("warnings:"));
         assertTrue(contract.contains("Functional payroll warning attached to a payroll result"));
+    }
+
+    @Test
+    void bulkInvalidateEndpointIsDocumented() throws IOException {
+        String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
+
+        assertTrue(contract.contains("/payrolls/invalidate-bulk:"));
+        assertTrue(contract.contains("invalidatePayrollBulk"));
+        assertTrue(contract.contains("Bulk invalidation workflow for payroll results"));
+        assertTrue(contract.contains("invalidates only existing CALCULATED payrolls") ||
+                contract.contains("invalidates all existing CALCULATED payrolls"));
+        assertTrue(contract.contains("Protected payrolls") ||
+                contract.contains("protected from bulk invalidation"));
+        assertTrue(contract.contains("totalCandidates represents expanded presence-based units"));
+        assertTrue(contract.contains("BulkInvalidatePayrollRequest"));
+        assertTrue(contract.contains("BulkInvalidatePayrollResponse"));
+        assertTrue(contract.contains("totalCandidates"));
+        assertTrue(contract.contains("totalFound"));
+        assertTrue(contract.contains("totalInvalidated"));
+        assertTrue(contract.contains("totalSkippedAlreadyNotValid"));
+        assertTrue(contract.contains("totalSkippedProtected"));
+        assertTrue(contract.contains("totalSkippedNotFound"));
+        assertTrue(contract.contains("EXPLICIT_VALIDATED or DEFINITIVE"));
     }
 }

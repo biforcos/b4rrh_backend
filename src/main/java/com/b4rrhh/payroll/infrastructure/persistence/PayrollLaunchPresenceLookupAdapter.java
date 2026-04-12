@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
 import jakarta.persistence.EntityManager;
@@ -15,6 +16,31 @@ public class PayrollLaunchPresenceLookupAdapter implements PayrollLaunchPresence
 
     public PayrollLaunchPresenceLookupAdapter(EntityManager entityManager) {
         this.entityManager = entityManager;
+    }
+
+    @Override
+    public List<PayrollLaunchEmployeeContext> findEmployeesWithPresenceInPeriod(
+            String ruleSystemCode,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
+        List<?> rows = entityManager.createNativeQuery("""
+            select distinct e.employee_type_code,
+                            e.employee_number
+              from employee.employee e
+              join employee.presence p on p.employee_id = e.id
+             where upper(trim(e.rule_system_code)) = :ruleSystemCode
+               and p.start_date <= :periodEnd
+               and (p.end_date is null or p.end_date >= :periodStart)
+             order by e.employee_type_code asc,
+                      e.employee_number asc
+            """)
+                .setParameter("ruleSystemCode", ruleSystemCode)
+                .setParameter("periodStart", periodStart)
+                .setParameter("periodEnd", periodEnd)
+                .getResultList();
+
+        return rows.stream().map(this::toEmployeeContext).toList();
     }
 
     @Override
@@ -58,6 +84,16 @@ public class PayrollLaunchPresenceLookupAdapter implements PayrollLaunchPresence
                 (String) columns[1],
                 (String) columns[2],
                 ((Number) columns[3]).intValue()
+        );
+    }
+
+    private PayrollLaunchEmployeeContext toEmployeeContext(Object row) {
+        if (!(row instanceof Object[] columns) || columns.length < 2) {
+            throw new IllegalStateException("Unexpected row shape for payroll launch employee lookup query");
+        }
+        return new PayrollLaunchEmployeeContext(
+                (String) columns[0],
+                (String) columns[1]
         );
     }
 }

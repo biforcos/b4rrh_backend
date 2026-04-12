@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
@@ -147,7 +148,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             LocalDate periodEnd
     ) {
         List<PayrollCalculationUnit> units = new ArrayList<>();
-        for (PayrollLaunchEmployeeTarget employeeTarget : resolveEmployees(targetSelection)) {
+        for (PayrollLaunchEmployeeTarget employeeTarget : resolveEmployees(targetSelection, ruleSystemCode, periodStart, periodEnd)) {
             List<PayrollLaunchPresenceContext> presences = payrollLaunchPresenceLookupPort.findRelevantPresences(
                     ruleSystemCode,
                     employeeTarget.employeeTypeCode(),
@@ -277,10 +278,20 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         }
     }
 
-    private List<PayrollLaunchEmployeeTarget> resolveEmployees(PayrollLaunchTargetSelection targetSelection) {
+    private List<PayrollLaunchEmployeeTarget> resolveEmployees(
+            PayrollLaunchTargetSelection targetSelection,
+            String ruleSystemCode,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
         List<PayrollLaunchEmployeeTarget> rawTargets = switch (targetSelection.selectionType()) {
             case SINGLE_EMPLOYEE -> List.of(targetSelection.employee());
             case EMPLOYEE_LIST -> targetSelection.employees();
+            case ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD -> payrollLaunchPresenceLookupPort
+                    .findEmployeesWithPresenceInPeriod(ruleSystemCode, periodStart, periodEnd)
+                    .stream()
+                    .map(employee -> new PayrollLaunchEmployeeTarget(employee.employeeTypeCode(), employee.employeeNumber()))
+                    .toList();
         };
 
         LinkedHashMap<String, PayrollLaunchEmployeeTarget> uniqueTargets = new LinkedHashMap<>();
@@ -317,6 +328,18 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                         PayrollLaunchTargetSelectionType.EMPLOYEE_LIST,
                         null,
                         List.copyOf(targetSelection.employees())
+                );
+            }
+            case ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD -> {
+                if (targetSelection.employee() != null || targetSelection.employees() != null) {
+                    throw new InvalidPayrollArgumentException(
+                            "targetSelection.employee and targetSelection.employees must be null for ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD"
+                    );
+                }
+                yield new PayrollLaunchTargetSelection(
+                        PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
+                        null,
+                        null
                 );
             }
         };

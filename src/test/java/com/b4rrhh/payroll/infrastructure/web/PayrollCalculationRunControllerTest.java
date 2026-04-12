@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,6 +83,36 @@ class PayrollCalculationRunControllerTest {
         assertEquals("ORD", captor.getValue().payrollTypeCode());
         assertEquals("INTERNAL", captor.getValue().targetSelection().employee().employeeTypeCode());
     }
+
+        @Test
+        void launchesPayrollCalculationRunForAllEmployeesWithPresenceInPeriod() {
+        when(launchPayrollCalculationUseCase.launch(any(LaunchPayrollCalculationCommand.class))).thenReturn(run("COMPLETED"));
+
+        ResponseEntity<PayrollCalculationRunResponse> response = controller.launch(new LaunchPayrollCalculationRequest(
+            "ESP",
+            "202501",
+            "ORD",
+            "ENGINE",
+            "1.0",
+            new PayrollLaunchTargetSelectionRequest(
+                com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
+                null,
+                null
+            )
+        ));
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        ArgumentCaptor<LaunchPayrollCalculationCommand> captor = ArgumentCaptor.forClass(LaunchPayrollCalculationCommand.class);
+        verify(launchPayrollCalculationUseCase).launch(captor.capture());
+        assertEquals(
+            com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
+            captor.getValue().targetSelection().selectionType()
+        );
+        assertNull(captor.getValue().targetSelection().employee());
+        assertNull(captor.getValue().targetSelection().employees());
+        }
 
     @Test
     void getsPayrollCalculationRunById() {
