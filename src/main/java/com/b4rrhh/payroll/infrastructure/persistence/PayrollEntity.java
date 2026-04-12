@@ -15,6 +15,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -73,6 +74,9 @@ public class PayrollEntity {
     @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<PayrollContextSnapshotEntity> contextSnapshots = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PayrollWarningEntity> warnings = new ArrayList<>();
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
@@ -105,6 +109,14 @@ public class PayrollEntity {
         items.forEach(this::addContextSnapshot);
     }
 
+    public void replaceWarnings(List<PayrollWarningEntity> items) {
+        warnings.clear();
+        if (items == null) {
+            return;
+        }
+        items.forEach(this::addWarning);
+    }
+
     private void addConcept(PayrollConceptEntity concept) {
         concept.setPayroll(this);
         concepts.add(concept);
@@ -113,6 +125,11 @@ public class PayrollEntity {
     private void addContextSnapshot(PayrollContextSnapshotEntity snapshot) {
         snapshot.setPayroll(this);
         contextSnapshots.add(snapshot);
+    }
+
+    private void addWarning(PayrollWarningEntity warning) {
+        warning.setPayroll(this);
+        warnings.add(warning);
     }
 
     public Long getId() { return id; }
@@ -145,4 +162,5 @@ public class PayrollEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Set<PayrollConceptEntity> getConcepts() { return concepts; }
     public Set<PayrollContextSnapshotEntity> getContextSnapshots() { return contextSnapshots; }
+    public List<PayrollWarningEntity> getWarnings() { return warnings; }
 }

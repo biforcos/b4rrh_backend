@@ -13,6 +13,7 @@ import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
@@ -106,6 +107,32 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("202501", response.getBody().payrollPeriodCode());
+        assertEquals(0, response.getBody().warnings().size());
+        }
+
+        @Test
+        void getsPayrollByBusinessKeyIncludingWarningsWhenPresent() {
+        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+            .thenReturn(Optional.of(payroll(
+                PayrollStatus.NOT_VALID,
+                "ENGINE_INVALID",
+                List.of(new PayrollWarning(
+                    9L,
+                    7L,
+                    "MISSING_RULE_INPUT",
+                    "WARNING",
+                    "Missing optional input value",
+                    "{\"field\":\"baseSalary\"}"
+                ))
+            )));
+
+        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().warnings().size());
+        assertEquals("MISSING_RULE_INPUT", response.getBody().warnings().getFirst().warningCode());
+        assertEquals("WARNING", response.getBody().warnings().getFirst().severityCode());
     }
 
     @Test
@@ -153,6 +180,10 @@ class PayrollControllerTest {
     }
 
     private Payroll payroll(PayrollStatus status, String statusReasonCode) {
+        return payroll(status, statusReasonCode, List.of());
+    }
+
+    private Payroll payroll(PayrollStatus status, String statusReasonCode, List<PayrollWarning> warnings) {
         return Payroll.rehydrate(
                 7L,
                 "ESP",
@@ -166,6 +197,7 @@ class PayrollControllerTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15),
                 "ENGINE",
                 "1.0",
+                warnings,
                 List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
                 LocalDateTime.now(),

@@ -20,6 +20,7 @@ public class Payroll {
     private final LocalDateTime calculatedAt;
     private final String calculationEngineCode;
     private final String calculationEngineVersion;
+    private final List<PayrollWarning> warnings;
     private final List<PayrollConcept> concepts;
     private final List<PayrollContextSnapshot> contextSnapshots;
     private final LocalDateTime createdAt;
@@ -38,6 +39,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
             LocalDateTime createdAt,
@@ -55,6 +57,7 @@ public class Payroll {
         this.calculatedAt = requireCalculatedAt(calculatedAt);
         this.calculationEngineCode = requireCode(calculationEngineCode, "calculationEngineCode", 50);
         this.calculationEngineVersion = requireText(calculationEngineVersion, "calculationEngineVersion", 50);
+        this.warnings = copyWarnings(warnings);
         this.concepts = copyConcepts(concepts);
         this.contextSnapshots = copySnapshots(contextSnapshots);
         this.createdAt = createdAt;
@@ -89,6 +92,7 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                List.of(),
                 concepts,
                 contextSnapshots,
                 null,
@@ -109,6 +113,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
             LocalDateTime createdAt,
@@ -127,12 +132,52 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                warnings,
                 concepts,
                 contextSnapshots,
                 createdAt,
                 updatedAt
         );
     }
+
+            public static Payroll rehydrate(
+                Long id,
+                String ruleSystemCode,
+                String employeeTypeCode,
+                String employeeNumber,
+                String payrollPeriodCode,
+                String payrollTypeCode,
+                Integer presenceNumber,
+                PayrollStatus status,
+                String statusReasonCode,
+                LocalDateTime calculatedAt,
+                String calculationEngineCode,
+                String calculationEngineVersion,
+                List<PayrollConcept> concepts,
+                List<PayrollContextSnapshot> contextSnapshots,
+                LocalDateTime createdAt,
+                LocalDateTime updatedAt
+            ) {
+            return rehydrate(
+                id,
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber,
+                status,
+                statusReasonCode,
+                calculatedAt,
+                calculationEngineCode,
+                calculationEngineVersion,
+                List.of(),
+                concepts,
+                contextSnapshots,
+                createdAt,
+                updatedAt
+            );
+            }
 
     public Payroll invalidate(String statusReasonCode) {
         if (status != PayrollStatus.CALCULATED && status != PayrollStatus.EXPLICIT_VALIDATED) {
@@ -169,6 +214,7 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                warnings,
                 concepts,
                 contextSnapshots,
                 createdAt,
@@ -225,6 +271,13 @@ public class Payroll {
             throw new InvalidPayrollArgumentException("concepts is required");
         }
         return List.copyOf(concepts);
+    }
+
+    private static List<PayrollWarning> copyWarnings(List<PayrollWarning> warnings) {
+        if (warnings == null) {
+            throw new InvalidPayrollArgumentException("warnings is required");
+        }
+        return List.copyOf(warnings);
     }
 
     private static List<PayrollContextSnapshot> copySnapshots(List<PayrollContextSnapshot> contextSnapshots) {
@@ -284,6 +337,10 @@ public class Payroll {
 
     public String getCalculationEngineVersion() {
         return calculationEngineVersion;
+    }
+
+    public List<PayrollWarning> getWarnings() {
+        return warnings;
     }
 
     public List<PayrollConcept> getConcepts() {

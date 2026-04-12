@@ -702,6 +702,28 @@ components:
       allOf:
         - $ref: "#/components/schemas/PayrollContextSnapshotRequest"
 
+    PayrollWarningResponse:
+      type: object
+      description: Functional payroll warning attached to a payroll result. Distinct from launch/run operational messages.
+      required:
+        - warningCode
+        - severityCode
+        - message
+      properties:
+        warningCode:
+          type: string
+          maxLength: 50
+        severityCode:
+          type: string
+          maxLength: 20
+          description: Intended severities are INFO, WARNING, and ERROR.
+        message:
+          type: string
+          maxLength: 500
+        detailsJson:
+          type: string
+          nullable: true
+
     PayrollResponse:
       type: object
       required:
@@ -715,6 +737,7 @@ components:
         - calculatedAt
         - calculationEngineCode
         - calculationEngineVersion
+        - warnings
         - concepts
         - contextSnapshots
       properties:
@@ -743,6 +766,11 @@ components:
           type: string
         calculationEngineVersion:
           type: string
+        warnings:
+          type: array
+          description: Functional payroll warnings attached to this payroll result.
+          items:
+            $ref: "#/components/schemas/PayrollWarningResponse"
         concepts:
           type: array
           items:

@@ -17,6 +17,7 @@ public record PayrollResponse(
         LocalDateTime calculatedAt,
         String calculationEngineCode,
         String calculationEngineVersion,
+        List<PayrollWarningResponse> warnings,
         List<PayrollConceptResponse> concepts,
         List<PayrollContextSnapshotResponse> contextSnapshots
 ) {

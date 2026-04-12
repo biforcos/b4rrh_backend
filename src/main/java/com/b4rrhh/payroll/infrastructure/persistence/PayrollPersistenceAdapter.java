@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.springframework.stereotype.Component;
 
@@ -69,6 +70,16 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                 entity.getCalculatedAt(),
                 entity.getCalculationEngineCode(),
                 entity.getCalculationEngineVersion(),
+                entity.getWarnings().stream()
+                    .map(warning -> new PayrollWarning(
+                        warning.getId(),
+                        entity.getId(),
+                        warning.getWarningCode(),
+                        warning.getSeverityCode(),
+                        warning.getMessage(),
+                        warning.getDetailsJson()
+                    ))
+                    .toList(),
                 entity.getConcepts().stream()
                         .sorted(Comparator.comparing(PayrollConceptEntity::getDisplayOrder)
                                 .thenComparing(PayrollConceptEntity::getLineNumber))
@@ -115,6 +126,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.setUpdatedAt(payroll.getUpdatedAt());
         entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
         entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
+        entity.replaceWarnings(payroll.getWarnings().stream().map(this::toWarningEntity).toList());
         return entity;
     }
 
@@ -138,6 +150,16 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.setSourceVerticalCode(snapshot.getSourceVerticalCode());
         entity.setSourceBusinessKeyJson(snapshot.getSourceBusinessKeyJson());
         entity.setSnapshotPayloadJson(snapshot.getSnapshotPayloadJson());
+        return entity;
+    }
+
+    private PayrollWarningEntity toWarningEntity(PayrollWarning warning) {
+        PayrollWarningEntity entity = new PayrollWarningEntity();
+        entity.setId(warning.id());
+        entity.setWarningCode(warning.warningCode());
+        entity.setSeverityCode(warning.severityCode());
+        entity.setMessage(warning.message());
+        entity.setDetailsJson(warning.detailsJson());
         return entity;
     }
 }

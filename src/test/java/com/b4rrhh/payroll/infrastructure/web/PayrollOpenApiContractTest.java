@@ -27,5 +27,8 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("List persisted operational messages for a payroll calculation run"));
         assertTrue(contract.contains("PayrollCalculationRunMessagesResponse"));
         assertTrue(contract.contains("Payroll calculation run not found"));
+        assertTrue(contract.contains("PayrollWarningResponse"));
+        assertTrue(contract.contains("warnings:"));
+        assertTrue(contract.contains("Functional payroll warning attached to a payroll result"));
     }
 }

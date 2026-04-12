@@ -4,6 +4,7 @@ import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollWarningResponse;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +23,14 @@ public class PayrollResponseAssembler {
                 payroll.getCalculatedAt(),
                 payroll.getCalculationEngineCode(),
                 payroll.getCalculationEngineVersion(),
+                payroll.getWarnings().stream()
+                        .map(warning -> new PayrollWarningResponse(
+                                warning.warningCode(),
+                                warning.severityCode(),
+                                warning.message(),
+                                warning.detailsJson()
+                        ))
+                        .toList(),
                 payroll.getConcepts().stream()
                         .map(concept -> new PayrollConceptResponse(
                                 concept.getLineNumber(),
