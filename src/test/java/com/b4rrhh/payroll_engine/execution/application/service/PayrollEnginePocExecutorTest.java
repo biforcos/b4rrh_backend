@@ -4,10 +4,13 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
+import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
 import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.dependency.application.service.DefaultConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPocConceptException;
@@ -42,7 +45,11 @@ class PayrollEnginePocExecutorTest {
                     stubConceptRepository("ESP"),
                     new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
                     new DefaultExecutionPlanBuilder(),
-                    new DefaultSegmentExecutionEngine(new SegmentTechnicalValueResolver()));
+                    new DefaultSegmentExecutionEngine(
+                            new SegmentTechnicalValueResolver(),
+                            new RateByQuantityOperandResolver(
+                                    pocOperandRepo("ESP"),
+                                    new RateByQuantityConfigurationValidator())));
 
     private static final LocalDate APR_01 = LocalDate.of(2026, 4, 1);
     private static final LocalDate APR_14 = LocalDate.of(2026, 4, 14);
@@ -191,7 +198,16 @@ class PayrollEnginePocExecutorTest {
                         emptyConceptRepository(),
                         new DefaultConceptDependencyGraphService(emptyFeedRelationRepo()),
                         new DefaultExecutionPlanBuilder(),
-                        new DefaultSegmentExecutionEngine(new SegmentTechnicalValueResolver()));
+                        new DefaultSegmentExecutionEngine(
+                                new SegmentTechnicalValueResolver(),
+                                new RateByQuantityOperandResolver(
+                                        new PayrollConceptOperandRepository() {
+                                            @Override
+                                            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+                                            @Override
+                                            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
+                                        },
+                                        new RateByQuantityConfigurationValidator())));
         assertThrows(MissingPocConceptException.class, () ->
                 executorWithEmptyRepo.execute(referenceRequest()));
     }
@@ -325,5 +341,33 @@ class PayrollEnginePocExecutorTest {
                 LocalDate.of(2020, 1, 1), null,
                 LocalDateTime.now(), LocalDateTime.now()
         );
+    }
+
+    /**
+     * Returns a stub operand repository for the PoC concepts:
+     * SALARIO_BASE (id=3) has QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1) and RATE=T_PRECIO_DIA (id=2).
+     */
+    private static PayrollConceptOperandRepository pocOperandRepo(String ruleSystemCode) {
+        PayrollObject targetObj = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
+        PayrollObject qObj      = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollObject rObj      = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
+
+        List<PayrollConceptOperand> salarioBaseOperands = List.of(
+                new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, qObj,
+                        LocalDateTime.now(), LocalDateTime.now()),
+                new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
+                        LocalDateTime.now(), LocalDateTime.now())
+        );
+
+        return new PayrollConceptOperandRepository() {
+            @Override
+            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+            @Override
+            public List<PayrollConceptOperand> findByTarget(String rs, String code) {
+                return ruleSystemCode.equals(rs) && "SALARIO_BASE".equals(code)
+                        ? salarioBaseOperands
+                        : Collections.emptyList();
+            }
+        };
     }
 }

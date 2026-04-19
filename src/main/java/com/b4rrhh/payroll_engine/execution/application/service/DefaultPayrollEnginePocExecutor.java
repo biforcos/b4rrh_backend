@@ -53,16 +53,35 @@ import java.util.List;
  * {@link ConceptDependencyGraphService}. Only relations active on the period start date
  * and whose source concept is in the loaded concept set are included.
  *
- * <h3>PoC runtime coupling — TEMPORARY</h3>
- * <p>Segment execution still references concept codes by name ({@code T_DIAS_PRESENCIA_SEGMENTO},
- * {@code T_PRECIO_DIA}, {@code SALARIO_BASE}) in {@link SegmentTechnicalValueResolver} and
- * {@link DefaultSegmentExecutionEngine}. This is a PoC limitation: operand wiring is not yet
- * configurable from persisted data. Once operand configuration is available, these hardcoded
- * code references must be removed from the execution layer.
+ * <h3>PoC runtime coupling — RESOLVED</h3>
+ * <p>Operand wiring is now configurable from persisted data via
+ * {@link com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository}.
+ * SALARIO_BASE operand sources are no longer hardcoded in the execution layer.
+ * Hardcoded concept code references remain only in {@link SegmentTechnicalValueResolver}
+ * (for DIRECT_AMOUNT technical concepts such as T_DIAS_PRESENCIA_SEGMENTO, T_PRECIO_DIA)
+ * and in the result extraction at the end of this executor (reading SALARIO_BASE and
+ * T_PRECIO_DIA by concept code). These are PoC limitations that should be addressed in a
+ * future iteration.
  *
- * <p>This executor must not grow into a second hidden source of truth for runtime logic.
- * Business logic — which concept feeds which, how operands are resolved — belongs in
- * persisted configuration, not in executor code.
+ * <h3>Execution coherence contract</h3>
+ * <p>Both graph structure and operand configuration are required to be coherent at runtime:
+ * <ul>
+ *   <li>The <strong>graph</strong> controls calculation order (topological sort from
+ *       persisted feed relations).</li>
+ *   <li>The <strong>operand configuration</strong> ({@code payroll_concept_operand} table)
+ *       controls which prior-computed value supplies QUANTITY and which supplies RATE for
+ *       each RATE_BY_QUANTITY concept.</li>
+ *   <li>These two structures must remain aligned: every operand source concept must be a
+ *       declared graph dependency of its target. Misalignment is caught at runtime by
+ *       {@link RateByQuantityConfigurationValidator} and causes
+ *       {@link com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException}.</li>
+ * </ul>
+ *
+ * <h3>Future optimization note</h3>
+ * <p>Currently, operand definitions are loaded from the repository once per RATE_BY_QUANTITY
+ * concept per segment (inside {@link RateByQuantityOperandResolver}). Both graph and operand
+ * structures should be preloaded together at plan-construction time in a future iteration,
+ * making per-segment execution fully in-memory.</p>
  *
  * <h3>Rounding policy</h3>
  * <ul>
@@ -139,7 +158,7 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     request.getMonthlySalaryAmount()
             );
 
-            SegmentExecutionState state = segmentExecutionEngine.execute(plan, context);
+            SegmentExecutionState state = segmentExecutionEngine.execute(plan, context, graph);
 
             BigDecimal salarioBaseAmount = state.getRequiredAmount(
                     new ConceptNodeIdentity(request.getRuleSystemCode(), "SALARIO_BASE"));
