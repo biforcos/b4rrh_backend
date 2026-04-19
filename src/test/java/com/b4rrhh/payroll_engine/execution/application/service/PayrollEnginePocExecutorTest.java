@@ -1,15 +1,33 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
+import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
+import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
+import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.dependency.application.service.DefaultConceptDependencyGraphService;
+import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPocConceptException;
 import com.b4rrhh.payroll_engine.execution.domain.model.PayrollEnginePocRequest;
 import com.b4rrhh.payroll_engine.execution.domain.model.PayrollEnginePocResult;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionResult;
+import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
+import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.segment.application.service.DefaultWorkingTimeSegmentBuilder;
 import com.b4rrhh.payroll_engine.segment.domain.model.WorkingTimeWindow;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,6 +39,8 @@ class PayrollEnginePocExecutorTest {
     private final DefaultPayrollEnginePocExecutor executor =
             new DefaultPayrollEnginePocExecutor(
                     new DefaultWorkingTimeSegmentBuilder(),
+                    stubConceptRepository("ESP"),
+                    new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
                     new DefaultExecutionPlanBuilder(),
                     new DefaultSegmentExecutionEngine(new SegmentTechnicalValueResolver()));
 
@@ -161,5 +181,149 @@ class PayrollEnginePocExecutorTest {
         PayrollEnginePocResult result = executor.execute(zeroRequest);
         assertEquals(0, BigDecimal.ZERO.compareTo(result.getTotalDevengos()));
         assertEquals(0, BigDecimal.ZERO.compareTo(result.getSegmentResults().get(0).getSalarioBaseAmount()));
+    }
+
+    @Test
+    void missingPocConceptThrowsMissingPocConceptException() {
+        DefaultPayrollEnginePocExecutor executorWithEmptyRepo =
+                new DefaultPayrollEnginePocExecutor(
+                        new DefaultWorkingTimeSegmentBuilder(),
+                        emptyConceptRepository(),
+                        new DefaultConceptDependencyGraphService(emptyFeedRelationRepo()),
+                        new DefaultExecutionPlanBuilder(),
+                        new DefaultSegmentExecutionEngine(new SegmentTechnicalValueResolver()));
+        assertThrows(MissingPocConceptException.class, () ->
+                executorWithEmptyRepo.execute(referenceRequest()));
+    }
+
+    // ── repository stubs ─────────────────────────────────────────────────────
+
+    /**
+     * Returns a stub concept repository seeded with the 3 PoC concepts for the given rule system.
+     * Concepts are assigned sequential IDs (1, 2, 3) so that feed relation lookup by ID works.
+     */
+    private static PayrollConceptRepository stubConceptRepository(String ruleSystemCode) {
+        PayrollConcept diasPresencia = pocConcept(
+                1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO",
+                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
+        PayrollConcept precioDia = pocConcept(
+                2L, ruleSystemCode, "T_PRECIO_DIA",
+                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
+        PayrollConcept salarioBase = pocConcept(
+                3L, ruleSystemCode, "SALARIO_BASE",
+                CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING);
+
+        Map<String, PayrollConcept> index = new HashMap<>();
+        index.put("T_DIAS_PRESENCIA_SEGMENTO", diasPresencia);
+        index.put("T_PRECIO_DIA", precioDia);
+        index.put("SALARIO_BASE", salarioBase);
+
+        return new PayrollConceptRepository() {
+            @Override
+            public PayrollConcept save(PayrollConcept c) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public Optional<PayrollConcept> findByBusinessKey(String rs, String code) {
+                if (!ruleSystemCode.equals(rs)) return Optional.empty();
+                return Optional.ofNullable(index.get(code));
+            }
+            @Override
+            public boolean existsByBusinessKey(String rs, String code) {
+                return ruleSystemCode.equals(rs) && index.containsKey(code);
+            }
+        };
+    }
+
+    /**
+     * Returns a stub feed relation repository reflecting the PoC structure:
+     * SALARIO_BASE (id=3) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_DIA (id=2).
+     */
+    private static PayrollConceptFeedRelationRepository pocFeedRelationRepo(String ruleSystemCode) {
+        PayrollObject diasPresenciaObj = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollObject precioDiaObj    = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
+        PayrollObject salarioBaseObj  = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
+
+        List<PayrollConceptFeedRelation> salarioBaseFeeds = List.of(
+                feedRelation(diasPresenciaObj, salarioBaseObj),
+                feedRelation(precioDiaObj, salarioBaseObj)
+        );
+
+        Map<Long, List<PayrollConceptFeedRelation>> relsByTarget = new HashMap<>();
+        relsByTarget.put(3L, salarioBaseFeeds);
+
+        return new PayrollConceptFeedRelationRepository() {
+            @Override
+            public PayrollConceptFeedRelation save(PayrollConceptFeedRelation r) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
+                return relsByTarget.getOrDefault(id, Collections.emptyList());
+            }
+        };
+    }
+
+    private static PayrollConceptFeedRelationRepository emptyFeedRelationRepo() {
+        return new PayrollConceptFeedRelationRepository() {
+            @Override
+            public PayrollConceptFeedRelation save(PayrollConceptFeedRelation r) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
+                return Collections.emptyList();
+            }
+        };
+    }
+
+    private static PayrollConceptRepository emptyConceptRepository() {
+        return new PayrollConceptRepository() {
+            @Override
+            public PayrollConcept save(PayrollConcept c) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public Optional<PayrollConcept> findByBusinessKey(String rs, String code) {
+                return Optional.empty();
+            }
+            @Override
+            public boolean existsByBusinessKey(String rs, String code) {
+                return false;
+            }
+        };
+    }
+
+    private static PayrollConcept pocConcept(
+            Long id,
+            String ruleSystemCode,
+            String conceptCode,
+            CalculationType calculationType,
+            FunctionalNature nature
+    ) {
+        PayrollObject object = new PayrollObject(
+                id, ruleSystemCode, PayrollObjectTypeCode.CONCEPT, conceptCode, null, null);
+        return new PayrollConcept(
+                object,
+                conceptCode,
+                calculationType,
+                nature,
+                ResultCompositionMode.REPLACE,
+                null,
+                ExecutionScope.SEGMENT,
+                null, null
+        );
+    }
+
+    private static PayrollObject pocObject(Long id, String ruleSystemCode, String conceptCode) {
+        return new PayrollObject(id, ruleSystemCode, PayrollObjectTypeCode.CONCEPT, conceptCode, null, null);
+    }
+
+    private static PayrollConceptFeedRelation feedRelation(PayrollObject source, PayrollObject target) {
+        return new PayrollConceptFeedRelation(
+                null, source, target, FeedMode.FEED_BY_SOURCE, null,
+                LocalDate.of(2020, 1, 1), null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
     }
 }

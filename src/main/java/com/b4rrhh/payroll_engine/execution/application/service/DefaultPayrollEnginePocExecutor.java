@@ -1,20 +1,16 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
-import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
-import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
-import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.dependency.application.service.ConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPocConceptException;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.PayrollEnginePocRequest;
 import com.b4rrhh.payroll_engine.execution.domain.model.PayrollEnginePocResult;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionResult;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.segment.domain.model.CalculationPeriod;
 import com.b4rrhh.payroll_engine.segment.domain.model.CalculationSegment;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
@@ -34,10 +30,10 @@ import java.util.List;
  *
  * <h3>Execution flow</h3>
  * <ol>
- *   <li>Build the PoC concept set in-memory (T_DIAS_PRESENCIA_SEGMENTO, T_PRECIO_DIA,
- *       SALARIO_BASE).</li>
- *   <li>Build the corresponding {@link ConceptDependencyGraph} declaring that
- *       SALARIO_BASE depends on both technical concepts.</li>
+ *   <li>Load the three PoC concept definitions from {@link PayrollConceptRepository} by
+ *       business key ({@code ruleSystemCode} + {@code conceptCode}).</li>
+ *   <li>Derive the {@link ConceptDependencyGraph} from persisted feed relations via
+ *       {@link ConceptDependencyGraphService}.</li>
  *   <li>Translate graph + concepts to an ordered execution plan via
  *       {@link ExecutionPlanBuilder}. Plan order is topological: dependencies first.</li>
  *   <li>Build temporal segments from working time windows.</li>
@@ -47,17 +43,26 @@ import java.util.List;
  *   <li>Consolidate {@code totalDevengos} as the sum of all segment salary-base amounts.</li>
  * </ol>
  *
- * <h3>PoC in-memory concept assembly — TEMPORARY</h3>
- * <p><strong>This assembly is a PoC placeholder only.</strong>
- * The three concepts ({@code T_DIAS_PRESENCIA_SEGMENTO}, {@code T_PRECIO_DIA},
- * {@code SALARIO_BASE}) are constructed directly in memory because repository
- * loading is outside the scope of the current iteration.
+ * <h3>Concept loading and graph derivation</h3>
+ * <p>The three required PoC concepts ({@code T_DIAS_PRESENCIA_SEGMENTO}, {@code T_PRECIO_DIA},
+ * {@code SALARIO_BASE}) are loaded from {@link PayrollConceptRepository} by business key
+ * ({@code ruleSystemCode}, {@code conceptCode}). If any concept is absent,
+ * {@link MissingPocConceptException} is thrown immediately.
  *
- * <p>Once concepts can be loaded from the {@code payroll_engine} repositories,
- * {@link #buildPocConcepts} and {@link #buildPocGraph} must be removed entirely
- * and replaced by repository-sourced data. These helpers must <strong>not</strong>
- * be extended with real business logic or grow into a second hidden source of truth
- * for concept definitions.
+ * <p>The dependency graph is derived from persisted feed relations via
+ * {@link ConceptDependencyGraphService}. Only relations active on the period start date
+ * and whose source concept is in the loaded concept set are included.
+ *
+ * <h3>PoC runtime coupling — TEMPORARY</h3>
+ * <p>Segment execution still references concept codes by name ({@code T_DIAS_PRESENCIA_SEGMENTO},
+ * {@code T_PRECIO_DIA}, {@code SALARIO_BASE}) in {@link SegmentTechnicalValueResolver} and
+ * {@link DefaultSegmentExecutionEngine}. This is a PoC limitation: operand wiring is not yet
+ * configurable from persisted data. Once operand configuration is available, these hardcoded
+ * code references must be removed from the execution layer.
+ *
+ * <p>This executor must not grow into a second hidden source of truth for runtime logic.
+ * Business logic — which concept feeds which, how operands are resolved — belongs in
+ * persisted configuration, not in executor code.
  *
  * <h3>Rounding policy</h3>
  * <ul>
@@ -73,15 +78,21 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
     private final WorkingTimeSegmentBuilder segmentBuilder;
+    private final PayrollConceptRepository conceptRepository;
+    private final ConceptDependencyGraphService graphService;
     private final ExecutionPlanBuilder executionPlanBuilder;
     private final SegmentExecutionEngine segmentExecutionEngine;
 
     public DefaultPayrollEnginePocExecutor(
             WorkingTimeSegmentBuilder segmentBuilder,
+            PayrollConceptRepository conceptRepository,
+            ConceptDependencyGraphService graphService,
             ExecutionPlanBuilder executionPlanBuilder,
             SegmentExecutionEngine segmentExecutionEngine
     ) {
         this.segmentBuilder = segmentBuilder;
+        this.conceptRepository = conceptRepository;
+        this.graphService = graphService;
         this.executionPlanBuilder = executionPlanBuilder;
         this.segmentExecutionEngine = segmentExecutionEngine;
     }
@@ -91,11 +102,15 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
         CalculationPeriod period = new CalculationPeriod(request.getPeriodStart(), request.getPeriodEnd());
         long daysInPeriod = ChronoUnit.DAYS.between(period.getPeriodStart(), period.getPeriodEnd()) + 1;
 
-        // Build the in-memory PoC concept set for this rule system.
-        List<PayrollConcept> pocConcepts = buildPocConcepts(request.getRuleSystemCode());
+        // Load the PoC concept definitions from the repository.
+        String ruleSystemCode = request.getRuleSystemCode();
+        PayrollConcept diasPresencia = loadPocConcept(ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollConcept precioDia    = loadPocConcept(ruleSystemCode, "T_PRECIO_DIA");
+        PayrollConcept salarioBase  = loadPocConcept(ruleSystemCode, "SALARIO_BASE");
+        List<PayrollConcept> pocConcepts = List.of(diasPresencia, precioDia, salarioBase);
 
-        // Build the structural dependency graph for these concepts.
-        ConceptDependencyGraph graph = buildPocGraph(pocConcepts, request.getRuleSystemCode());
+        // Build the dependency graph from persisted feed relations.
+        ConceptDependencyGraph graph = graphService.build(pocConcepts, period.getPeriodStart());
 
         // Translate graph + concept definitions into an ordered execution plan.
         List<ConceptExecutionPlanEntry> plan = executionPlanBuilder.build(graph, pocConcepts);
@@ -153,90 +168,15 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
     }
 
     /**
-     * Builds the minimal set of PoC concepts in memory.
+     * Loads a single PoC concept from the repository by business key.
      *
-     * <p><strong>TEMPORARY — remove when concepts are loaded from repositories.</strong>
-     * This method exists only to unblock the graph → execution-plan bridge PoC.
-     * It must not be extended with business logic. Any change to concept definitions
-     * must go through the proper {@code payroll_engine} concept and object domain,
-     * not through this helper.
-     *
-     * <ul>
-     *   <li>{@code T_DIAS_PRESENCIA_SEGMENTO} — DIRECT_AMOUNT, INFORMATIONAL, SEGMENT scope</li>
-     *   <li>{@code T_PRECIO_DIA} — DIRECT_AMOUNT, INFORMATIONAL, SEGMENT scope</li>
-     *   <li>{@code SALARIO_BASE} — RATE_BY_QUANTITY, EARNING, SEGMENT scope</li>
-     * </ul>
-     *
-     * <p>Fields beyond {@code calculationType} (mnemonic, compositionMode, payslipOrderCode)
-     * are set to placeholder values because only {@code calculationType} is used at execution time.
+     * @throws MissingPocConceptException if the concept is absent from the repository
      */
-    private List<PayrollConcept> buildPocConcepts(String ruleSystemCode) {
-        PayrollConcept diasPresencia = pocConcept(
-                ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO",
-                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
-
-        PayrollConcept precioDia = pocConcept(
-                ruleSystemCode, "T_PRECIO_DIA",
-                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
-
-        PayrollConcept salarioBase = pocConcept(
-                ruleSystemCode, "SALARIO_BASE",
-                CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING);
-
-        return List.of(diasPresencia, precioDia, salarioBase);
+    private PayrollConcept loadPocConcept(String ruleSystemCode, String conceptCode) {
+        return conceptRepository.findByBusinessKey(ruleSystemCode, conceptCode)
+                .orElseThrow(() -> new MissingPocConceptException(ruleSystemCode, conceptCode));
     }
 
-    private PayrollConcept pocConcept(
-            String ruleSystemCode,
-            String conceptCode,
-            CalculationType calculationType,
-            FunctionalNature nature
-    ) {
-        PayrollObject object = new PayrollObject(
-                null, ruleSystemCode, PayrollObjectTypeCode.CONCEPT, conceptCode, null, null);
-        return new PayrollConcept(
-                object,
-                conceptCode,          // mnemonic = conceptCode for PoC
-                calculationType,
-                nature,
-                ResultCompositionMode.REPLACE,
-                null,                 // payslipOrderCode — not relevant for PoC execution
-                ExecutionScope.SEGMENT,
-                null, null
-        );
-    }
-
-    /**
-     * Builds the structural dependency graph for the PoC:
-     * SALARIO_BASE depends on T_DIAS_PRESENCIA_SEGMENTO and T_PRECIO_DIA.
-     */
-    private ConceptDependencyGraph buildPocGraph(List<PayrollConcept> concepts, String ruleSystemCode) {
-        PayrollConcept diasPresencia = findConcept(concepts, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollConcept precioDia    = findConcept(concepts, ruleSystemCode, "T_PRECIO_DIA");
-        PayrollConcept salarioBase  = findConcept(concepts, ruleSystemCode, "SALARIO_BASE");
-
-        return new ConceptDependencyGraphBuilder()
-                .addNode(diasPresencia)
-                .addNode(precioDia)
-                .addOperandDependency(salarioBase, diasPresencia)
-                .addOperandDependency(salarioBase, precioDia)
-                .build();
-    }
-
-    private PayrollConcept findConcept(List<PayrollConcept> concepts, String ruleSystemCode, String conceptCode) {
-        return concepts.stream()
-                .filter(c -> c.getRuleSystemCode().equals(ruleSystemCode)
-                          && c.getConceptCode().equals(conceptCode))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "PoC concept not found: " + ruleSystemCode + "/" + conceptCode));
-    }
-
-    /**
-     * Locates the working-time window that covers {@code date}.
-     *
-     * @throws IllegalStateException if no window covers the date
-     */
     private BigDecimal resolveWorkingTimePercentage(LocalDate date, List<WorkingTimeWindow> windows) {
         for (WorkingTimeWindow window : windows) {
             boolean afterOrOnStart = !date.isBefore(window.getStartDate());
