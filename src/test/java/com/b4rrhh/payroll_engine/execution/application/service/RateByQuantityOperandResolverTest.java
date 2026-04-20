@@ -1,180 +1,144 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
-import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
-import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptResultException;
-import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
+import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPlannedOperandException;
+import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Unit tests for {@link RateByQuantityOperandResolver}.
+ *
+ * <p>The resolver reads pre-wired operand source identities from the plan entry
+ * and amounts from execution state. No repository access occurs at runtime.
+ */
 class RateByQuantityOperandResolverTest {
 
     private static final String RS = "ESP";
-    private static final String TARGET_CODE = "SALARIO_BASE";
 
-    private static PayrollObject obj(long id, String code) {
-        return new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code,
-                LocalDateTime.now(), LocalDateTime.now());
+    private final RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver();
+
+    private static ConceptNodeIdentity node(String code) {
+        return new ConceptNodeIdentity(RS, code);
     }
 
-    private static PayrollConceptOperand operand(PayrollObject target, OperandRole role, PayrollObject source) {
-        return new PayrollConceptOperand(null, target, role, source,
-                LocalDateTime.now(), LocalDateTime.now());
+    private static ConceptExecutionPlanEntry enrichedEntry() {
+        return new ConceptExecutionPlanEntry(
+                node("SALARIO_BASE"),
+                CalculationType.RATE_BY_QUANTITY,
+                Map.of(
+                        OperandRole.QUANTITY, node("T_DIAS_PRESENCIA_SEGMENTO"),
+                        OperandRole.RATE,     node("T_PRECIO_DIA")
+                )
+        );
     }
 
-    private static SegmentExecutionState stateWith(String code, BigDecimal amount) {
+    private static SegmentExecutionState stateWithBoth(BigDecimal quantity, BigDecimal rate) {
         SegmentExecutionState state = new SegmentExecutionState();
-        state.storeResult(new ConceptNodeIdentity(RS, code), amount);
+        state.storeResult(node("T_DIAS_PRESENCIA_SEGMENTO"), quantity);
+        state.storeResult(node("T_PRECIO_DIA"), rate);
         return state;
-    }
-
-    private static SegmentExecutionState stateWithBoth(String qCode, BigDecimal q, String rCode, BigDecimal r) {
-        SegmentExecutionState state = new SegmentExecutionState();
-        state.storeResult(new ConceptNodeIdentity(RS, qCode), q);
-        state.storeResult(new ConceptNodeIdentity(RS, rCode), r);
-        return state;
-    }
-
-    private static PayrollConceptOperandRepository fixedRepo(List<PayrollConceptOperand> operands) {
-        return new PayrollConceptOperandRepository() {
-            @Override
-            public PayrollConceptOperand save(PayrollConceptOperand o) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                return operands;
-            }
-        };
     }
 
     // ── happy path ────────────────────────────────────────────────────────────
 
     @Test
     void resolvesQuantityTimesRate() {
-        PayrollObject targetObj = obj(3L, TARGET_CODE);
-        PayrollObject qObj = obj(1L, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollObject rObj = obj(2L, "T_PRECIO_DIA");
-
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(fixedRepo(List.of(
-                operand(targetObj, OperandRole.QUANTITY, qObj),
-                operand(targetObj, OperandRole.RATE, rObj)
-        )), new RateByQuantityConfigurationValidator());
-
         SegmentExecutionState state = stateWithBoth(
-                "T_DIAS_PRESENCIA_SEGMENTO", new BigDecimal("14"),
-                "T_PRECIO_DIA", new BigDecimal("66.66666667")
+                new BigDecimal("14"),
+                new BigDecimal("66.66666667")
         );
 
-        Set<ConceptNodeIdentity> graphDeps = Set.of(
-                new ConceptNodeIdentity(RS, "T_DIAS_PRESENCIA_SEGMENTO"),
-                new ConceptNodeIdentity(RS, "T_PRECIO_DIA"));
+        BigDecimal result = resolver.resolve(enrichedEntry(), state);
 
-        BigDecimal result = resolver.resolve(RS, TARGET_CODE, state, graphDeps);
         assertEquals(0, new BigDecimal("933.33").compareTo(result));
     }
 
-    // ── missing operand definition ────────────────────────────────────────────
-
     @Test
-    void throwsMissingOperandWhenQuantityIsAbsent() {
-        PayrollObject targetObj = obj(3L, TARGET_CODE);
-        PayrollObject rObj = obj(2L, "T_PRECIO_DIA");
-
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(fixedRepo(List.of(
-                operand(targetObj, OperandRole.RATE, rObj)
-        )), new RateByQuantityConfigurationValidator());
-
-        SegmentExecutionState state = stateWith("T_PRECIO_DIA", new BigDecimal("66.66666667"));
-        Set<ConceptNodeIdentity> graphDeps = Set.of(new ConceptNodeIdentity(RS, "T_PRECIO_DIA"));
-        assertThrows(MissingOperandDefinitionException.class,
-                () -> resolver.resolve(RS, TARGET_CODE, state, graphDeps));
-    }
-
-    @Test
-    void throwsMissingOperandWhenRateIsAbsent() {
-        PayrollObject targetObj = obj(3L, TARGET_CODE);
-        PayrollObject qObj = obj(1L, "T_DIAS_PRESENCIA_SEGMENTO");
-
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(fixedRepo(List.of(
-                operand(targetObj, OperandRole.QUANTITY, qObj)
-        )), new RateByQuantityConfigurationValidator());
-
-        SegmentExecutionState state = stateWith("T_DIAS_PRESENCIA_SEGMENTO", new BigDecimal("14"));
-        Set<ConceptNodeIdentity> graphDeps = Set.of(new ConceptNodeIdentity(RS, "T_DIAS_PRESENCIA_SEGMENTO"));
-        assertThrows(MissingOperandDefinitionException.class,
-                () -> resolver.resolve(RS, TARGET_CODE, state, graphDeps));
-    }
-
-    @Test
-    void throwsMissingOperandWhenNoOperantsExist() {
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(
-                fixedRepo(Collections.emptyList()), new RateByQuantityConfigurationValidator());
-
-        assertThrows(MissingOperandDefinitionException.class,
-                () -> resolver.resolve(RS, TARGET_CODE, new SegmentExecutionState(), Set.of()));
-    }
-
-    // ── duplicate operand definition ──────────────────────────────────────────
-
-    @Test
-    void throwsDuplicateWhenQuantityDefinedTwice() {
-        PayrollObject targetObj = obj(3L, TARGET_CODE);
-        PayrollObject q1 = obj(1L, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollObject q2 = obj(4L, "T_OTHER_QUANTITY");
-        PayrollObject rObj = obj(2L, "T_PRECIO_DIA");
-
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(fixedRepo(List.of(
-                operand(targetObj, OperandRole.QUANTITY, q1),
-                operand(targetObj, OperandRole.QUANTITY, q2),
-                operand(targetObj, OperandRole.RATE, rObj)
-        )), new RateByQuantityConfigurationValidator());
-
+    void resultIsRoundedToScale2HalfUp() {
+        // 10 * 0.555 = 5.55 (scale 8 product is 5.55000000 → scale 2 HALF_UP = 5.55)
         SegmentExecutionState state = stateWithBoth(
-                "T_DIAS_PRESENCIA_SEGMENTO", new BigDecimal("14"),
-                "T_PRECIO_DIA", new BigDecimal("66.66666667")
+                new BigDecimal("10"),
+                new BigDecimal("0.555")
         );
-        Set<ConceptNodeIdentity> graphDeps = Set.of(
-                new ConceptNodeIdentity(RS, "T_DIAS_PRESENCIA_SEGMENTO"),
-                new ConceptNodeIdentity(RS, "T_OTHER_QUANTITY"),
-                new ConceptNodeIdentity(RS, "T_PRECIO_DIA"));
-        assertThrows(DuplicateOperandDefinitionException.class,
-                () -> resolver.resolve(RS, TARGET_CODE, state, graphDeps));
+
+        BigDecimal result = resolver.resolve(enrichedEntry(), state);
+
+        assertEquals(2, result.scale());
+        assertEquals(0, new BigDecimal("5.55").compareTo(result));
+    }
+
+    // ── missing planned operand wiring ────────────────────────────────────────
+
+    @Test
+    void throwsMissingPlannedOperandWhenQuantityIsAbsent() {
+        // Entry only has RATE wired, QUANTITY is absent from the plan entry's operands map
+        ConceptExecutionPlanEntry entry = new ConceptExecutionPlanEntry(
+                node("SALARIO_BASE"),
+                CalculationType.RATE_BY_QUANTITY,
+                Map.of(OperandRole.RATE, node("T_PRECIO_DIA"))
+        );
+
+        SegmentExecutionState state = new SegmentExecutionState();
+        state.storeResult(node("T_PRECIO_DIA"), new BigDecimal("66.66666667"));
+
+        assertThrows(MissingPlannedOperandException.class, () -> resolver.resolve(entry, state));
+    }
+
+    @Test
+    void throwsMissingPlannedOperandWhenRateIsAbsent() {
+        // Entry only has QUANTITY wired, RATE is absent from the plan entry's operands map
+        ConceptExecutionPlanEntry entry = new ConceptExecutionPlanEntry(
+                node("SALARIO_BASE"),
+                CalculationType.RATE_BY_QUANTITY,
+                Map.of(OperandRole.QUANTITY, node("T_DIAS_PRESENCIA_SEGMENTO"))
+        );
+
+        SegmentExecutionState state = new SegmentExecutionState();
+        state.storeResult(node("T_DIAS_PRESENCIA_SEGMENTO"), new BigDecimal("14"));
+
+        assertThrows(MissingPlannedOperandException.class, () -> resolver.resolve(entry, state));
+    }
+
+    @Test
+    void throwsMissingPlannedOperandWhenOperandsMapIsEmpty() {
+        // Entry has an empty operands map (2-arg constructor) — plan was not properly enriched
+        ConceptExecutionPlanEntry entry = new ConceptExecutionPlanEntry(
+                node("SALARIO_BASE"), CalculationType.RATE_BY_QUANTITY
+        );
+
+        assertThrows(MissingPlannedOperandException.class,
+                () -> resolver.resolve(entry, new SegmentExecutionState()));
     }
 
     // ── missing state amount ──────────────────────────────────────────────────
 
     @Test
     void throwsMissingConceptResultWhenQuantityNotInState() {
-        PayrollObject targetObj = obj(3L, TARGET_CODE);
-        PayrollObject qObj = obj(1L, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollObject rObj = obj(2L, "T_PRECIO_DIA");
+        // Entry is fully wired but state only has RATE — QUANTITY is absent
+        SegmentExecutionState state = new SegmentExecutionState();
+        state.storeResult(node("T_PRECIO_DIA"), new BigDecimal("66.66666667"));
 
-        RateByQuantityOperandResolver resolver = new RateByQuantityOperandResolver(fixedRepo(List.of(
-                operand(targetObj, OperandRole.QUANTITY, qObj),
-                operand(targetObj, OperandRole.RATE, rObj)
-        )), new RateByQuantityConfigurationValidator());
-
-        // only rate is in state, quantity is missing
-        SegmentExecutionState state = stateWith("T_PRECIO_DIA", new BigDecimal("66.66666667"));
-        Set<ConceptNodeIdentity> graphDeps = Set.of(
-                new ConceptNodeIdentity(RS, "T_DIAS_PRESENCIA_SEGMENTO"),
-                new ConceptNodeIdentity(RS, "T_PRECIO_DIA"));
         assertThrows(MissingConceptResultException.class,
-                () -> resolver.resolve(RS, TARGET_CODE, state, graphDeps));
+                () -> resolver.resolve(enrichedEntry(), state));
+    }
+
+    @Test
+    void throwsMissingConceptResultWhenRateNotInState() {
+        // Entry is fully wired but state only has QUANTITY — RATE is absent
+        SegmentExecutionState state = new SegmentExecutionState();
+        state.storeResult(node("T_DIAS_PRESENCIA_SEGMENTO"), new BigDecimal("14"));
+
+        assertThrows(MissingConceptResultException.class,
+                () -> resolver.resolve(enrichedEntry(), state));
     }
 }

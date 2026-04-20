@@ -58,6 +58,11 @@ public class SegmentTechnicalValueResolver {
                             )
                             .setScale(INTERMEDIATE_SCALE, ROUNDING);
 
+            // Fixed daily transport rate, independent of working time percentage.
+            // PoC value; in a real implementation this would come from a collective agreement table.
+            case "T_PRECIO_TRANSPORTE" ->
+                    new BigDecimal("7.50");
+
             default -> throw new UnsupportedTechnicalConceptException(conceptCode);
         };
     }

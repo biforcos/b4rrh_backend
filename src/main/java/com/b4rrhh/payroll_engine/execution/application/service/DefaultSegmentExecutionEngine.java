@@ -1,16 +1,16 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedCalculationTypeException;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.springframework.stereotype.Component;
 
+import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Default implementation of {@link SegmentExecutionEngine}.
@@ -21,33 +21,28 @@ import java.util.Set;
  *   <li>For each entry, dispatches based on {@link com.b4rrhh.payroll_engine.concept.domain.model.CalculationType}:
  *       <ul>
  *         <li>{@code DIRECT_AMOUNT} — delegates to {@link SegmentTechnicalValueResolver}</li>
- *         <li>{@code RATE_BY_QUANTITY} — validates operand ↔ graph coherence, then reads
- *             previously stored dependencies from state, multiplies rate × quantity,
- *             rounds to 2 decimal places HALF_UP</li>
+ *         <li>{@code RATE_BY_QUANTITY} — reads pre-resolved QUANTITY and RATE operand
+ *             identities from the plan entry, fetches them from state, multiplies
+ *             rate × quantity, rounds to 2 decimal places HALF_UP</li>
+ *         <li>{@code AGGREGATE} — iterates the pre-resolved source list, sums the stored
+ *             amount for each source, rounds to 2 decimal places HALF_UP</li>
  *       </ul>
  *   </li>
  *   <li>Stores each result in {@link SegmentExecutionState}.</li>
  * </ol>
  *
- * <h3>Graph ↔ operand validation</h3>
- * <p>For each {@code RATE_BY_QUANTITY} entry, the engine reads the direct graph dependencies
- * of that concept and passes them to {@link RateByQuantityOperandResolver}. The resolver
- * delegates to {@link RateByQuantityConfigurationValidator} to assert that every configured
- * operand source is a declared graph dependency, ensuring state will contain the source
- * value when the multiplication is attempted.
+ * <h3>In-memory RATE_BY_QUANTITY execution</h3>
+ * <p>For each {@code RATE_BY_QUANTITY} entry, the engine reads the pre-resolved QUANTITY
+ * and RATE source identities directly from
+ * {@link ConceptExecutionPlanEntry#operands()} and delegates to
+ * {@link RateByQuantityOperandResolver}. No repository access occurs at runtime.
  *
  * <h3>Rounding policy</h3>
  * <ul>
  *   <li>Intermediate scale: 8, HALF_UP (delegated to {@link SegmentTechnicalValueResolver})</li>
  *   <li>RATE_BY_QUANTITY final result: scale 2, HALF_UP (delegated to {@link RateByQuantityOperandResolver})</li>
+ *   <li>AGGREGATE final result: scale 2, HALF_UP (applied in-engine after summation)</li>
  * </ul>
- *
- * <h3>Runtime limitation — operand lookup frequency</h3>
- * <p>Operand definitions are currently loaded from the repository on each
- * {@code RATE_BY_QUANTITY} execution (once per concept per segment). This is acceptable
- * for the current PoC but is not the intended optimized runtime model.
- * Future iterations should preload operand configuration at plan-construction time so that
- * per-segment execution operates fully in-memory without additional repository access.
  */
 @Component
 public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
@@ -66,8 +61,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
     @Override
     public SegmentExecutionState execute(
             List<ConceptExecutionPlanEntry> plan,
-            SegmentCalculationContext context,
-            ConceptDependencyGraph graph
+            SegmentCalculationContext context
     ) {
         SegmentExecutionState state = new SegmentExecutionState();
 
@@ -76,13 +70,15 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                 case DIRECT_AMOUNT ->
                         technicalValueResolver.resolve(entry.identity().getConceptCode(), context);
 
-                case RATE_BY_QUANTITY -> {
-                    Set<ConceptNodeIdentity> graphDeps = graph.getDependenciesOf(entry.identity());
-                    yield rateByQuantityResolver.resolve(
-                            context.getRuleSystemCode(),
-                            entry.identity().getConceptCode(),
-                            state,
-                            graphDeps);
+                case RATE_BY_QUANTITY ->
+                        rateByQuantityResolver.resolve(entry, state);
+
+                case AGGREGATE -> {
+                    BigDecimal sum = BigDecimal.ZERO;
+                    for (ConceptNodeIdentity source : entry.aggregateSources()) {
+                        sum = sum.add(state.getRequiredAmount(source));
+                    }
+                    yield sum.setScale(2, RoundingMode.HALF_UP);
                 }
 
                 default ->

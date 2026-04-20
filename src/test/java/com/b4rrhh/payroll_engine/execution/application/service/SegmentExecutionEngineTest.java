@@ -1,30 +1,20 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
-import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
-import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
-import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptResultException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedCalculationTypeException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
-import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,60 +35,43 @@ class SegmentExecutionEngineTest {
 
     private static final String RULE_SYSTEM = "ESP";
 
-    /**
-     * In-memory operand stub: SALARIO_BASE has QUANTITY=T_DIAS_PRESENCIA_SEGMENTO, RATE=T_PRECIO_DIA.
-     */
-    private static PayrollConceptOperandRepository pocOperandRepo() {
-        PayrollObject targetObj = new PayrollObject(3L, RULE_SYSTEM, PayrollObjectTypeCode.CONCEPT,
-                "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
-        PayrollObject qObj = new PayrollObject(1L, RULE_SYSTEM, PayrollObjectTypeCode.CONCEPT,
-                "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
-        PayrollObject rObj = new PayrollObject(2L, RULE_SYSTEM, PayrollObjectTypeCode.CONCEPT,
-                "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
-
-        List<PayrollConceptOperand> salarioBaseOperands = List.of(
-                new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, qObj,
-                        LocalDateTime.now(), LocalDateTime.now()),
-                new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
-                        LocalDateTime.now(), LocalDateTime.now())
-        );
-
-        return new PayrollConceptOperandRepository() {
-            @Override
-            public PayrollConceptOperand save(PayrollConceptOperand o) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                return "SALARIO_BASE".equals(code) ? salarioBaseOperands : List.of();
-            }
-        };
-    }
-
     private final DefaultSegmentExecutionEngine engine =
             new DefaultSegmentExecutionEngine(
                     new SegmentTechnicalValueResolver(),
-                    new RateByQuantityOperandResolver(
-                            pocOperandRepo(),
-                            new RateByQuantityConfigurationValidator()));
+                    new RateByQuantityOperandResolver());
 
-    /**
-     * Builds a minimal PoC graph: SALARIO_BASE depends on T_DIAS_PRESENCIA_SEGMENTO and T_PRECIO_DIA.
-     */
-    private static ConceptDependencyGraph pocGraph() {
-        PayrollConcept dias = pocConcept(1L, "T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
-        PayrollConcept precio = pocConcept(2L, "T_PRECIO_DIA", CalculationType.DIRECT_AMOUNT);
-        PayrollConcept salario = pocConcept(3L, "SALARIO_BASE", CalculationType.RATE_BY_QUANTITY);
-        return new ConceptDependencyGraphBuilder()
-                .addOperandDependency(salario, dias)
-                .addOperandDependency(salario, precio)
-                .build();
+    /** Builds an enriched SALARIO_BASE plan entry with QUANTITY and RATE operand wiring. */
+    private static ConceptExecutionPlanEntry enrichedSalarioBaseEntry() {
+        return new ConceptExecutionPlanEntry(
+                node("SALARIO_BASE"),
+                CalculationType.RATE_BY_QUANTITY,
+                Map.of(
+                        OperandRole.QUANTITY, node("T_DIAS_PRESENCIA_SEGMENTO"),
+                        OperandRole.RATE,     node("T_PRECIO_DIA")
+                )
+        );
     }
 
-    private static PayrollConcept pocConcept(Long id, String code, CalculationType type) {
-        PayrollObject obj = new PayrollObject(id, RULE_SYSTEM, PayrollObjectTypeCode.CONCEPT, code, null, null);
-        return new PayrollConcept(obj, code, type, FunctionalNature.INFORMATIONAL,
-                ResultCompositionMode.REPLACE, null, ExecutionScope.SEGMENT, null, null);
+    /** Builds an enriched PLUS_TRANSPORTE plan entry with QUANTITY=T_DIAS and RATE=T_PRECIO_TRANSPORTE. */
+    private static ConceptExecutionPlanEntry enrichedPlusTransporteEntry() {
+        return new ConceptExecutionPlanEntry(
+                node("PLUS_TRANSPORTE"),
+                CalculationType.RATE_BY_QUANTITY,
+                Map.of(
+                        OperandRole.QUANTITY, node("T_DIAS_PRESENCIA_SEGMENTO"),
+                        OperandRole.RATE,     node("T_PRECIO_TRANSPORTE")
+                )
+        );
+    }
+
+    /** Builds an AGGREGATE TOTAL_DEVENGOS_SEGMENTO entry sourced from SALARIO_BASE and PLUS_TRANSPORTE. */
+    private static ConceptExecutionPlanEntry aggregateTotalDevengosEntry() {
+        return new ConceptExecutionPlanEntry(
+                node("TOTAL_DEVENGOS_SEGMENTO"),
+                CalculationType.AGGREGATE,
+                Map.of(),
+                List.of(node("SALARIO_BASE"), node("PLUS_TRANSPORTE"))
+        );
     }
 
     private static ConceptNodeIdentity node(String code) {
@@ -129,7 +102,7 @@ class SegmentExecutionEngineTest {
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT)
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertEquals(0, new BigDecimal("14").compareTo(
                 state.getRequiredAmount(node("T_DIAS_PRESENCIA_SEGMENTO"))));
@@ -145,7 +118,7 @@ class SegmentExecutionEngineTest {
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT)
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertEquals(0, new BigDecimal("66.66666667").compareTo(
                 state.getRequiredAmount(node("T_PRECIO_DIA"))));
@@ -153,7 +126,7 @@ class SegmentExecutionEngineTest {
 
     @Test
     void directAmountPrecioDiaAt50PctIsHalfOfFull() {
-        // 2000 / 30 * 0.5 = 33.33333333
+        // 2000 / 30 * 0.5 = 33.33333334
         LocalDate s = LocalDate.of(2026, 4, 15);
         LocalDate e = LocalDate.of(2026, 4, 30);
         SegmentCalculationContext ctx = new SegmentCalculationContext(
@@ -167,7 +140,7 @@ class SegmentExecutionEngineTest {
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT)
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertEquals(0, new BigDecimal("33.33333334").compareTo(
                 state.getRequiredAmount(node("T_PRECIO_DIA"))));
@@ -182,10 +155,10 @@ class SegmentExecutionEngineTest {
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("SALARIO_BASE"), CalculationType.RATE_BY_QUANTITY)
+                enrichedSalarioBaseEntry()
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertEquals(0, new BigDecimal("933.33").compareTo(
                 state.getRequiredAmount(node("SALARIO_BASE"))));
@@ -193,7 +166,7 @@ class SegmentExecutionEngineTest {
 
     @Test
     void salarioBaseAt50PctIs533_33() {
-        // 16 * 33.33333333 = 533.33333328 → scale 2 HALF_UP = 533.33
+        // 16 * 33.33333334 = 533.33333344 → scale 2 HALF_UP = 533.33
         LocalDate s = LocalDate.of(2026, 4, 15);
         LocalDate e = LocalDate.of(2026, 4, 30);
         SegmentCalculationContext ctx = new SegmentCalculationContext(
@@ -206,10 +179,10 @@ class SegmentExecutionEngineTest {
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("SALARIO_BASE"), CalculationType.RATE_BY_QUANTITY)
+                enrichedSalarioBaseEntry()
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertEquals(0, new BigDecimal("533.33").compareTo(
                 state.getRequiredAmount(node("SALARIO_BASE"))));
@@ -220,22 +193,22 @@ class SegmentExecutionEngineTest {
     @Test
     void salarioBaseMissingDependencyThrows() {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
-        // SALARIO_BASE first — its dependencies are not in state yet
+        // SALARIO_BASE entry has operand wiring, but dependencies are absent from state
         List<ConceptExecutionPlanEntry> plan = List.of(
-                new ConceptExecutionPlanEntry(node("SALARIO_BASE"), CalculationType.RATE_BY_QUANTITY)
+                enrichedSalarioBaseEntry()
         );
 
-        assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx, pocGraph()));
+        assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx));
     }
 
     @Test
     void unsupportedCalculationTypeThrows() {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
-                new ConceptExecutionPlanEntry(node("SOME_CONCEPT"), CalculationType.AGGREGATE)
+                new ConceptExecutionPlanEntry(node("SOME_CONCEPT"), CalculationType.PERCENTAGE)
         );
 
-        assertThrows(UnsupportedCalculationTypeException.class, () -> engine.execute(plan, ctx, pocGraph()));
+        assertThrows(UnsupportedCalculationTypeException.class, () -> engine.execute(plan, ctx));
     }
 
     @Test
@@ -245,7 +218,7 @@ class SegmentExecutionEngineTest {
                 new ConceptExecutionPlanEntry(node("UNKNOWN_CONCEPT"), CalculationType.DIRECT_AMOUNT)
         );
 
-        assertThrows(UnsupportedTechnicalConceptException.class, () -> engine.execute(plan, ctx, pocGraph()));
+        assertThrows(UnsupportedTechnicalConceptException.class, () -> engine.execute(plan, ctx));
     }
 
     @Test
@@ -254,13 +227,47 @@ class SegmentExecutionEngineTest {
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("SALARIO_BASE"), CalculationType.RATE_BY_QUANTITY)
+                enrichedSalarioBaseEntry()
         );
 
-        SegmentExecutionState state = engine.execute(plan, ctx, pocGraph());
+        SegmentExecutionState state = engine.execute(plan, ctx);
 
         assertTrue(state.getOptionalAmount(node("T_DIAS_PRESENCIA_SEGMENTO")).isPresent());
         assertTrue(state.getOptionalAmount(node("T_PRECIO_DIA")).isPresent());
         assertTrue(state.getOptionalAmount(node("SALARIO_BASE")).isPresent());
+    }
+
+    // ── AGGREGATE ──────────────────────────────────────────────────
+
+    @Test
+    void aggregateConceptSumsTwoPriorSources() {
+        // Segment 1 reference values: SALARIO_BASE = 933.33, PLUS_TRANSPORTE = 14 * 7.50 = 105.00
+        // TOTAL_DEVENGOS_SEGMENTO = 933.33 + 105.00 = 1038.33
+        SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
+        List<ConceptExecutionPlanEntry> plan = List.of(
+                new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"),  CalculationType.DIRECT_AMOUNT),
+                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"),              CalculationType.DIRECT_AMOUNT),
+                enrichedSalarioBaseEntry(),
+                new ConceptExecutionPlanEntry(node("T_PRECIO_TRANSPORTE"),       CalculationType.DIRECT_AMOUNT),
+                enrichedPlusTransporteEntry(),
+                aggregateTotalDevengosEntry()
+        );
+
+        SegmentExecutionState state = engine.execute(plan, ctx);
+
+        assertEquals(0, new BigDecimal("1038.33").compareTo(
+                state.getRequiredAmount(node("TOTAL_DEVENGOS_SEGMENTO"))),
+                "TOTAL_DEVENGOS_SEGMENTO must be the sum of SALARIO_BASE + PLUS_TRANSPORTE");
+    }
+
+    @Test
+    void aggregateMissingSourceInStateThrows() {
+        // Execute TOTAL_DEVENGOS_SEGMENTO before its sources are in state
+        SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
+        List<ConceptExecutionPlanEntry> plan = List.of(
+                aggregateTotalDevengosEntry()
+        );
+
+        assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx));
     }
 }

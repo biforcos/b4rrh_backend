@@ -30,22 +30,30 @@ import java.util.List;
  *
  * <h3>Execution flow</h3>
  * <ol>
- *   <li>Load the three PoC concept definitions from {@link PayrollConceptRepository} by
- *       business key ({@code ruleSystemCode} + {@code conceptCode}).</li>
+ *   <li>Load the six PoC concept definitions from {@link PayrollConceptRepository} by
+ *       business key ({@code ruleSystemCode} + {@code conceptCode}):
+ *       {@code T_DIAS_PRESENCIA_SEGMENTO}, {@code T_PRECIO_DIA}, {@code SALARIO_BASE},
+ *       {@code T_PRECIO_TRANSPORTE}, {@code PLUS_TRANSPORTE}, and
+ *       {@code TOTAL_DEVENGOS_SEGMENTO}.</li>
  *   <li>Derive the {@link ConceptDependencyGraph} from persisted feed relations via
  *       {@link ConceptDependencyGraphService}.</li>
- *   <li>Translate graph + concepts to an ordered execution plan via
- *       {@link ExecutionPlanBuilder}. Plan order is topological: dependencies first.</li>
+ *   <li>Translate graph + concepts to an ordered, enriched execution plan via
+ *       {@link ExecutionPlanBuilder}. Plan order is topological: dependencies first.
+ *       Operand wiring ({@code RATE_BY_QUANTITY}) and aggregate sources ({@code AGGREGATE})
+ *       are resolved and embedded into each plan entry at this step.</li>
  *   <li>Build temporal segments from working time windows.</li>
  *   <li>For each segment, build a {@link SegmentCalculationContext} and delegate
- *       execution to {@link SegmentExecutionEngine}.</li>
- *   <li>Extract SALARIO_BASE and T_PRECIO_DIA amounts from the resulting state.</li>
- *   <li>Consolidate {@code totalDevengos} as the sum of all segment salary-base amounts.</li>
+ *       execution to {@link SegmentExecutionEngine}. No repository access occurs
+ *       during per-segment execution: all wiring is pre-resolved in the plan.</li>
+ *   <li>Extract per-concept amounts from the resulting state:
+ *       {@code SALARIO_BASE}, {@code T_PRECIO_DIA}, {@code PLUS_TRANSPORTE},
+ *       {@code TOTAL_DEVENGOS_SEGMENTO}. These extractions are PoC-specific and
+ *       not yet generic.</li>
+ *   <li>Consolidate period-level totals from the per-segment results.</li>
  * </ol>
  *
  * <h3>Concept loading and graph derivation</h3>
- * <p>The three required PoC concepts ({@code T_DIAS_PRESENCIA_SEGMENTO}, {@code T_PRECIO_DIA},
- * {@code SALARIO_BASE}) are loaded from {@link PayrollConceptRepository} by business key
+ * <p>The six PoC concepts are loaded from {@link PayrollConceptRepository} by business key
  * ({@code ruleSystemCode}, {@code conceptCode}). If any concept is absent,
  * {@link MissingPocConceptException} is thrown immediately.
  *
@@ -53,41 +61,45 @@ import java.util.List;
  * {@link ConceptDependencyGraphService}. Only relations active on the period start date
  * and whose source concept is in the loaded concept set are included.
  *
- * <h3>PoC runtime coupling — RESOLVED</h3>
- * <p>Operand wiring is now configurable from persisted data via
- * {@link com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository}.
- * SALARIO_BASE operand sources are no longer hardcoded in the execution layer.
- * Hardcoded concept code references remain only in {@link SegmentTechnicalValueResolver}
- * (for DIRECT_AMOUNT technical concepts such as T_DIAS_PRESENCIA_SEGMENTO, T_PRECIO_DIA)
- * and in the result extraction at the end of this executor (reading SALARIO_BASE and
- * T_PRECIO_DIA by concept code). These are PoC limitations that should be addressed in a
- * future iteration.
+ * <h3>Plan enrichment and in-memory execution</h3>
+ * <p>All operand wiring ({@code RATE_BY_QUANTITY}) and aggregate source lists
+ * ({@code AGGREGATE}) are resolved from repositories and the dependency graph at
+ * plan-construction time by {@link ExecutionPlanBuilder}. Per-segment execution
+ * reads only pre-populated in-memory state: no repository access occurs inside
+ * {@link SegmentExecutionEngine#execute}.
  *
  * <h3>Execution coherence contract</h3>
- * <p>Both graph structure and operand configuration are required to be coherent at runtime:
+ * <p>Graph structure and operand configuration must remain aligned at plan-construction time:
  * <ul>
  *   <li>The <strong>graph</strong> controls calculation order (topological sort from
  *       persisted feed relations).</li>
  *   <li>The <strong>operand configuration</strong> ({@code payroll_concept_operand} table)
  *       controls which prior-computed value supplies QUANTITY and which supplies RATE for
- *       each RATE_BY_QUANTITY concept.</li>
- *   <li>These two structures must remain aligned: every operand source concept must be a
- *       declared graph dependency of its target. Misalignment is caught at runtime by
+ *       each {@code RATE_BY_QUANTITY} concept.</li>
+ *   <li>Every operand source concept must be a declared graph dependency of its target.
+ *       Misalignment is caught at plan-build time by
  *       {@link RateByQuantityConfigurationValidator} and causes
  *       {@link com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException}.</li>
+ *   <li>Every {@code AGGREGATE} concept must have at least one declared graph dependency.
+ *       An empty source set is caught at plan-build time by
+ *       {@link com.b4rrhh.payroll_engine.execution.application.service.DefaultExecutionPlanBuilder}
+ *       and causes
+ *       {@link com.b4rrhh.payroll_engine.execution.domain.exception.MissingAggregateSourcesException}.</li>
  * </ul>
  *
- * <h3>Future optimization note</h3>
- * <p>Currently, operand definitions are loaded from the repository once per RATE_BY_QUANTITY
- * concept per segment (inside {@link RateByQuantityOperandResolver}). Both graph and operand
- * structures should be preloaded together at plan-construction time in a future iteration,
- * making per-segment execution fully in-memory.</p>
+ * <h3>PoC limitations</h3>
+ * <p>Hardcoded concept code references remain in {@link SegmentTechnicalValueResolver}
+ * (for {@code DIRECT_AMOUNT} technical concepts such as {@code T_DIAS_PRESENCIA_SEGMENTO}
+ * and {@code T_PRECIO_DIA}) and in the result extraction at the end of this executor
+ * (reading {@code SALARIO_BASE}, {@code T_PRECIO_DIA}, {@code PLUS_TRANSPORTE},
+ * {@code TOTAL_DEVENGOS_SEGMENTO} by concept code).
+ * Making result extraction generic is a future concern, not part of this PoC.
  *
  * <h3>Rounding policy</h3>
  * <ul>
- *   <li>Intermediate: scale 8, HALF_UP (inside SegmentTechnicalValueResolver).</li>
- *   <li>Per-segment amount: scale 2, HALF_UP (inside DefaultSegmentExecutionEngine).</li>
- *   <li>{@code totalDevengos}: scale 2, HALF_UP applied after summing.</li>
+ *   <li>Intermediate: scale 8, HALF_UP (inside {@link SegmentTechnicalValueResolver}).</li>
+ *   <li>Per-segment amounts: scale 2, HALF_UP (inside {@link DefaultSegmentExecutionEngine}).</li>
+ *   <li>Period-level totals: scale 2, HALF_UP applied after summing segment amounts.</li>
  * </ul>
  */
 @Service
@@ -123,10 +135,15 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
 
         // Load the PoC concept definitions from the repository.
         String ruleSystemCode = request.getRuleSystemCode();
-        PayrollConcept diasPresencia = loadPocConcept(ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollConcept precioDia    = loadPocConcept(ruleSystemCode, "T_PRECIO_DIA");
-        PayrollConcept salarioBase  = loadPocConcept(ruleSystemCode, "SALARIO_BASE");
-        List<PayrollConcept> pocConcepts = List.of(diasPresencia, precioDia, salarioBase);
+        PayrollConcept diasPresencia       = loadPocConcept(ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollConcept precioDia            = loadPocConcept(ruleSystemCode, "T_PRECIO_DIA");
+        PayrollConcept salarioBase          = loadPocConcept(ruleSystemCode, "SALARIO_BASE");
+        PayrollConcept precioTransporte     = loadPocConcept(ruleSystemCode, "T_PRECIO_TRANSPORTE");
+        PayrollConcept plusTransporte       = loadPocConcept(ruleSystemCode, "PLUS_TRANSPORTE");
+        PayrollConcept totalDevengosSegmento = loadPocConcept(ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO");
+        List<PayrollConcept> pocConcepts = List.of(
+                diasPresencia, precioDia, salarioBase, precioTransporte, plusTransporte,
+                totalDevengosSegmento);
 
         // Build the dependency graph from persisted feed relations.
         ConceptDependencyGraph graph = graphService.build(pocConcepts, period.getPeriodStart());
@@ -158,12 +175,16 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     request.getMonthlySalaryAmount()
             );
 
-            SegmentExecutionState state = segmentExecutionEngine.execute(plan, context, graph);
+            SegmentExecutionState state = segmentExecutionEngine.execute(plan, context);
 
             BigDecimal salarioBaseAmount = state.getRequiredAmount(
                     new ConceptNodeIdentity(request.getRuleSystemCode(), "SALARIO_BASE"));
             BigDecimal dailyRate = state.getRequiredAmount(
                     new ConceptNodeIdentity(request.getRuleSystemCode(), "T_PRECIO_DIA"));
+            BigDecimal plusTransporteAmount = state.getRequiredAmount(
+                    new ConceptNodeIdentity(request.getRuleSystemCode(), "PLUS_TRANSPORTE"));
+            BigDecimal totalDevengosSegmentoAmount = state.getRequiredAmount(
+                    new ConceptNodeIdentity(request.getRuleSystemCode(), "TOTAL_DEVENGOS_SEGMENTO"));
 
             segmentResults.add(new SegmentExecutionResult(
                     segment.getSegmentStart(),
@@ -174,16 +195,29 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     segment.lengthInDaysInclusive(),
                     workingTimePercentage,
                     dailyRate,
-                    salarioBaseAmount
+                    salarioBaseAmount,
+                    plusTransporteAmount,
+                    totalDevengosSegmentoAmount
             ));
         }
 
-        BigDecimal totalDevengos = segmentResults.stream()
+        BigDecimal totalSalarioBase = segmentResults.stream()
                 .map(SegmentExecutionResult::getSalarioBaseAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(AMOUNT_SCALE, ROUNDING);
 
-        return new PayrollEnginePocResult(segmentResults, totalDevengos);
+        BigDecimal totalPlusTransporte = segmentResults.stream()
+                .map(SegmentExecutionResult::getPlusTransporteAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(AMOUNT_SCALE, ROUNDING);
+
+        BigDecimal totalDevengosConsolidated = segmentResults.stream()
+                .map(SegmentExecutionResult::getTotalDevengosSegmentoAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(AMOUNT_SCALE, ROUNDING);
+
+        return new PayrollEnginePocResult(segmentResults, totalSalarioBase, totalPlusTransporte,
+                totalDevengosConsolidated);
     }
 
     /**

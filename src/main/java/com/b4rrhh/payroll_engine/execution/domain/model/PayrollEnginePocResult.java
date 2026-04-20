@@ -6,20 +6,38 @@ import java.util.List;
 /**
  * Consolidated result of a full payroll engine PoC execution.
  *
- * <p>{@code totalDevengos} is the sum of all per-segment {@code salarioBaseAmount} values.
- * In this PoC it represents TOTAL_DEVENGOS as produced by consolidation,
- * not by full aggregate runtime execution.
+ * <p>These are PoC-specific named extractions, not yet a generic result projection.
+ *
+ * <ul>
+ *   <li>{@code totalSalarioBase} — period-level sum of all per-segment {@code salarioBaseAmount}
+ *       values (SALARIO_BASE concept, RATE_BY_QUANTITY).</li>
+ *   <li>{@code totalPlusTransporte} — period-level sum of all per-segment
+ *       {@code plusTransporteAmount} values (PLUS_TRANSPORTE concept, RATE_BY_QUANTITY).</li>
+ *   <li>{@code totalDevengosConsolidated} — period-level sum of all per-segment
+ *       {@code totalDevengosSegmentoAmount} values, i.e. the period-level consolidation
+ *       of the AGGREGATE concept TOTAL_DEVENGOS_SEGMENTO.</li>
+ * </ul>
  */
 public final class PayrollEnginePocResult {
 
     private final List<SegmentExecutionResult> segmentResults;
-    private final BigDecimal totalDevengos;
+    private final BigDecimal totalSalarioBase;
+    private final BigDecimal totalPlusTransporte;
+    private final BigDecimal totalDevengosConsolidated;
 
-    public PayrollEnginePocResult(List<SegmentExecutionResult> segmentResults, BigDecimal totalDevengos) {
+    public PayrollEnginePocResult(
+            List<SegmentExecutionResult> segmentResults,
+            BigDecimal totalSalarioBase,
+            BigDecimal totalPlusTransporte,
+            BigDecimal totalDevengosConsolidated) {
         this.segmentResults = List.copyOf(segmentResults);
-        this.totalDevengos = totalDevengos;
+        this.totalSalarioBase = totalSalarioBase;
+        this.totalPlusTransporte = totalPlusTransporte;
+        this.totalDevengosConsolidated = totalDevengosConsolidated;
     }
 
     public List<SegmentExecutionResult> getSegmentResults() { return segmentResults; }
-    public BigDecimal getTotalDevengos() { return totalDevengos; }
+    public BigDecimal getTotalSalarioBase() { return totalSalarioBase; }
+    public BigDecimal getTotalPlusTransporte() { return totalPlusTransporte; }
+    public BigDecimal getTotalDevengosConsolidated() { return totalDevengosConsolidated; }
 }

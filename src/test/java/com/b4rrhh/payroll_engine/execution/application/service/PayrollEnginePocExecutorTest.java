@@ -44,12 +44,12 @@ class PayrollEnginePocExecutorTest {
                     new DefaultWorkingTimeSegmentBuilder(),
                     stubConceptRepository("ESP"),
                     new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
-                    new DefaultExecutionPlanBuilder(),
+                    new DefaultExecutionPlanBuilder(
+                            pocOperandRepo("ESP"),
+                            new RateByQuantityConfigurationValidator()),
                     new DefaultSegmentExecutionEngine(
                             new SegmentTechnicalValueResolver(),
-                            new RateByQuantityOperandResolver(
-                                    pocOperandRepo("ESP"),
-                                    new RateByQuantityConfigurationValidator())));
+                            new RateByQuantityOperandResolver()));
 
     private static final LocalDate APR_01 = LocalDate.of(2026, 4, 1);
     private static final LocalDate APR_14 = LocalDate.of(2026, 4, 14);
@@ -124,13 +124,13 @@ class PayrollEnginePocExecutorTest {
     }
 
     @Test
-    void totalDevengosEqualsSumOfBothSegments() {
+    void totalSalarioBaseEqualsSumOfBothSegments() {
         PayrollEnginePocResult result = executor.execute(referenceRequest());
         BigDecimal expected = result.getSegmentResults().stream()
                 .map(SegmentExecutionResult::getSalarioBaseAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        assertEquals(0, expected.compareTo(result.getTotalDevengos()),
-                "totalDevengos must equal the sum of segment salarioBaseAmounts");
+        assertEquals(0, expected.compareTo(result.getTotalSalarioBase()),
+                "totalSalarioBase must equal the sum of segment salarioBaseAmounts");
     }
 
     // ── validation tests ─────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ class PayrollEnginePocExecutorTest {
         //   salarioBase = 14 * 66.66666667 = 933.33 (scale 2 HALF_UP)
         // Segment 2: 16 days at 50%  → dailyRate = 2000/30 * 0.5 = 33.33333334
         //   salarioBase = 16 * 33.33333334 = 533.33 (scale 2 HALF_UP)
-        // totalDevengos = 933.33 + 533.33 = 1466.66
+        // totalSalarioBase = 933.33 + 533.33 = 1466.66
         PayrollEnginePocResult result = executor.execute(referenceRequest());
 
         BigDecimal seg1Amount = result.getSegmentResults().get(0).getSalarioBaseAmount();
@@ -174,8 +174,8 @@ class PayrollEnginePocExecutorTest {
                 "segment 1 salarioBase");
         assertEquals(0, new BigDecimal("533.33").compareTo(seg2Amount),
                 "segment 2 salarioBase");
-        assertEquals(0, new BigDecimal("1466.66").compareTo(result.getTotalDevengos()),
-                "totalDevengos");
+        assertEquals(0, new BigDecimal("1466.66").compareTo(result.getTotalSalarioBase()),
+                "totalSalarioBase");
     }
 
     @Test
@@ -186,7 +186,7 @@ class PayrollEnginePocExecutorTest {
                 List.of(new WorkingTimeWindow(APR_01, null, new BigDecimal("100")))
         );
         PayrollEnginePocResult result = executor.execute(zeroRequest);
-        assertEquals(0, BigDecimal.ZERO.compareTo(result.getTotalDevengos()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(result.getTotalSalarioBase()));
         assertEquals(0, BigDecimal.ZERO.compareTo(result.getSegmentResults().get(0).getSalarioBaseAmount()));
     }
 
@@ -197,17 +197,17 @@ class PayrollEnginePocExecutorTest {
                         new DefaultWorkingTimeSegmentBuilder(),
                         emptyConceptRepository(),
                         new DefaultConceptDependencyGraphService(emptyFeedRelationRepo()),
-                        new DefaultExecutionPlanBuilder(),
+                        new DefaultExecutionPlanBuilder(
+                                new PayrollConceptOperandRepository() {
+                                    @Override
+                                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+                                    @Override
+                                    public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
+                                },
+                                new RateByQuantityConfigurationValidator()),
                         new DefaultSegmentExecutionEngine(
                                 new SegmentTechnicalValueResolver(),
-                                new RateByQuantityOperandResolver(
-                                        new PayrollConceptOperandRepository() {
-                                            @Override
-                                            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                                            @Override
-                                            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
-                                        },
-                                        new RateByQuantityConfigurationValidator())));
+                                new RateByQuantityOperandResolver()));
         assertThrows(MissingPocConceptException.class, () ->
                 executorWithEmptyRepo.execute(referenceRequest()));
     }
@@ -215,8 +215,8 @@ class PayrollEnginePocExecutorTest {
     // ── repository stubs ─────────────────────────────────────────────────────
 
     /**
-     * Returns a stub concept repository seeded with the 3 PoC concepts for the given rule system.
-     * Concepts are assigned sequential IDs (1, 2, 3) so that feed relation lookup by ID works.
+     * Returns a stub concept repository seeded with the 6 PoC concepts for the given rule system.
+     * Concepts are assigned sequential IDs (1–6) so that feed relation lookup by ID works.
      */
     private static PayrollConceptRepository stubConceptRepository(String ruleSystemCode) {
         PayrollConcept diasPresencia = pocConcept(
@@ -228,11 +228,23 @@ class PayrollEnginePocExecutorTest {
         PayrollConcept salarioBase = pocConcept(
                 3L, ruleSystemCode, "SALARIO_BASE",
                 CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING);
+        PayrollConcept precioTransporte = pocConcept(
+                4L, ruleSystemCode, "T_PRECIO_TRANSPORTE",
+                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
+        PayrollConcept plusTransporte = pocConcept(
+                5L, ruleSystemCode, "PLUS_TRANSPORTE",
+                CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING);
+        PayrollConcept totalDevengosSegmento = pocConcept(
+                6L, ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO",
+                CalculationType.AGGREGATE, FunctionalNature.EARNING);
 
         Map<String, PayrollConcept> index = new HashMap<>();
         index.put("T_DIAS_PRESENCIA_SEGMENTO", diasPresencia);
         index.put("T_PRECIO_DIA", precioDia);
         index.put("SALARIO_BASE", salarioBase);
+        index.put("T_PRECIO_TRANSPORTE", precioTransporte);
+        index.put("PLUS_TRANSPORTE", plusTransporte);
+        index.put("TOTAL_DEVENGOS_SEGMENTO", totalDevengosSegmento);
 
         return new PayrollConceptRepository() {
             @Override
@@ -252,21 +264,38 @@ class PayrollEnginePocExecutorTest {
     }
 
     /**
-     * Returns a stub feed relation repository reflecting the PoC structure:
-     * SALARIO_BASE (id=3) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_DIA (id=2).
+     * Returns a stub feed relation repository reflecting the full PoC structure:
+     * <ul>
+     *   <li>SALARIO_BASE (id=3) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_DIA (id=2).</li>
+     *   <li>PLUS_TRANSPORTE (id=5) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_TRANSPORTE (id=4).</li>
+     *   <li>TOTAL_DEVENGOS_SEGMENTO (id=6) is fed by SALARIO_BASE (id=3) and PLUS_TRANSPORTE (id=5).</li>
+     * </ul>
      */
     private static PayrollConceptFeedRelationRepository pocFeedRelationRepo(String ruleSystemCode) {
-        PayrollObject diasPresenciaObj = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollObject precioDiaObj    = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
-        PayrollObject salarioBaseObj  = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
+        PayrollObject diasPresenciaObj    = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollObject precioDiaObj        = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
+        PayrollObject salarioBaseObj      = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
+        PayrollObject precioTransporteObj = pocObject(4L, ruleSystemCode, "T_PRECIO_TRANSPORTE");
+        PayrollObject plusTransporteObj   = pocObject(5L, ruleSystemCode, "PLUS_TRANSPORTE");
+        PayrollObject totalDevengosObj    = pocObject(6L, ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO");
 
         List<PayrollConceptFeedRelation> salarioBaseFeeds = List.of(
                 feedRelation(diasPresenciaObj, salarioBaseObj),
                 feedRelation(precioDiaObj, salarioBaseObj)
         );
+        List<PayrollConceptFeedRelation> plusTransporteFeeds = List.of(
+                feedRelation(diasPresenciaObj, plusTransporteObj),
+                feedRelation(precioTransporteObj, plusTransporteObj)
+        );
+        List<PayrollConceptFeedRelation> totalDevengosFeeds = List.of(
+                feedRelation(salarioBaseObj, totalDevengosObj),
+                feedRelation(plusTransporteObj, totalDevengosObj)
+        );
 
         Map<Long, List<PayrollConceptFeedRelation>> relsByTarget = new HashMap<>();
         relsByTarget.put(3L, salarioBaseFeeds);
+        relsByTarget.put(5L, plusTransporteFeeds);
+        relsByTarget.put(6L, totalDevengosFeeds);
 
         return new PayrollConceptFeedRelationRepository() {
             @Override
@@ -344,18 +373,29 @@ class PayrollEnginePocExecutorTest {
     }
 
     /**
-     * Returns a stub operand repository for the PoC concepts:
-     * SALARIO_BASE (id=3) has QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1) and RATE=T_PRECIO_DIA (id=2).
+     * Returns a stub operand repository for all PoC RATE_BY_QUANTITY concepts:
+     * <ul>
+     *   <li>SALARIO_BASE (id=3): QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1), RATE=T_PRECIO_DIA (id=2).</li>
+     *   <li>PLUS_TRANSPORTE (id=5): QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1), RATE=T_PRECIO_TRANSPORTE (id=4).</li>
+     * </ul>
      */
     private static PayrollConceptOperandRepository pocOperandRepo(String ruleSystemCode) {
-        PayrollObject targetObj = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
-        PayrollObject qObj      = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollObject rObj      = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
+        PayrollObject diasPresenciaObj    = pocObject(1L, ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollObject precioDiaObj        = pocObject(2L, ruleSystemCode, "T_PRECIO_DIA");
+        PayrollObject salarioBaseObj      = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
+        PayrollObject precioTransporteObj = pocObject(4L, ruleSystemCode, "T_PRECIO_TRANSPORTE");
+        PayrollObject plusTransporteObj   = pocObject(5L, ruleSystemCode, "PLUS_TRANSPORTE");
 
         List<PayrollConceptOperand> salarioBaseOperands = List.of(
-                new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, qObj,
+                new PayrollConceptOperand(null, salarioBaseObj, OperandRole.QUANTITY, diasPresenciaObj,
                         LocalDateTime.now(), LocalDateTime.now()),
-                new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
+                new PayrollConceptOperand(null, salarioBaseObj, OperandRole.RATE, precioDiaObj,
+                        LocalDateTime.now(), LocalDateTime.now())
+        );
+        List<PayrollConceptOperand> plusTransporteOperands = List.of(
+                new PayrollConceptOperand(null, plusTransporteObj, OperandRole.QUANTITY, diasPresenciaObj,
+                        LocalDateTime.now(), LocalDateTime.now()),
+                new PayrollConceptOperand(null, plusTransporteObj, OperandRole.RATE, precioTransporteObj,
                         LocalDateTime.now(), LocalDateTime.now())
         );
 
@@ -364,10 +404,121 @@ class PayrollEnginePocExecutorTest {
             public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                return ruleSystemCode.equals(rs) && "SALARIO_BASE".equals(code)
-                        ? salarioBaseOperands
-                        : Collections.emptyList();
+                if (!ruleSystemCode.equals(rs)) return Collections.emptyList();
+                if ("SALARIO_BASE".equals(code))    return salarioBaseOperands;
+                if ("PLUS_TRANSPORTE".equals(code)) return plusTransporteOperands;
+                return Collections.emptyList();
             }
         };
+    }
+
+    // ── scenario 2: PLUS_TRANSPORTE ───────────────────────────────────────────
+
+    @Test
+    void plusTransporteSegmentOneIs105() {
+        // T_PRECIO_TRANSPORTE = 7.50/day (fixed, no working-time scaling)
+        // Segment 1: T_DIAS_PRESENCIA_SEGMENTO = 14 → PLUS_TRANSPORTE = 14 * 7.50 = 105.00
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("105.00").compareTo(
+                result.getSegmentResults().get(0).getPlusTransporteAmount()),
+                "segment 1 plusTransporte");
+    }
+
+    @Test
+    void plusTransporteSegmentTwoIs120() {
+        // Segment 2: T_DIAS_PRESENCIA_SEGMENTO = 16 → PLUS_TRANSPORTE = 16 * 7.50 = 120.00
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("120.00").compareTo(
+                result.getSegmentResults().get(1).getPlusTransporteAmount()),
+                "segment 2 plusTransporte");
+    }
+
+    @Test
+    void totalPlusTransporteIs225() {
+        // 105.00 + 120.00 = 225.00
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("225.00").compareTo(result.getTotalPlusTransporte()),
+                "total plusTransporte");
+    }
+
+    @Test
+    void plusTransporteIsIndependentOfWorkingTimePercentage() {
+        // T_PRECIO_TRANSPORTE has no working-time scaling.
+        // Segment 2 (16 days at 50%) exceeds segment 1 (14 days at 100%) for transport
+        // because the day count, not the percentage, drives the transport allowance.
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+        BigDecimal seg1 = result.getSegmentResults().get(0).getPlusTransporteAmount();
+        BigDecimal seg2 = result.getSegmentResults().get(1).getPlusTransporteAmount();
+
+        assertTrue(seg2.compareTo(seg1) > 0,
+                "segment 2 plusTransporte (16d) must exceed segment 1 (14d) since rate is fixed");
+    }
+
+    @Test
+    void salarioBaseAndPlusTransporteAreConsistentForSegmentOne() {
+        // salarioBase = 933.33, plusTransporte = 105.00 → combined = 1038.33
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+        SegmentExecutionResult seg1 = result.getSegmentResults().get(0);
+
+        BigDecimal actualCombined = seg1.getSalarioBaseAmount().add(seg1.getPlusTransporteAmount());
+        assertEquals(0, new BigDecimal("1038.33").compareTo(actualCombined),
+                "segment 1: salarioBase + plusTransporte");
+    }
+
+    @Test
+    void salarioBaseAndPlusTransporteAreConsistentForSegmentTwo() {
+        // salarioBase = 533.33, plusTransporte = 120.00 → combined = 653.33
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+        SegmentExecutionResult seg2 = result.getSegmentResults().get(1);
+
+        BigDecimal actualCombined = seg2.getSalarioBaseAmount().add(seg2.getPlusTransporteAmount());
+        assertEquals(0, new BigDecimal("653.33").compareTo(actualCombined),
+                "segment 2: salarioBase + plusTransporte");
+    }
+
+    // ── scenario 3: TOTAL_DEVENGOS_SEGMENTO (AGGREGATE) ──────────────────────
+
+    @Test
+    void totalDevengosSegmentoSegmentOneIs1038_33() {
+        // TOTAL_DEVENGOS_SEGMENTO (AGGREGATE) = SALARIO_BASE + PLUS_TRANSPORTE
+        // Segment 1: 933.33 + 105.00 = 1038.33
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("1038.33").compareTo(
+                result.getSegmentResults().get(0).getTotalDevengosSegmentoAmount()),
+                "segment 1 TOTAL_DEVENGOS_SEGMENTO");
+    }
+
+    @Test
+    void totalDevengosSegmentoSegmentTwoIs653_33() {
+        // Segment 2: 533.33 + 120.00 = 653.33
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("653.33").compareTo(
+                result.getSegmentResults().get(1).getTotalDevengosSegmentoAmount()),
+                "segment 2 TOTAL_DEVENGOS_SEGMENTO");
+    }
+
+    @Test
+    void totalDevengosConsolidatedIs1691_66() {
+        // 1038.33 + 653.33 = 1691.66
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("1691.66").compareTo(result.getTotalDevengosConsolidated()),
+                "totalDevengosConsolidated");
+    }
+
+    @Test
+    void totalDevengosSegmentoMatchesSumOfItsSourcesForBothSegments() {
+        // Verifies that AGGREGATE correctly sums SALARIO_BASE + PLUS_TRANSPORTE per segment.
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+        for (SegmentExecutionResult seg : result.getSegmentResults()) {
+            BigDecimal expected = seg.getSalarioBaseAmount().add(seg.getPlusTransporteAmount());
+            assertEquals(0, expected.compareTo(seg.getTotalDevengosSegmentoAmount()),
+                    "TOTAL_DEVENGOS_SEGMENTO must equal salarioBase + plusTransporte for each segment");
+        }
     }
 }
