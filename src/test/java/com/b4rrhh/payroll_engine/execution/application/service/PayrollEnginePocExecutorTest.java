@@ -270,6 +270,12 @@ class PayrollEnginePocExecutorTest {
             public boolean existsByBusinessKey(String rs, String code) {
                 return ruleSystemCode.equals(rs) && index.containsKey(code);
             }
+            @Override
+            public java.util.List<PayrollConcept> findAllByCodes(String rs, java.util.Collection<String> codes) {
+                if (!ruleSystemCode.equals(rs)) return java.util.List.of();
+                return codes.stream().map(index::get).filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toList());
+            }
         };
     }
 
@@ -353,6 +359,10 @@ class PayrollEnginePocExecutorTest {
             @Override
             public boolean existsByBusinessKey(String rs, String code) {
                 return false;
+            }
+            @Override
+            public java.util.List<PayrollConcept> findAllByCodes(String rs, java.util.Collection<String> codes) {
+                return java.util.List.of();
             }
         };
     }

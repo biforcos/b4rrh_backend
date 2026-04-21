@@ -12,7 +12,10 @@ import com.b4rrhh.payroll_engine.object.infrastructure.persistence.PayrollObject
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.SpringDataPayrollObjectRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class PayrollConceptPersistenceAdapter implements PayrollConceptRepository {
@@ -56,6 +59,17 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
     @Override
     public boolean existsByBusinessKey(String ruleSystemCode, String conceptCode) {
         return conceptRepository.existsByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode);
+    }
+
+    @Override
+    public List<PayrollConcept> findAllByCodes(String ruleSystemCode, Collection<String> conceptCodes) {
+        if (conceptCodes == null || conceptCodes.isEmpty()) {
+            return List.of();
+        }
+        return conceptRepository.findAllByRuleSystemCodeAndConceptCodes(ruleSystemCode, conceptCodes)
+                .stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
     }
 
     private PayrollConceptEntity toEntity(PayrollConcept domain, PayrollObjectEntity objectEntity) {

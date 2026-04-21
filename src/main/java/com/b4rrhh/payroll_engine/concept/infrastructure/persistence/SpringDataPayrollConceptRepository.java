@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface SpringDataPayrollConceptRepository extends JpaRepository<PayrollConceptEntity, Long> {
@@ -28,5 +30,16 @@ public interface SpringDataPayrollConceptRepository extends JpaRepository<Payrol
     boolean existsByRuleSystemCodeAndConceptCode(
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("conceptCode") String conceptCode
+    );
+
+    @Query("""
+        select c from PayrollEngineConceptEntity c
+        where c.payrollObject.ruleSystemCode = :ruleSystemCode
+          and c.payrollObject.objectCode in :conceptCodes
+          and c.payrollObject.objectTypeCode = 'CONCEPT'
+        """)
+    List<PayrollConceptEntity> findAllByRuleSystemCodeAndConceptCodes(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("conceptCodes") Collection<String> conceptCodes
     );
 }
