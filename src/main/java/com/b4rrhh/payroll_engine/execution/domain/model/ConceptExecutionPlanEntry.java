@@ -14,10 +14,10 @@ import java.util.Map;
  * applied when the engine processes that concept. Entries must be provided in
  * topological order: dependencies before dependents.
  *
- * <h3>Operand wiring — RATE_BY_QUANTITY</h3>
- * <p>For {@code RATE_BY_QUANTITY} concepts, {@link #operands()} carries the pre-resolved
- * source identity for each required {@link OperandRole} (QUANTITY and RATE). This wiring
- * is resolved and validated once at plan-construction time by {@link
+ * <h3>Operand wiring — RATE_BY_QUANTITY and PERCENTAGE</h3>
+ * <p>For {@code RATE_BY_QUANTITY} concepts, {@link #operands()} carries QUANTITY and RATE source
+ * identities. For {@code PERCENTAGE} concepts, {@link #operands()} carries BASE and PERCENTAGE
+ * source identities. This wiring is resolved and validated once at plan-construction time by {@link
  * com.b4rrhh.payroll_engine.execution.application.service.DefaultExecutionPlanBuilder},
  * so per-segment execution can operate fully in-memory without repository access.
  * For other calculation types, {@code operands()} is an empty map.

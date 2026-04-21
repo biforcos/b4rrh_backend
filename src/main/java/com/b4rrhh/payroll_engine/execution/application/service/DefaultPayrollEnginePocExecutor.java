@@ -30,11 +30,12 @@ import java.util.List;
  *
  * <h3>Execution flow</h3>
  * <ol>
- *   <li>Load the six PoC concept definitions from {@link PayrollConceptRepository} by
+ *   <li>Load the eight PoC concept definitions from {@link PayrollConceptRepository} by
  *       business key ({@code ruleSystemCode} + {@code conceptCode}):
  *       {@code T_DIAS_PRESENCIA_SEGMENTO}, {@code T_PRECIO_DIA}, {@code SALARIO_BASE},
- *       {@code T_PRECIO_TRANSPORTE}, {@code PLUS_TRANSPORTE}, and
- *       {@code TOTAL_DEVENGOS_SEGMENTO}.</li>
+ *       {@code T_PRECIO_TRANSPORTE}, {@code PLUS_TRANSPORTE},
+ *       {@code TOTAL_DEVENGOS_SEGMENTO}, {@code T_PCT_IRPF}, and
+ *       {@code RETENCION_IRPF_TRAMO}.</li>
  *   <li>Derive the {@link ConceptDependencyGraph} from persisted feed relations via
  *       {@link ConceptDependencyGraphService}.</li>
  *   <li>Translate graph + concepts to an ordered, enriched execution plan via
@@ -47,13 +48,13 @@ import java.util.List;
  *       during per-segment execution: all wiring is pre-resolved in the plan.</li>
  *   <li>Extract per-concept amounts from the resulting state:
  *       {@code SALARIO_BASE}, {@code T_PRECIO_DIA}, {@code PLUS_TRANSPORTE},
- *       {@code TOTAL_DEVENGOS_SEGMENTO}. These extractions are PoC-specific and
- *       not yet generic.</li>
+ *       {@code TOTAL_DEVENGOS_SEGMENTO}, {@code RETENCION_IRPF_TRAMO}.
+ *       These extractions are PoC-specific and not yet generic.</li>
  *   <li>Consolidate period-level totals from the per-segment results.</li>
  * </ol>
  *
  * <h3>Concept loading and graph derivation</h3>
- * <p>The six PoC concepts are loaded from {@link PayrollConceptRepository} by business key
+ * <p>The eight PoC concepts are loaded from {@link PayrollConceptRepository} by business key
  * ({@code ruleSystemCode}, {@code conceptCode}). If any concept is absent,
  * {@link MissingPocConceptException} is thrown immediately.
  *
@@ -62,7 +63,7 @@ import java.util.List;
  * and whose source concept is in the loaded concept set are included.
  *
  * <h3>Plan enrichment and in-memory execution</h3>
- * <p>All operand wiring ({@code RATE_BY_QUANTITY}) and aggregate source lists
+ * <p>All operand wiring ({@code RATE_BY_QUANTITY}, {@code PERCENTAGE}) and aggregate source lists
  * ({@code AGGREGATE}) are resolved from repositories and the dependency graph at
  * plan-construction time by {@link ExecutionPlanBuilder}. Per-segment execution
  * reads only pre-populated in-memory state: no repository access occurs inside
@@ -78,7 +79,7 @@ import java.util.List;
  *       each {@code RATE_BY_QUANTITY} concept.</li>
  *   <li>Every operand source concept must be a declared graph dependency of its target.
  *       Misalignment is caught at plan-build time by
- *       {@link RateByQuantityConfigurationValidator} and causes
+ *       {@link OperandConfigurationValidator} and causes
  *       {@link com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException}.</li>
  *   <li>Every {@code AGGREGATE} concept must have at least one declared graph dependency.
  *       An empty source set is caught at plan-build time by
@@ -135,15 +136,17 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
 
         // Load the PoC concept definitions from the repository.
         String ruleSystemCode = request.getRuleSystemCode();
-        PayrollConcept diasPresencia       = loadPocConcept(ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
-        PayrollConcept precioDia            = loadPocConcept(ruleSystemCode, "T_PRECIO_DIA");
-        PayrollConcept salarioBase          = loadPocConcept(ruleSystemCode, "SALARIO_BASE");
-        PayrollConcept precioTransporte     = loadPocConcept(ruleSystemCode, "T_PRECIO_TRANSPORTE");
-        PayrollConcept plusTransporte       = loadPocConcept(ruleSystemCode, "PLUS_TRANSPORTE");
+        PayrollConcept diasPresencia         = loadPocConcept(ruleSystemCode, "T_DIAS_PRESENCIA_SEGMENTO");
+        PayrollConcept precioDia             = loadPocConcept(ruleSystemCode, "T_PRECIO_DIA");
+        PayrollConcept salarioBase           = loadPocConcept(ruleSystemCode, "SALARIO_BASE");
+        PayrollConcept precioTransporte      = loadPocConcept(ruleSystemCode, "T_PRECIO_TRANSPORTE");
+        PayrollConcept plusTransporte        = loadPocConcept(ruleSystemCode, "PLUS_TRANSPORTE");
         PayrollConcept totalDevengosSegmento = loadPocConcept(ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO");
+        PayrollConcept tPctIrpf              = loadPocConcept(ruleSystemCode, "T_PCT_IRPF");
+        PayrollConcept retencionIrpfTramo    = loadPocConcept(ruleSystemCode, "RETENCION_IRPF_TRAMO");
         List<PayrollConcept> pocConcepts = List.of(
                 diasPresencia, precioDia, salarioBase, precioTransporte, plusTransporte,
-                totalDevengosSegmento);
+                totalDevengosSegmento, tPctIrpf, retencionIrpfTramo);
 
         // Build the dependency graph from persisted feed relations.
         ConceptDependencyGraph graph = graphService.build(pocConcepts, period.getPeriodStart());
@@ -185,6 +188,8 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     new ConceptNodeIdentity(request.getRuleSystemCode(), "PLUS_TRANSPORTE"));
             BigDecimal totalDevengosSegmentoAmount = state.getRequiredAmount(
                     new ConceptNodeIdentity(request.getRuleSystemCode(), "TOTAL_DEVENGOS_SEGMENTO"));
+            BigDecimal retencionIrpfTramoAmount = state.getRequiredAmount(
+                    new ConceptNodeIdentity(request.getRuleSystemCode(), "RETENCION_IRPF_TRAMO"));
 
             segmentResults.add(new SegmentExecutionResult(
                     segment.getSegmentStart(),
@@ -197,7 +202,8 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     dailyRate,
                     salarioBaseAmount,
                     plusTransporteAmount,
-                    totalDevengosSegmentoAmount
+                    totalDevengosSegmentoAmount,
+                    retencionIrpfTramoAmount
             ));
         }
 
@@ -216,8 +222,13 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(AMOUNT_SCALE, ROUNDING);
 
+        BigDecimal totalRetencionIrpf = segmentResults.stream()
+                .map(SegmentExecutionResult::getRetencionIrpfTramoAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(AMOUNT_SCALE, ROUNDING);
+
         return new PayrollEnginePocResult(segmentResults, totalSalarioBase, totalPlusTransporte,
-                totalDevengosConsolidated);
+                totalDevengosConsolidated, totalRetencionIrpf);
     }
 
     /**

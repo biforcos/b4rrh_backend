@@ -20,6 +20,9 @@ import java.time.LocalDate;
  *       {@code T_DIAS_PRESENCIA_SEGMENTO * T_PRECIO_TRANSPORTE}.</li>
  *   <li>{@code totalDevengosSegmentoAmount} — amount of {@code TOTAL_DEVENGOS_SEGMENTO}
  *       (AGGREGATE): {@code SALARIO_BASE + PLUS_TRANSPORTE} for this segment.</li>
+ *   <li>{@code retencionIrpfTramoAmount} — amount of {@code RETENCION_IRPF_TRAMO}
+ *       (PERCENTAGE): {@code TOTAL_DEVENGOS_SEGMENTO × T_PCT_IRPF / 100} for this segment.
+ *       PoC: T_PCT_IRPF is a fixed technical percentage (15). Not a real tax engine.</li>
  * </ul>
  */
 public final class SegmentExecutionResult {
@@ -35,6 +38,7 @@ public final class SegmentExecutionResult {
     private final BigDecimal salarioBaseAmount;
     private final BigDecimal plusTransporteAmount;
     private final BigDecimal totalDevengosSegmentoAmount;
+    private final BigDecimal retencionIrpfTramoAmount;
 
     public SegmentExecutionResult(
             LocalDate segmentStart,
@@ -47,7 +51,8 @@ public final class SegmentExecutionResult {
             BigDecimal dailyRate,
             BigDecimal salarioBaseAmount,
             BigDecimal plusTransporteAmount,
-            BigDecimal totalDevengosSegmentoAmount
+            BigDecimal totalDevengosSegmentoAmount,
+            BigDecimal retencionIrpfTramoAmount
     ) {
         this.segmentStart = segmentStart;
         this.segmentEnd = segmentEnd;
@@ -60,6 +65,7 @@ public final class SegmentExecutionResult {
         this.salarioBaseAmount = salarioBaseAmount;
         this.plusTransporteAmount = plusTransporteAmount;
         this.totalDevengosSegmentoAmount = totalDevengosSegmentoAmount;
+        this.retencionIrpfTramoAmount = retencionIrpfTramoAmount;
     }
 
     public LocalDate getSegmentStart() { return segmentStart; }
@@ -73,4 +79,5 @@ public final class SegmentExecutionResult {
     public BigDecimal getSalarioBaseAmount() { return salarioBaseAmount; }
     public BigDecimal getPlusTransporteAmount() { return plusTransporteAmount; }
     public BigDecimal getTotalDevengosSegmentoAmount() { return totalDevengosSegmentoAmount; }
+    public BigDecimal getRetencionIrpfTramoAmount() { return retencionIrpfTramoAmount; }
 }

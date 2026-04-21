@@ -36,11 +36,12 @@ import java.util.Set;
  *       If no concept is found, fail fast with {@link MissingConceptDefinitionException}.</li>
  *   <li>For {@code DIRECT_AMOUNT} concepts, produce a plain {@link ConceptExecutionPlanEntry}
  *       (no operand wiring needed).</li>
- *   <li>For {@code RATE_BY_QUANTITY} concepts, additionally:
+ *   <li>For {@code RATE_BY_QUANTITY} and {@code PERCENTAGE} concepts, additionally:
  *       <ul>
  *         <li>Load operand definitions from {@link PayrollConceptOperandRepository}.</li>
- *         <li>Validate graph ↔ operand coherence via {@link RateByQuantityConfigurationValidator}.</li>
- *         <li>Resolve exactly one QUANTITY and one RATE operand source identity.</li>
+ *         <li>Validate graph ↔ operand coherence via {@link OperandConfigurationValidator}.</li>
+ *         <li>Resolve exactly two operand source identities (QUANTITY+RATE for RATE_BY_QUANTITY;
+ *             BASE+PERCENTAGE for PERCENTAGE).</li>
  *         <li>Embed the operand wiring into the plan entry.</li>
  *       </ul>
  *   </li>
@@ -55,11 +56,11 @@ import java.util.Set;
 public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
 
     private final PayrollConceptOperandRepository operandRepository;
-    private final RateByQuantityConfigurationValidator configurationValidator;
+    private final OperandConfigurationValidator configurationValidator;
 
     public DefaultExecutionPlanBuilder(
             PayrollConceptOperandRepository operandRepository,
-            RateByQuantityConfigurationValidator configurationValidator
+            OperandConfigurationValidator configurationValidator
     ) {
         this.operandRepository = operandRepository;
         this.configurationValidator = configurationValidator;
@@ -89,8 +90,8 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
     }
 
     /**
-     * Builds a single plan entry. For RATE_BY_QUANTITY, loads and validates operand
-     * definitions and embeds them into the entry. For AGGREGATE, resolves the source
+     * Builds a single plan entry. For RATE_BY_QUANTITY and PERCENTAGE, loads and validates
+     * operand definitions and embeds them into the entry. For AGGREGATE, resolves the source
      * concept identities from the dependency graph and embeds them into the entry.
      */
     private ConceptExecutionPlanEntry buildEntry(
@@ -121,10 +122,33 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             );
         }
 
-        if (calculationType != CalculationType.RATE_BY_QUANTITY) {
-            return new ConceptExecutionPlanEntry(identity, calculationType);
+        if (calculationType == CalculationType.RATE_BY_QUANTITY) {
+            return buildOperandWiredEntry(graph, identity, calculationType,
+                    OperandRole.QUANTITY, OperandRole.RATE);
         }
 
+        if (calculationType == CalculationType.PERCENTAGE) {
+            return buildOperandWiredEntry(graph, identity, calculationType,
+                    OperandRole.BASE, OperandRole.PERCENTAGE);
+        }
+
+        return new ConceptExecutionPlanEntry(identity, calculationType);
+    }
+
+    /**
+     * Shared helper for calculation types that require exactly two persisted operand roles
+     * ({@code RATE_BY_QUANTITY} uses QUANTITY+RATE; {@code PERCENTAGE} uses BASE+PERCENTAGE).
+     *
+     * <p>Loads operand definitions from the repository, validates graph coherence, resolves
+     * one source identity per role, and returns an enriched plan entry.
+     */
+    private ConceptExecutionPlanEntry buildOperandWiredEntry(
+            ConceptDependencyGraph graph,
+            ConceptNodeIdentity identity,
+            CalculationType calculationType,
+            OperandRole role1,
+            OperandRole role2
+    ) {
         String ruleSystemCode = identity.getRuleSystemCode();
         String conceptCode    = identity.getConceptCode();
 
@@ -133,18 +157,18 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
 
         configurationValidator.validate(ruleSystemCode, conceptCode, operands, declaredDeps);
 
-        PayrollConceptOperand quantityDef = findSingle(operands, OperandRole.QUANTITY, ruleSystemCode, conceptCode);
-        PayrollConceptOperand rateDef     = findSingle(operands, OperandRole.RATE,     ruleSystemCode, conceptCode);
+        PayrollConceptOperand def1 = findSingle(operands, role1, ruleSystemCode, conceptCode);
+        PayrollConceptOperand def2 = findSingle(operands, role2, ruleSystemCode, conceptCode);
 
-        ConceptNodeIdentity quantityId = new ConceptNodeIdentity(
-                ruleSystemCode, quantityDef.getSourceObject().getObjectCode());
-        ConceptNodeIdentity rateId = new ConceptNodeIdentity(
-                ruleSystemCode, rateDef.getSourceObject().getObjectCode());
+        ConceptNodeIdentity id1 = new ConceptNodeIdentity(
+                ruleSystemCode, def1.getSourceObject().getObjectCode());
+        ConceptNodeIdentity id2 = new ConceptNodeIdentity(
+                ruleSystemCode, def2.getSourceObject().getObjectCode());
 
         return new ConceptExecutionPlanEntry(
                 identity,
-                concept.getCalculationType(),
-                Map.of(OperandRole.QUANTITY, quantityId, OperandRole.RATE, rateId)
+                calculationType,
+                Map.of(role1, id1, role2, id2)
         );
     }
 

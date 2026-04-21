@@ -24,6 +24,9 @@ import java.util.List;
  *         <li>{@code RATE_BY_QUANTITY} — reads pre-resolved QUANTITY and RATE operand
  *             identities from the plan entry, fetches them from state, multiplies
  *             rate × quantity, rounds to 2 decimal places HALF_UP</li>
+ *         <li>{@code PERCENTAGE} — reads pre-resolved BASE and PERCENTAGE operand
+ *             identities from the plan entry, fetches them from state, computes
+ *             base × percentage / 100, rounds to 2 decimal places HALF_UP</li>
  *         <li>{@code AGGREGATE} — iterates the pre-resolved source list, sums the stored
  *             amount for each source, rounds to 2 decimal places HALF_UP</li>
  *       </ul>
@@ -31,16 +34,16 @@ import java.util.List;
  *   <li>Stores each result in {@link SegmentExecutionState}.</li>
  * </ol>
  *
- * <h3>In-memory RATE_BY_QUANTITY execution</h3>
- * <p>For each {@code RATE_BY_QUANTITY} entry, the engine reads the pre-resolved QUANTITY
- * and RATE source identities directly from
- * {@link ConceptExecutionPlanEntry#operands()} and delegates to
- * {@link RateByQuantityOperandResolver}. No repository access occurs at runtime.
+ * <h3>In-memory execution</h3>
+ * <p>For all non-DIRECT_AMOUNT calculation types, the engine reads pre-resolved source
+ * identities directly from {@link ConceptExecutionPlanEntry} and pre-computed amounts from
+ * {@link SegmentExecutionState}. No repository access occurs at runtime.
  *
  * <h3>Rounding policy</h3>
  * <ul>
  *   <li>Intermediate scale: 8, HALF_UP (delegated to {@link SegmentTechnicalValueResolver})</li>
  *   <li>RATE_BY_QUANTITY final result: scale 2, HALF_UP (delegated to {@link RateByQuantityOperandResolver})</li>
+ *   <li>PERCENTAGE final result: scale 2, HALF_UP (delegated to {@link PercentageConceptResolver})</li>
  *   <li>AGGREGATE final result: scale 2, HALF_UP (applied in-engine after summation)</li>
  * </ul>
  */
@@ -49,13 +52,16 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
     private final SegmentTechnicalValueResolver technicalValueResolver;
     private final RateByQuantityOperandResolver rateByQuantityResolver;
+    private final PercentageConceptResolver percentageConceptResolver;
 
     public DefaultSegmentExecutionEngine(
             SegmentTechnicalValueResolver technicalValueResolver,
-            RateByQuantityOperandResolver rateByQuantityResolver
+            RateByQuantityOperandResolver rateByQuantityResolver,
+            PercentageConceptResolver percentageConceptResolver
     ) {
         this.technicalValueResolver = technicalValueResolver;
         this.rateByQuantityResolver = rateByQuantityResolver;
+        this.percentageConceptResolver = percentageConceptResolver;
     }
 
     @Override
@@ -72,6 +78,9 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
                 case RATE_BY_QUANTITY ->
                         rateByQuantityResolver.resolve(entry, state);
+
+                case PERCENTAGE ->
+                        percentageConceptResolver.resolve(entry, state);
 
                 case AGGREGATE -> {
                     BigDecimal sum = BigDecimal.ZERO;

@@ -46,10 +46,11 @@ class PayrollEnginePocExecutorTest {
                     new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
                     new DefaultExecutionPlanBuilder(
                             pocOperandRepo("ESP"),
-                            new RateByQuantityConfigurationValidator()),
+                            new OperandConfigurationValidator()),
                     new DefaultSegmentExecutionEngine(
                             new SegmentTechnicalValueResolver(),
-                            new RateByQuantityOperandResolver()));
+                            new RateByQuantityOperandResolver(),
+                            new PercentageConceptResolver()));
 
     private static final LocalDate APR_01 = LocalDate.of(2026, 4, 1);
     private static final LocalDate APR_14 = LocalDate.of(2026, 4, 14);
@@ -204,10 +205,11 @@ class PayrollEnginePocExecutorTest {
                                     @Override
                                     public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
                                 },
-                                new RateByQuantityConfigurationValidator()),
+                                new OperandConfigurationValidator()),
                         new DefaultSegmentExecutionEngine(
                                 new SegmentTechnicalValueResolver(),
-                                new RateByQuantityOperandResolver()));
+                                new RateByQuantityOperandResolver(),
+                                new PercentageConceptResolver()));
         assertThrows(MissingPocConceptException.class, () ->
                 executorWithEmptyRepo.execute(referenceRequest()));
     }
@@ -215,8 +217,8 @@ class PayrollEnginePocExecutorTest {
     // ── repository stubs ─────────────────────────────────────────────────────
 
     /**
-     * Returns a stub concept repository seeded with the 6 PoC concepts for the given rule system.
-     * Concepts are assigned sequential IDs (1–6) so that feed relation lookup by ID works.
+     * Returns a stub concept repository seeded with the 8 PoC concepts for the given rule system.
+     * Concepts are assigned sequential IDs (1–8) so that feed relation lookup by ID works.
      */
     private static PayrollConceptRepository stubConceptRepository(String ruleSystemCode) {
         PayrollConcept diasPresencia = pocConcept(
@@ -237,6 +239,12 @@ class PayrollEnginePocExecutorTest {
         PayrollConcept totalDevengosSegmento = pocConcept(
                 6L, ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO",
                 CalculationType.AGGREGATE, FunctionalNature.EARNING);
+        PayrollConcept tPctIrpf = pocConcept(
+                7L, ruleSystemCode, "T_PCT_IRPF",
+                CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
+        PayrollConcept retencionIrpfTramo = pocConcept(
+                8L, ruleSystemCode, "RETENCION_IRPF_TRAMO",
+                CalculationType.PERCENTAGE, FunctionalNature.DEDUCTION);
 
         Map<String, PayrollConcept> index = new HashMap<>();
         index.put("T_DIAS_PRESENCIA_SEGMENTO", diasPresencia);
@@ -245,6 +253,8 @@ class PayrollEnginePocExecutorTest {
         index.put("T_PRECIO_TRANSPORTE", precioTransporte);
         index.put("PLUS_TRANSPORTE", plusTransporte);
         index.put("TOTAL_DEVENGOS_SEGMENTO", totalDevengosSegmento);
+        index.put("T_PCT_IRPF", tPctIrpf);
+        index.put("RETENCION_IRPF_TRAMO", retencionIrpfTramo);
 
         return new PayrollConceptRepository() {
             @Override
@@ -269,6 +279,7 @@ class PayrollEnginePocExecutorTest {
      *   <li>SALARIO_BASE (id=3) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_DIA (id=2).</li>
      *   <li>PLUS_TRANSPORTE (id=5) is fed by T_DIAS_PRESENCIA_SEGMENTO (id=1) and T_PRECIO_TRANSPORTE (id=4).</li>
      *   <li>TOTAL_DEVENGOS_SEGMENTO (id=6) is fed by SALARIO_BASE (id=3) and PLUS_TRANSPORTE (id=5).</li>
+     *   <li>RETENCION_IRPF_TRAMO (id=8) is fed by TOTAL_DEVENGOS_SEGMENTO (id=6) and T_PCT_IRPF (id=7).</li>
      * </ul>
      */
     private static PayrollConceptFeedRelationRepository pocFeedRelationRepo(String ruleSystemCode) {
@@ -278,6 +289,8 @@ class PayrollEnginePocExecutorTest {
         PayrollObject precioTransporteObj = pocObject(4L, ruleSystemCode, "T_PRECIO_TRANSPORTE");
         PayrollObject plusTransporteObj   = pocObject(5L, ruleSystemCode, "PLUS_TRANSPORTE");
         PayrollObject totalDevengosObj    = pocObject(6L, ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO");
+        PayrollObject tPctIrpfObj         = pocObject(7L, ruleSystemCode, "T_PCT_IRPF");
+        PayrollObject retencionIrpfObj    = pocObject(8L, ruleSystemCode, "RETENCION_IRPF_TRAMO");
 
         List<PayrollConceptFeedRelation> salarioBaseFeeds = List.of(
                 feedRelation(diasPresenciaObj, salarioBaseObj),
@@ -291,11 +304,16 @@ class PayrollEnginePocExecutorTest {
                 feedRelation(salarioBaseObj, totalDevengosObj),
                 feedRelation(plusTransporteObj, totalDevengosObj)
         );
+        List<PayrollConceptFeedRelation> retencionIrpfFeeds = List.of(
+                feedRelation(totalDevengosObj, retencionIrpfObj),
+                feedRelation(tPctIrpfObj, retencionIrpfObj)
+        );
 
         Map<Long, List<PayrollConceptFeedRelation>> relsByTarget = new HashMap<>();
         relsByTarget.put(3L, salarioBaseFeeds);
         relsByTarget.put(5L, plusTransporteFeeds);
         relsByTarget.put(6L, totalDevengosFeeds);
+        relsByTarget.put(8L, retencionIrpfFeeds);
 
         return new PayrollConceptFeedRelationRepository() {
             @Override
@@ -373,10 +391,11 @@ class PayrollEnginePocExecutorTest {
     }
 
     /**
-     * Returns a stub operand repository for all PoC RATE_BY_QUANTITY concepts:
+     * Returns a stub operand repository for all PoC RATE_BY_QUANTITY and PERCENTAGE concepts:
      * <ul>
      *   <li>SALARIO_BASE (id=3): QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1), RATE=T_PRECIO_DIA (id=2).</li>
      *   <li>PLUS_TRANSPORTE (id=5): QUANTITY=T_DIAS_PRESENCIA_SEGMENTO (id=1), RATE=T_PRECIO_TRANSPORTE (id=4).</li>
+     *   <li>RETENCION_IRPF_TRAMO (id=8): BASE=TOTAL_DEVENGOS_SEGMENTO (id=6), PERCENTAGE=T_PCT_IRPF (id=7).</li>
      * </ul>
      */
     private static PayrollConceptOperandRepository pocOperandRepo(String ruleSystemCode) {
@@ -385,6 +404,9 @@ class PayrollEnginePocExecutorTest {
         PayrollObject salarioBaseObj      = pocObject(3L, ruleSystemCode, "SALARIO_BASE");
         PayrollObject precioTransporteObj = pocObject(4L, ruleSystemCode, "T_PRECIO_TRANSPORTE");
         PayrollObject plusTransporteObj   = pocObject(5L, ruleSystemCode, "PLUS_TRANSPORTE");
+        PayrollObject totalDevengosObj    = pocObject(6L, ruleSystemCode, "TOTAL_DEVENGOS_SEGMENTO");
+        PayrollObject tPctIrpfObj         = pocObject(7L, ruleSystemCode, "T_PCT_IRPF");
+        PayrollObject retencionIrpfObj    = pocObject(8L, ruleSystemCode, "RETENCION_IRPF_TRAMO");
 
         List<PayrollConceptOperand> salarioBaseOperands = List.of(
                 new PayrollConceptOperand(null, salarioBaseObj, OperandRole.QUANTITY, diasPresenciaObj,
@@ -398,6 +420,12 @@ class PayrollEnginePocExecutorTest {
                 new PayrollConceptOperand(null, plusTransporteObj, OperandRole.RATE, precioTransporteObj,
                         LocalDateTime.now(), LocalDateTime.now())
         );
+        List<PayrollConceptOperand> retencionIrpfOperands = List.of(
+                new PayrollConceptOperand(null, retencionIrpfObj, OperandRole.BASE, totalDevengosObj,
+                        LocalDateTime.now(), LocalDateTime.now()),
+                new PayrollConceptOperand(null, retencionIrpfObj, OperandRole.PERCENTAGE, tPctIrpfObj,
+                        LocalDateTime.now(), LocalDateTime.now())
+        );
 
         return new PayrollConceptOperandRepository() {
             @Override
@@ -405,9 +433,12 @@ class PayrollEnginePocExecutorTest {
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                 if (!ruleSystemCode.equals(rs)) return Collections.emptyList();
-                if ("SALARIO_BASE".equals(code))    return salarioBaseOperands;
-                if ("PLUS_TRANSPORTE".equals(code)) return plusTransporteOperands;
-                return Collections.emptyList();
+                return switch (code) {
+                    case "SALARIO_BASE"         -> salarioBaseOperands;
+                    case "PLUS_TRANSPORTE"      -> plusTransporteOperands;
+                    case "RETENCION_IRPF_TRAMO" -> retencionIrpfOperands;
+                    default                     -> Collections.emptyList();
+                };
             }
         };
     }
@@ -519,6 +550,52 @@ class PayrollEnginePocExecutorTest {
             BigDecimal expected = seg.getSalarioBaseAmount().add(seg.getPlusTransporteAmount());
             assertEquals(0, expected.compareTo(seg.getTotalDevengosSegmentoAmount()),
                     "TOTAL_DEVENGOS_SEGMENTO must equal salarioBase + plusTransporte for each segment");
+        }
+    }
+
+    // ── scenario 4: RETENCION_IRPF_TRAMO (PERCENTAGE) ────────────────────────
+
+    @Test
+    void retencionIrpfSegmentOneIs155_75() {
+        // T_PCT_IRPF = 15 (fixed)
+        // Segment 1: TOTAL_DEVENGOS_SEGMENTO = 1038.33 → RETENCION = 1038.33 × 15 / 100 = 155.7495 → 155.75
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("155.75").compareTo(
+                result.getSegmentResults().get(0).getRetencionIrpfTramoAmount()),
+                "segment 1 RETENCION_IRPF_TRAMO");
+    }
+
+    @Test
+    void retencionIrpfSegmentTwoIs98_00() {
+        // Segment 2: TOTAL_DEVENGOS_SEGMENTO = 653.33 → RETENCION = 653.33 × 15 / 100 = 97.9995 → 98.00
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("98.00").compareTo(
+                result.getSegmentResults().get(1).getRetencionIrpfTramoAmount()),
+                "segment 2 RETENCION_IRPF_TRAMO");
+    }
+
+    @Test
+    void totalRetencionIrpfIs253_75() {
+        // 155.75 + 98.00 = 253.75
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+
+        assertEquals(0, new BigDecimal("253.75").compareTo(result.getTotalRetencionIrpf()),
+                "totalRetencionIrpf");
+    }
+
+    @Test
+    void retencionIrpfIsConsistentWithTotalDevengosForBothSegments() {
+        // Verifies RETENCION = TOTAL_DEVENGOS × 15 / 100 per segment (independent of arithmetic path).
+        PayrollEnginePocResult result = executor.execute(referenceRequest());
+        for (SegmentExecutionResult seg : result.getSegmentResults()) {
+            BigDecimal expected = seg.getTotalDevengosSegmentoAmount()
+                    .multiply(new BigDecimal("15"))
+                    .divide(new java.math.BigDecimal("100"), 8, java.math.RoundingMode.HALF_UP)
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            assertEquals(0, expected.compareTo(seg.getRetencionIrpfTramoAmount()),
+                    "RETENCION_IRPF_TRAMO must equal TOTAL_DEVENGOS × 15 / 100 for each segment");
         }
     }
 }

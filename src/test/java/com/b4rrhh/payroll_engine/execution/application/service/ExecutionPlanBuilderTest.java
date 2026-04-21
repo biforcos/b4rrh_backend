@@ -42,16 +42,19 @@ class ExecutionPlanBuilderTest {
     private static final String RS = "ESP";
 
     private final DefaultExecutionPlanBuilder builder =
-            new DefaultExecutionPlanBuilder(pocOperandRepo(), new RateByQuantityConfigurationValidator());
+            new DefaultExecutionPlanBuilder(pocOperandRepo(), new OperandConfigurationValidator());
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Returns a stub operand repository seeded with the PoC SALARIO_BASE operand definitions:
-     * QUANTITY=T_DIAS_PRESENCIA_SEGMENTO, RATE=T_PRECIO_DIA.
+     * Returns a stub operand repository seeded with:
+     * <ul>
+     *   <li>SALARIO_BASE operands: QUANTITY=T_DIAS_PRESENCIA_SEGMENTO, RATE=T_PRECIO_DIA</li>
+     *   <li>RETENCION_IRPF_TRAMO operands: BASE=TOTAL_DEVENGOS_SEGMENTO, PERCENTAGE=T_PCT_IRPF</li>
+     * </ul>
      */
     private static PayrollConceptOperandRepository pocOperandRepo() {
-        PayrollObject targetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
+        PayrollObject salarioTargetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
                 "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
         PayrollObject qObj = new PayrollObject(1L, RS, PayrollObjectTypeCode.CONCEPT,
                 "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
@@ -59,9 +62,23 @@ class ExecutionPlanBuilderTest {
                 "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
 
         List<PayrollConceptOperand> salarioBaseOperands = List.of(
-                new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, qObj,
+                new PayrollConceptOperand(null, salarioTargetObj, OperandRole.QUANTITY, qObj,
                         LocalDateTime.now(), LocalDateTime.now()),
-                new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
+                new PayrollConceptOperand(null, salarioTargetObj, OperandRole.RATE, rObj,
+                        LocalDateTime.now(), LocalDateTime.now())
+        );
+
+        PayrollObject retencionTargetObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject totalDevengosObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject tPctIrpfObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
+                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+
+        List<PayrollConceptOperand> retencionIrpfOperands = List.of(
+                new PayrollConceptOperand(null, retencionTargetObj, OperandRole.BASE, totalDevengosObj,
+                        LocalDateTime.now(), LocalDateTime.now()),
+                new PayrollConceptOperand(null, retencionTargetObj, OperandRole.PERCENTAGE, tPctIrpfObj,
                         LocalDateTime.now(), LocalDateTime.now())
         );
 
@@ -70,7 +87,11 @@ class ExecutionPlanBuilderTest {
             public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                return "SALARIO_BASE".equals(code) ? salarioBaseOperands : Collections.emptyList();
+                return switch (code) {
+                    case "SALARIO_BASE"        -> salarioBaseOperands;
+                    case "RETENCION_IRPF_TRAMO" -> retencionIrpfOperands;
+                    default                    -> Collections.emptyList();
+                };
             }
         };
     }
@@ -327,7 +348,7 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? rateOnly : Collections.emptyList();
                     }
                 },
-                new RateByQuantityConfigurationValidator());
+                new OperandConfigurationValidator());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -365,7 +386,7 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? duplicateQuantity : Collections.emptyList();
                     }
                 },
-                new RateByQuantityConfigurationValidator());
+                new OperandConfigurationValidator());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -409,7 +430,7 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? mismatchedOperands : Collections.emptyList();
                     }
                 },
-                new RateByQuantityConfigurationValidator());
+                new OperandConfigurationValidator());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -505,5 +526,182 @@ class ExecutionPlanBuilderTest {
 
         assertThrows(MissingAggregateSourcesException.class,
                 () -> builder.build(graph, List.of(total)));
+    }
+
+    // ── PERCENTAGE enrichment ─────────────────────────────────────────────────
+
+    /**
+     * Builds a minimal graph for RETENCION_IRPF_TRAMO (PERCENTAGE):
+     * BASE = TOTAL_DEVENGOS_SEGMENTO, PERCENTAGE = T_PCT_IRPF.
+     */
+    private static ConceptDependencyGraph percentageGraph(
+            PayrollConcept totalDevengos,
+            PayrollConcept tPctIrpf,
+            PayrollConcept retencionIrpf
+    ) {
+        return new ConceptDependencyGraphBuilder()
+                .addNode(totalDevengos)
+                .addNode(tPctIrpf)
+                .addOperandDependency(retencionIrpf, totalDevengos)
+                .addOperandDependency(retencionIrpf, tPctIrpf)
+                .build();
+    }
+
+    @Test
+    void retencionIrpfPlanEntryContainsBaseOperand() {
+        PayrollConcept totalDevengos  = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
+        PayrollConcept tPctIrpf       = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf  = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
+
+        List<ConceptExecutionPlanEntry> plan = builder.build(
+                percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
+                List.of(totalDevengos, tPctIrpf, retencionIrpf));
+
+        ConceptExecutionPlanEntry entry = plan.stream()
+                .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
+                .findFirst().orElseThrow();
+
+        assertEquals(id("TOTAL_DEVENGOS_SEGMENTO"), entry.operands().get(OperandRole.BASE));
+    }
+
+    @Test
+    void retencionIrpfPlanEntryContainsPercentageOperand() {
+        PayrollConcept totalDevengos  = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
+        PayrollConcept tPctIrpf       = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf  = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
+
+        List<ConceptExecutionPlanEntry> plan = builder.build(
+                percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
+                List.of(totalDevengos, tPctIrpf, retencionIrpf));
+
+        ConceptExecutionPlanEntry entry = plan.stream()
+                .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
+                .findFirst().orElseThrow();
+
+        assertEquals(id("T_PCT_IRPF"), entry.operands().get(OperandRole.PERCENTAGE));
+    }
+
+    @Test
+    void retencionIrpfAppearsAfterItsDependenciesInPlan() {
+        PayrollConcept totalDevengos  = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
+        PayrollConcept tPctIrpf       = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf  = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
+
+        List<ConceptExecutionPlanEntry> plan = builder.build(
+                percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
+                List.of(retencionIrpf, tPctIrpf, totalDevengos));
+
+        int retencionIdx = indexOf(plan, "RETENCION_IRPF_TRAMO");
+        int totalIdx     = indexOf(plan, "TOTAL_DEVENGOS_SEGMENTO");
+        int pctIdx       = indexOf(plan, "T_PCT_IRPF");
+
+        org.junit.jupiter.api.Assertions.assertTrue(totalIdx < retencionIdx,
+                "TOTAL_DEVENGOS_SEGMENTO must appear before RETENCION_IRPF_TRAMO");
+        org.junit.jupiter.api.Assertions.assertTrue(pctIdx < retencionIdx,
+                "T_PCT_IRPF must appear before RETENCION_IRPF_TRAMO");
+    }
+
+    @Test
+    void missingBaseOperandDefinitionForPercentageConceptThrows() {
+        // Repo returns PERCENTAGE only — BASE is missing → MissingOperandDefinitionException
+        PayrollObject retencionObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject pctObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
+                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+        List<PayrollConceptOperand> pctOnly = List.of(
+                new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
+                        LocalDateTime.now(), LocalDateTime.now()));
+
+        DefaultExecutionPlanBuilder missingBaseBuilder = new DefaultExecutionPlanBuilder(
+                new PayrollConceptOperandRepository() {
+                    @Override
+                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+                    @Override
+                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
+                        return "RETENCION_IRPF_TRAMO".equals(code) ? pctOnly : Collections.emptyList();
+                    }
+                },
+                new OperandConfigurationValidator());
+
+        PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
+        PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
+
+        assertThrows(MissingOperandDefinitionException.class,
+                () -> missingBaseBuilder.build(
+                        percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf)));
+    }
+
+    @Test
+    void missingPercentageOperandDefinitionForPercentageConceptThrows() {
+        // Repo returns BASE only — PERCENTAGE is missing → MissingOperandDefinitionException
+        PayrollObject retencionObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject baseObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+        List<PayrollConceptOperand> baseOnly = List.of(
+                new PayrollConceptOperand(null, retencionObj, OperandRole.BASE, baseObj,
+                        LocalDateTime.now(), LocalDateTime.now()));
+
+        DefaultExecutionPlanBuilder missingPctBuilder = new DefaultExecutionPlanBuilder(
+                new PayrollConceptOperandRepository() {
+                    @Override
+                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+                    @Override
+                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
+                        return "RETENCION_IRPF_TRAMO".equals(code) ? baseOnly : Collections.emptyList();
+                    }
+                },
+                new OperandConfigurationValidator());
+
+        PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
+        PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
+
+        assertThrows(MissingOperandDefinitionException.class,
+                () -> missingPctBuilder.build(
+                        percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf)));
+    }
+
+    @Test
+    void graphMismatchForPercentageConceptThrows() {
+        // Repo returns BASE=TOTAL_DEVENGOS which is NOT declared as dep in graph → OperandGraphMismatchException
+        PayrollObject retencionObj   = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject totalDevengosObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+        PayrollObject pctObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
+                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+        List<PayrollConceptOperand> operandsPointingToUndeclaredDep = List.of(
+                new PayrollConceptOperand(null, retencionObj, OperandRole.BASE, totalDevengosObj,
+                        LocalDateTime.now(), LocalDateTime.now()),
+                new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
+                        LocalDateTime.now(), LocalDateTime.now()));
+
+        DefaultExecutionPlanBuilder mismatchBuilder = new DefaultExecutionPlanBuilder(
+                new PayrollConceptOperandRepository() {
+                    @Override
+                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+                    @Override
+                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
+                        return "RETENCION_IRPF_TRAMO".equals(code) ? operandsPointingToUndeclaredDep : Collections.emptyList();
+                    }
+                },
+                new OperandConfigurationValidator());
+
+        // Graph: only T_PCT_IRPF is declared as dep — TOTAL_DEVENGOS_SEGMENTO is absent
+        PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",           CalculationType.DIRECT_AMOUNT);
+        PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO", CalculationType.PERCENTAGE);
+        ConceptDependencyGraph graphWithoutTotalDevengos = new ConceptDependencyGraphBuilder()
+                .addNode(tPctIrpf)
+                .addOperandDependency(retencionIrpf, tPctIrpf)
+                .build();
+
+        assertThrows(OperandGraphMismatchException.class,
+                () -> mismatchBuilder.build(
+                        graphWithoutTotalDevengos,
+                        List.of(tPctIrpf, retencionIrpf)));
     }
 }

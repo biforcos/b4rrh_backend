@@ -4,7 +4,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptResultException;
-import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedCalculationTypeException;
+import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPlannedOperandException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
@@ -38,7 +38,8 @@ class SegmentExecutionEngineTest {
     private final DefaultSegmentExecutionEngine engine =
             new DefaultSegmentExecutionEngine(
                     new SegmentTechnicalValueResolver(),
-                    new RateByQuantityOperandResolver());
+                    new RateByQuantityOperandResolver(),
+                    new PercentageConceptResolver());
 
     /** Builds an enriched SALARIO_BASE plan entry with QUANTITY and RATE operand wiring. */
     private static ConceptExecutionPlanEntry enrichedSalarioBaseEntry() {
@@ -202,13 +203,17 @@ class SegmentExecutionEngineTest {
     }
 
     @Test
-    void unsupportedCalculationTypeThrows() {
+    void percentageWithoutOperandWiringThrowsMissingPlannedOperandException() {
+        // PERCENTAGE entry created without operand wiring (as if the plan was not built by DefaultExecutionPlanBuilder).
+        // This is the closest reachable analogue to the former unsupported-type test:
+        // all current CalculationType values are handled by the engine, so the default branch
+        // is only reachable if a new enum value is added and the engine switch is not updated.
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("SOME_CONCEPT"), CalculationType.PERCENTAGE)
         );
 
-        assertThrows(UnsupportedCalculationTypeException.class, () -> engine.execute(plan, ctx));
+        assertThrows(MissingPlannedOperandException.class, () -> engine.execute(plan, ctx));
     }
 
     @Test
@@ -266,6 +271,55 @@ class SegmentExecutionEngineTest {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 aggregateTotalDevengosEntry()
+        );
+
+        assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx));
+    }
+
+    // ── PERCENTAGE ─────────────────────────────────────────────────────────
+
+    /** Builds an enriched RETENCION_IRPF_TRAMO entry: BASE=TOTAL_DEVENGOS_SEGMENTO, PERCENTAGE=T_PCT_IRPF. */
+    private static ConceptExecutionPlanEntry percentageRetencionIrpfEntry() {
+        return new ConceptExecutionPlanEntry(
+                node("RETENCION_IRPF_TRAMO"),
+                CalculationType.PERCENTAGE,
+                Map.of(
+                        OperandRole.BASE,       node("TOTAL_DEVENGOS_SEGMENTO"),
+                        OperandRole.PERCENTAGE, node("T_PCT_IRPF")
+                )
+        );
+    }
+
+    @Test
+    void percentageConceptComputesCorrectlyAfterDependencies() {
+        // Full plan: all 7 concepts including RETENCION_IRPF_TRAMO
+        // Segment 1 reference: TOTAL_DEVENGOS_SEGMENTO = 1038.33, T_PCT_IRPF = 15
+        // RETENCION_IRPF_TRAMO = 1038.33 × 15 / 100 = 155.7495 → scale 2 HALF_UP = 155.75
+        SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
+        List<ConceptExecutionPlanEntry> plan = List.of(
+                new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
+                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"),              CalculationType.DIRECT_AMOUNT),
+                enrichedSalarioBaseEntry(),
+                new ConceptExecutionPlanEntry(node("T_PRECIO_TRANSPORTE"),       CalculationType.DIRECT_AMOUNT),
+                enrichedPlusTransporteEntry(),
+                aggregateTotalDevengosEntry(),
+                new ConceptExecutionPlanEntry(node("T_PCT_IRPF"),                CalculationType.DIRECT_AMOUNT),
+                percentageRetencionIrpfEntry()
+        );
+
+        SegmentExecutionState state = engine.execute(plan, ctx);
+
+        assertEquals(0, new BigDecimal("155.75").compareTo(
+                state.getRequiredAmount(node("RETENCION_IRPF_TRAMO"))),
+                "RETENCION_IRPF_TRAMO = 1038.33 × 15 / 100 = 155.75");
+    }
+
+    @Test
+    void percentageMissingSourceInStateThrows() {
+        // Execute RETENCION_IRPF_TRAMO before TOTAL_DEVENGOS_SEGMENTO is in state
+        SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
+        List<ConceptExecutionPlanEntry> plan = List.of(
+                percentageRetencionIrpfEntry()
         );
 
         assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx));

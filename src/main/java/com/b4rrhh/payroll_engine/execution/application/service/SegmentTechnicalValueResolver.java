@@ -8,23 +8,36 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Resolves the amount of a technical DIRECT_AMOUNT concept from a {@link SegmentCalculationContext}.
+ * Resolves the amount of a technical {@code DIRECT_AMOUNT} concept from a
+ * {@link SegmentCalculationContext}.
  *
- * <p>This component is PoC-scoped. It is NOT a universal operand resolver.
- * It covers only the minimal set of technical concepts needed for SALARIO_BASE calculation:
+ * <h3>PoC scope — hardcoded values only</h3>
+ * <p>This component is PoC-scoped. All values are hardcoded or derived directly from the
+ * segment context. It is <strong>not</strong> a rule engine, collective agreement resolver,
+ * or tax calculation service. It exists solely to supply the fixed technical inputs required
+ * for the PoC execution plan.
  *
+ * <h3>Supported concepts</h3>
  * <ul>
- *   <li>{@code T_DIAS_PRESENCIA_SEGMENTO} = inclusive days in the segment</li>
- *   <li>{@code T_SALARIO_MENSUAL} = monthly salary amount from context</li>
- *   <li>{@code T_FACTOR_JORNADA} = workingTimePercentage / 100</li>
- *   <li>{@code T_PRECIO_DIA} = monthlySalaryAmount / daysInPeriod * (workingTimePercentage / 100)</li>
+ *   <li>{@code T_DIAS_PRESENCIA_SEGMENTO} — inclusive days in the segment</li>
+ *   <li>{@code T_SALARIO_MENSUAL} — monthly salary amount from context</li>
+ *   <li>{@code T_FACTOR_JORNADA} — workingTimePercentage / 100</li>
+ *   <li>{@code T_PRECIO_DIA} — monthlySalaryAmount / daysInPeriod × (workingTimePercentage / 100)</li>
+ *   <li>{@code T_PRECIO_TRANSPORTE} — fixed daily transport rate (hardcoded PoC value)</li>
+ *   <li>{@code T_PCT_IRPF} — fixed IRPF withholding percentage (hardcoded PoC value)</li>
  * </ul>
  *
  * <h3>Rounding policy</h3>
  * <ul>
  *   <li>Intermediate divisions use scale 8, rounding HALF_UP.</li>
- *   <li>T_PRECIO_DIA result kept at intermediate scale; final rounding occurs at SALARIO_BASE level.</li>
+ *   <li>{@code T_PRECIO_DIA} result kept at intermediate scale; final rounding occurs at the
+ *       consuming concept level.</li>
  * </ul>
+ *
+ * <h3>PoC warning</h3>
+ * <p>In a real implementation, {@code T_PRECIO_TRANSPORTE} would come from a collective
+ * agreement table and {@code T_PCT_IRPF} would come from employee tax data. Neither is
+ * computed here.
  */
 @Component
 public class SegmentTechnicalValueResolver {
@@ -62,6 +75,12 @@ public class SegmentTechnicalValueResolver {
             // PoC value; in a real implementation this would come from a collective agreement table.
             case "T_PRECIO_TRANSPORTE" ->
                     new BigDecimal("7.50");
+
+            // Fixed IRPF withholding rate for the PoC.
+            // This is NOT a tax engine. It is a single flat percentage hardcoded for PoC testing only.
+            // In a real implementation this value would come from employee tax data or collective agreement.
+            case "T_PCT_IRPF" ->
+                    new BigDecimal("15");
 
             default -> throw new UnsupportedTechnicalConceptException(conceptCode);
         };
