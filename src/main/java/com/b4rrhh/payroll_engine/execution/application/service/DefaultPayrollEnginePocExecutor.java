@@ -4,7 +4,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.dependency.application.service.ConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPocConceptException;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.PayrollEnginePocRequest;
@@ -15,12 +14,10 @@ import com.b4rrhh.payroll_engine.segment.domain.model.CalculationPeriod;
 import com.b4rrhh.payroll_engine.segment.domain.model.CalculationSegment;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import com.b4rrhh.payroll_engine.segment.domain.model.WorkingTimeSegmentBuilder;
-import com.b4rrhh.payroll_engine.segment.domain.model.WorkingTimeWindow;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -159,7 +156,7 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
         List<SegmentExecutionResult> segmentResults = new ArrayList<>(segments.size());
 
         for (CalculationSegment segment : segments) {
-            BigDecimal workingTimePercentage = resolveWorkingTimePercentage(
+                        BigDecimal workingTimePercentage = PocExecutionProjectionHelper.resolveWorkingTimePercentage(
                     segment.getSegmentStart(), request.getWorkingTimeWindows());
 
             SegmentCalculationContext context = new SegmentCalculationContext(
@@ -180,55 +177,20 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
 
             SegmentExecutionState state = segmentExecutionEngine.execute(plan, context);
 
-            BigDecimal salarioBaseAmount = state.getRequiredAmount(
-                    new ConceptNodeIdentity(request.getRuleSystemCode(), "SALARIO_BASE"));
-            BigDecimal dailyRate = state.getRequiredAmount(
-                    new ConceptNodeIdentity(request.getRuleSystemCode(), "T_PRECIO_DIA"));
-            BigDecimal plusTransporteAmount = state.getRequiredAmount(
-                    new ConceptNodeIdentity(request.getRuleSystemCode(), "PLUS_TRANSPORTE"));
-            BigDecimal totalDevengosSegmentoAmount = state.getRequiredAmount(
-                    new ConceptNodeIdentity(request.getRuleSystemCode(), "TOTAL_DEVENGOS_SEGMENTO"));
-            BigDecimal retencionIrpfTramoAmount = state.getRequiredAmount(
-                    new ConceptNodeIdentity(request.getRuleSystemCode(), "RETENCION_IRPF_TRAMO"));
-
-            segmentResults.add(new SegmentExecutionResult(
-                    segment.getSegmentStart(),
-                    segment.getSegmentEnd(),
-                    segment.isFirstSegment(),
-                    segment.isLastSegment(),
+            segmentResults.add(PocExecutionProjectionHelper.toSegmentExecutionResult(
+                    request.getRuleSystemCode(),
+                    segment,
                     daysInPeriod,
-                    segment.lengthInDaysInclusive(),
                     workingTimePercentage,
-                    dailyRate,
-                    salarioBaseAmount,
-                    plusTransporteAmount,
-                    totalDevengosSegmentoAmount,
-                    retencionIrpfTramoAmount
+                    state
             ));
         }
 
-        BigDecimal totalSalarioBase = segmentResults.stream()
-                .map(SegmentExecutionResult::getSalarioBaseAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(AMOUNT_SCALE, ROUNDING);
+        PocExecutionProjectionHelper.PocTotals totals =
+                PocExecutionProjectionHelper.consolidateTotals(segmentResults, AMOUNT_SCALE, ROUNDING);
 
-        BigDecimal totalPlusTransporte = segmentResults.stream()
-                .map(SegmentExecutionResult::getPlusTransporteAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(AMOUNT_SCALE, ROUNDING);
-
-        BigDecimal totalDevengosConsolidated = segmentResults.stream()
-                .map(SegmentExecutionResult::getTotalDevengosSegmentoAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(AMOUNT_SCALE, ROUNDING);
-
-        BigDecimal totalRetencionIrpf = segmentResults.stream()
-                .map(SegmentExecutionResult::getRetencionIrpfTramoAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(AMOUNT_SCALE, ROUNDING);
-
-        return new PayrollEnginePocResult(segmentResults, totalSalarioBase, totalPlusTransporte,
-                totalDevengosConsolidated, totalRetencionIrpf);
+        return new PayrollEnginePocResult(segmentResults, totals.totalSalarioBase(), totals.totalPlusTransporte(),
+                totals.totalDevengosConsolidated(), totals.totalRetencionIrpf());
     }
 
     /**
@@ -241,15 +203,4 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                 .orElseThrow(() -> new MissingPocConceptException(ruleSystemCode, conceptCode));
     }
 
-    private BigDecimal resolveWorkingTimePercentage(LocalDate date, List<WorkingTimeWindow> windows) {
-        for (WorkingTimeWindow window : windows) {
-            boolean afterOrOnStart = !date.isBefore(window.getStartDate());
-            boolean beforeOrOnEnd  = window.getEndDate() == null || !date.isAfter(window.getEndDate());
-            if (afterOrOnStart && beforeOrOnEnd) {
-                return window.getWorkingTimePercentage();
-            }
-        }
-        throw new IllegalStateException(
-                "No working time window covers date " + date + ". Period coverage should have been validated.");
-    }
 }
