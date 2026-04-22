@@ -221,6 +221,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
 
         run = calculationRunRepository.save(run.incrementTotalEligible());
 
+        LocalDate[] unitPeriodBounds = parsePayrollPeriodBounds(unit.payrollPeriodCode());
+
         CalculationClaim claim;
         try {
             claim = calculationClaimRepository.save(new CalculationClaim(
@@ -256,13 +258,29 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     unit.payrollPeriodCode(),
                     unit.payrollTypeCode(),
                     unit.presenceNumber(),
+                    unitPeriodBounds[0],
+                    unitPeriodBounds[1],
                     calculationEngineCode,
                     calculationEngineVersion
             ));
+            saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {
                 return calculationRunRepository.save(run.incrementTotalNotValid());
             }
             return calculationRunRepository.save(run.incrementTotalCalculated());
+        } catch (PayrollLaunchInputMissingException ex) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("reasonCode", ex.getReasonCode());
+            details.putAll(ex.getDetails());
+            saveRunMessage(
+                    run,
+                    "UNIT_ELIGIBLE_REAL_SKIPPED_MISSING_INPUT",
+                    "WARNING",
+                    ex.getMessage(),
+                    details,
+                    unit
+            );
+            return calculationRunRepository.save(run.incrementTotalSkippedNotEligible());
         } catch (RuntimeException ex) {
             saveRunMessage(
                     run,
@@ -276,6 +294,36 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         } finally {
             calculationClaimRepository.deleteById(claim.id());
         }
+    }
+
+    private void saveEligibleRealSuccessMessageIfPresent(
+            CalculationRun run,
+            PayrollCalculationUnit unit,
+            Payroll payroll
+    ) {
+        payroll.getWarnings().stream()
+                .filter(w -> "ELIGIBLE_REAL_EXECUTION".equals(w.warningCode()))
+                .findFirst()
+                .ifPresent(warning -> {
+                    LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+                    if (warning.detailsJson() != null && !warning.detailsJson().isBlank()) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> parsed = objectMapper.readValue(warning.detailsJson(), Map.class);
+                            details.putAll(parsed);
+                        } catch (Exception ignored) {
+                            details.put("rawDetails", warning.detailsJson());
+                        }
+                    }
+                    saveRunMessage(
+                            run,
+                            "UNIT_ELIGIBLE_REAL_EXECUTED",
+                            "INFO",
+                            "Eligible real payroll execution completed",
+                            details,
+                            unit
+                    );
+                });
     }
 
     private List<PayrollLaunchEmployeeTarget> resolveEmployees(

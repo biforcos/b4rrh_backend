@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import java.time.LocalDate;
+
 public record CalculatePayrollUnitCommand(
         String ruleSystemCode,
         String employeeTypeCode,
@@ -7,6 +9,8 @@ public record CalculatePayrollUnitCommand(
         String payrollPeriodCode,
         String payrollTypeCode,
         Integer presenceNumber,
+        LocalDate periodStart,
+        LocalDate periodEnd,
         String calculationEngineCode,
         String calculationEngineVersion
 ) {

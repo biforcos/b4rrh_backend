@@ -206,6 +206,33 @@ class LaunchPayrollCalculationServiceTest {
     }
 
     @Test
+    void launchSkipsUnitExplicitlyWhenEligibleRealInputIsMissing() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(31L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenThrow(new PayrollLaunchInputMissingException(
+                        "MONTHLY_SALARY_NOT_CONFIGURED",
+                        "Eligible real execution skipped: monthly salary is not configured",
+                        java.util.Map.of("executionMode", "ELIGIBLE_REAL")
+                ));
+
+        CalculationRun run = service.launch(singleEmployeeCommand());
+
+        assertEquals(CalculationRunStatuses.COMPLETED, run.status());
+        assertEquals(1, run.totalSkippedNotEligible());
+        assertEquals(0, run.totalErrors());
+
+        ArgumentCaptor<CalculationRunMessage> captor = ArgumentCaptor.forClass(CalculationRunMessage.class);
+        verify(calculationRunMessageRepository, atLeastOnce()).save(captor.capture());
+        assertTrue(captor.getAllValues().stream()
+                .anyMatch(m -> "UNIT_ELIGIBLE_REAL_SKIPPED_MISSING_INPUT".equals(m.messageCode())));
+    }
+
+    @Test
     void launchCountsCandidatesAsExpandedPresenceBasedUnits() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(

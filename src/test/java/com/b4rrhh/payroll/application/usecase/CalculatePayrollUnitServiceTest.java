@@ -1,19 +1,31 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
+import com.b4rrhh.payroll_engine.planning.application.service.EligiblePayrollExecutionRequest;
+import com.b4rrhh.payroll_engine.planning.application.service.EligiblePayrollExecutionResult;
+import com.b4rrhh.payroll_engine.planning.application.service.ExecuteEligiblePayrollUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,10 +33,22 @@ class CalculatePayrollUnitServiceTest {
 
     @Mock
     private CalculatePayrollUseCase calculatePayrollUseCase;
+        @Mock
+        private ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase;
+        @Mock
+        private PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
 
     @Test
-    void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
-        CalculatePayrollUnitService service = new CalculatePayrollUnitService(calculatePayrollUseCase);
+        void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.FAKE);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+            calculatePayrollUseCase,
+            executeEligiblePayrollUseCase,
+            payrollLaunchEligibleInputLookupPort,
+            properties
+        );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
 
@@ -35,6 +59,8 @@ class CalculatePayrollUnitServiceTest {
                 "202501",
                 "ORD",
                 2,
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(2025, 1, 31),
                 "ENGINE",
                 "1.0"
         ));
@@ -65,6 +91,121 @@ class CalculatePayrollUnitServiceTest {
         assertEquals("PAYROLL_LAUNCH", command.contextSnapshots().get(0).getSourceVerticalCode());
         assertTrue(command.contextSnapshots().get(0).getSourceBusinessKeyJson().contains("EMP001"));
         assertTrue(command.contextSnapshots().get(0).getSnapshotPayloadJson().contains("DETERMINISTIC_FAKE"));
+        verifyNoInteractions(executeEligiblePayrollUseCase);
+        }
+
+        @Test
+        void eligibleRealMode_buildsRequestAndCallsRealFlow() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.ELIGIBLE_REAL);
+        properties.setEligibleRealMonthlySalaryAmount(new BigDecimal("2000.00"));
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+            calculatePayrollUseCase,
+            executeEligiblePayrollUseCase,
+            payrollLaunchEligibleInputLookupPort,
+            properties
+        );
+
+        when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
+            "ESP", "INTERNAL", "EMP001", 2,
+            LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)
+        )).thenReturn(Optional.of(new PayrollLaunchEligibleInputContext(
+            "ES01",
+            "AGR_OFFICE",
+            List.of(new PayrollLaunchWorkingTimeWindowContext(
+                LocalDate.of(2025, 1, 1),
+                null,
+                new BigDecimal("100")
+            ))
+        )));
+
+        when(executeEligiblePayrollUseCase.execute(org.mockito.ArgumentMatchers.any(EligiblePayrollExecutionRequest.class)))
+            .thenReturn(new EligiblePayrollExecutionResult(
+                new com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext("ESP", "ES01", "AGR_OFFICE", "INTERNAL"),
+                LocalDate.of(2025, 1, 1),
+                null,
+                List.of(),
+                new BigDecimal("1466.66"),
+                new BigDecimal("225.00"),
+                new BigDecimal("1691.66"),
+                new BigDecimal("253.75")
+            ));
+
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+            .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+            "ESP",
+            "INTERNAL",
+            "EMP001",
+            "202501",
+            "ORD",
+            2,
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(2025, 1, 31),
+            "ENGINE",
+            "1.0"
+        ));
+
+        ArgumentCaptor<EligiblePayrollExecutionRequest> eligibleCaptor =
+            ArgumentCaptor.forClass(EligiblePayrollExecutionRequest.class);
+        verify(executeEligiblePayrollUseCase).execute(eligibleCaptor.capture());
+
+        EligiblePayrollExecutionRequest request = eligibleCaptor.getValue();
+        assertEquals("ESP", request.getRuleSystemCode());
+        assertEquals("INTERNAL", request.getEmployeeTypeCode());
+        assertEquals("EMP001", request.getEmployeeNumber());
+        assertEquals("ES01", request.getCompanyCode());
+        assertEquals("AGR_OFFICE", request.getAgreementCode());
+        assertEquals(LocalDate.of(2025, 1, 1), request.getPeriodStart());
+        assertEquals(LocalDate.of(2025, 1, 31), request.getPeriodEnd());
+        assertEquals(0, new BigDecimal("2000.00").compareTo(request.getMonthlySalaryAmount()));
+        assertEquals(1, request.getWorkingTimeWindows().size());
+        }
+
+        @Test
+        void eligibleRealMode_missingSalaryConfiguration_throwsExplicitException() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.ELIGIBLE_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+            calculatePayrollUseCase,
+            executeEligiblePayrollUseCase,
+            payrollLaunchEligibleInputLookupPort,
+            properties
+        );
+
+        when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
+            "ESP", "INTERNAL", "EMP001", 2,
+            LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)
+        )).thenReturn(Optional.of(new PayrollLaunchEligibleInputContext(
+            "ES01",
+            null,
+            List.of(new PayrollLaunchWorkingTimeWindowContext(
+                LocalDate.of(2025, 1, 1),
+                null,
+                new BigDecimal("100")
+            ))
+        )));
+
+        PayrollLaunchInputMissingException ex = assertThrows(PayrollLaunchInputMissingException.class, () ->
+            service.calculate(new CalculatePayrollUnitCommand(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "ORD",
+                2,
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 1, 31),
+                "ENGINE",
+                "1.0"
+            ))
+        );
+
+        assertEquals("MONTHLY_SALARY_NOT_CONFIGURED", ex.getReasonCode());
+        verifyNoInteractions(executeEligiblePayrollUseCase);
     }
 
     private Payroll payroll() {

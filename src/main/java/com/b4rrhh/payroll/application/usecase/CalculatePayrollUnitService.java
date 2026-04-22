@@ -1,27 +1,56 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
+import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
+import com.b4rrhh.payroll_engine.planning.application.service.EligiblePayrollExecutionRequest;
+import com.b4rrhh.payroll_engine.planning.application.service.EligiblePayrollExecutionResult;
+import com.b4rrhh.payroll_engine.planning.application.service.ExecuteEligiblePayrollUseCase;
+import com.b4rrhh.payroll_engine.segment.domain.model.WorkingTimeWindow;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase {
 
     private final CalculatePayrollUseCase calculatePayrollUseCase;
+    private final ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase;
+    private final PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
+    private final PayrollLaunchExecutionProperties payrollLaunchExecutionProperties;
 
-    public CalculatePayrollUnitService(CalculatePayrollUseCase calculatePayrollUseCase) {
+    public CalculatePayrollUnitService(
+            CalculatePayrollUseCase calculatePayrollUseCase,
+            ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase,
+            PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort,
+            PayrollLaunchExecutionProperties payrollLaunchExecutionProperties
+    ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
+        this.executeEligiblePayrollUseCase = executeEligiblePayrollUseCase;
+        this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
+        this.payrollLaunchExecutionProperties = payrollLaunchExecutionProperties;
     }
 
     @Override
     public Payroll calculate(CalculatePayrollUnitCommand command) {
+        if (payrollLaunchExecutionProperties.getMode() == PayrollExecutionMode.ELIGIBLE_REAL) {
+            return calculateEligibleReal(command);
+        }
+        return calculateFake(command);
+    }
+
+    private Payroll calculateFake(CalculatePayrollUnitCommand command) {
         return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
                 command.ruleSystemCode(),
                 command.employeeTypeCode(),
@@ -39,6 +68,189 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 List.of(fakeSnapshot(command))
         ));
     }
+
+            private Payroll calculateEligibleReal(CalculatePayrollUnitCommand command) {
+            Optional<PayrollLaunchEligibleInputContext> inputOpt = payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.presenceNumber(),
+                command.periodStart(),
+                command.periodEnd()
+            );
+
+            if (inputOpt.isEmpty()) {
+                throw new PayrollLaunchInputMissingException(
+                    "ELIGIBLE_INPUT_CONTEXT_NOT_FOUND",
+                    "Eligible real execution skipped: launcher input context is missing for payroll unit",
+                    Map.of(
+                        "executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name(),
+                        "employeeTypeCode", command.employeeTypeCode(),
+                        "employeeNumber", command.employeeNumber(),
+                        "presenceNumber", command.presenceNumber()
+                    )
+                );
+            }
+
+            PayrollLaunchEligibleInputContext input = inputOpt.get();
+            if (input.companyCode() == null || input.companyCode().isBlank()) {
+                throw new PayrollLaunchInputMissingException(
+                    "COMPANY_CODE_MISSING",
+                    "Eligible real execution skipped: companyCode is required but missing in launcher context",
+                    Map.of("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name())
+                );
+            }
+
+            BigDecimal monthlySalaryAmount = payrollLaunchExecutionProperties.getEligibleRealMonthlySalaryAmount();
+            if (monthlySalaryAmount == null) {
+                throw new PayrollLaunchInputMissingException(
+                    "MONTHLY_SALARY_NOT_CONFIGURED",
+                    "Eligible real execution skipped: payroll.launch.execution.eligible-real-monthly-salary-amount is not configured",
+                    Map.of("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name())
+                );
+            }
+
+            List<WorkingTimeWindow> workingTimeWindows = input.workingTimeWindows().stream()
+                .map(this::toWorkingTimeWindow)
+                .toList();
+            if (workingTimeWindows.isEmpty()) {
+                throw new PayrollLaunchInputMissingException(
+                    "WORKING_TIME_WINDOWS_MISSING",
+                    "Eligible real execution skipped: no working time windows overlap payroll period",
+                    Map.of("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name())
+                );
+            }
+
+            EligiblePayrollExecutionResult eligibleResult = executeEligiblePayrollUseCase.execute(
+                new EligiblePayrollExecutionRequest(
+                    command.ruleSystemCode(),
+                    command.employeeTypeCode(),
+                    command.employeeNumber(),
+                    input.companyCode(),
+                    input.agreementCode(),
+                    command.periodStart(),
+                    command.periodEnd(),
+                    monthlySalaryAmount,
+                    workingTimeWindows
+                )
+            );
+
+            return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.payrollPeriodCode(),
+                command.payrollTypeCode(),
+                command.presenceNumber(),
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.now(),
+                command.calculationEngineCode(),
+                command.calculationEngineVersion(),
+                List.of(eligibleRealWarning(command, eligibleResult)),
+                eligibleRealConcepts(command, eligibleResult),
+                List.of(eligibleRealSnapshot(command, eligibleResult))
+            ));
+            }
+
+            private WorkingTimeWindow toWorkingTimeWindow(PayrollLaunchWorkingTimeWindowContext window) {
+            return new WorkingTimeWindow(window.startDate(), window.endDate(), window.workingTimePercentage());
+            }
+
+            private List<PayrollConcept> eligibleRealConcepts(
+                CalculatePayrollUnitCommand command,
+                EligiblePayrollExecutionResult result
+            ) {
+            return List.of(
+                new PayrollConcept(1, "TOTAL_SALARIO_BASE", "Total salario base", result.getTotalSalarioBase(),
+                    BigDecimal.ONE, result.getTotalSalarioBase(), "EARNING", command.payrollPeriodCode(), 1),
+                new PayrollConcept(2, "TOTAL_PLUS_TRANSPORTE", "Total plus transporte", result.getTotalPlusTransporte(),
+                    BigDecimal.ONE, result.getTotalPlusTransporte(), "EARNING", command.payrollPeriodCode(), 2),
+                new PayrollConcept(3, "TOTAL_DEVENGOS_CONSOLIDATED", "Total devengos consolidated", result.getTotalDevengosConsolidated(),
+                    BigDecimal.ONE, result.getTotalDevengosConsolidated(), "GROSS", command.payrollPeriodCode(), 3),
+                new PayrollConcept(4, "TOTAL_RETENCION_IRPF", "Total retencion IRPF", result.getTotalRetencionIrpf().negate(),
+                    BigDecimal.ONE, result.getTotalRetencionIrpf(), "DEDUCTION", command.payrollPeriodCode(), 4)
+            );
+            }
+
+            private PayrollWarning eligibleRealWarning(
+                CalculatePayrollUnitCommand command,
+                EligiblePayrollExecutionResult result
+            ) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name());
+            details.put("employeeTypeCode", command.employeeTypeCode());
+            details.put("employeeNumber", command.employeeNumber());
+            details.put("totalSalarioBase", result.getTotalSalarioBase());
+            details.put("totalPlusTransporte", result.getTotalPlusTransporte());
+            details.put("totalDevengosConsolidated", result.getTotalDevengosConsolidated());
+            details.put("totalRetencionIrpf", result.getTotalRetencionIrpf());
+            details.put("segmentCount", result.getSegmentResults().size());
+            return new PayrollWarning(
+                null,
+                null,
+                "ELIGIBLE_REAL_EXECUTION",
+                "INFO",
+                "Payroll generated by eligible real payroll_engine execution",
+                toJson(details)
+            );
+            }
+
+            private PayrollContextSnapshot eligibleRealSnapshot(
+                CalculatePayrollUnitCommand command,
+                EligiblePayrollExecutionResult result
+            ) {
+            Map<String, Object> sourceKey = new LinkedHashMap<>();
+            sourceKey.put("ruleSystemCode", command.ruleSystemCode());
+            sourceKey.put("employeeTypeCode", command.employeeTypeCode());
+            sourceKey.put("employeeNumber", command.employeeNumber());
+            sourceKey.put("payrollPeriodCode", command.payrollPeriodCode());
+            sourceKey.put("payrollTypeCode", command.payrollTypeCode());
+            sourceKey.put("presenceNumber", command.presenceNumber());
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name());
+            payload.put("referenceDate", result.getReferenceDate().toString());
+            payload.put("segmentCount", result.getSegmentResults().size());
+            int eligibleConceptCount = result.getPlanningResult() == null
+                ? 0
+                : result.getPlanningResult().eligibleConcepts().size();
+            int expandedConceptCount = result.getPlanningResult() == null
+                ? 0
+                : result.getPlanningResult().expandedConcepts().size();
+            payload.put("eligibleConceptCount", eligibleConceptCount);
+            payload.put("expandedConceptCount", expandedConceptCount);
+
+            return new PayrollContextSnapshot(
+                "EMPLOYEE_PAYROLL_CONTEXT",
+                "PAYROLL_ENGINE",
+                toJson(sourceKey),
+                toJson(payload)
+            );
+            }
+
+            private String toJson(Map<String, Object> values) {
+            StringBuilder out = new StringBuilder();
+            out.append("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                if (!first) {
+                out.append(",");
+                }
+                first = false;
+                out.append("\"").append(entry.getKey()).append("\":");
+                Object value = entry.getValue();
+                if (value == null) {
+                out.append("null");
+                } else if (value instanceof Number || value instanceof Boolean) {
+                out.append(value);
+                } else {
+                out.append("\"").append(String.valueOf(value).replace("\"", "\\\"")).append("\"");
+                }
+            }
+            out.append("}");
+            return out.toString();
+            }
 
 
     private List<PayrollConcept> fakeConcepts(CalculatePayrollUnitCommand command) {
@@ -64,7 +276,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 "INFO",
                 "Payroll generated by deterministic fake calculator",
                 "{\"calculationEngineCode\":\"" + command.calculationEngineCode() + "\",\"calculationEngineVersion\":\""
-                        + command.calculationEngineVersion() + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
+                    + command.calculationEngineVersion() + "\",\"executionMode\":\"" + PayrollExecutionMode.FAKE.name() + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
         ));
     }
 
@@ -77,7 +289,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         + "\",\"payrollPeriodCode\":\"" + command.payrollPeriodCode() + "\",\"payrollTypeCode\":\""
                         + command.payrollTypeCode() + "\",\"presenceNumber\":" + command.presenceNumber() + "}",
                 "{\"calculationEngineCode\":\"" + command.calculationEngineCode() + "\",\"calculationEngineVersion\":\""
-                        + command.calculationEngineVersion() + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
+                    + command.calculationEngineVersion() + "\",\"executionMode\":\"" + PayrollExecutionMode.FAKE.name()
+                    + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
         );
     }
 }
