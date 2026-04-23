@@ -6,6 +6,7 @@ import com.b4rrhh.payroll.basesalary.domain.EmployeeAgreementCategoryLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectActivationLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectBindingLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowLookupPort;
+import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -49,22 +50,23 @@ public class CalculateBaseSalaryService {
      * @param employeeTypeCode the employee type (e.g., "INTERNAL")
      * @param employeeNumber the employee business key
      * @param effectiveDate the date for which to calculate
-          * @return the monthly base salary
-     * @throws IllegalArgumentException if required data is missing
+     * @return the monthly base salary
+     * @throws PayrollConceptNotApplicableException if BASE_SALARY is not activated for the agreement
+     * @throws IllegalStateException if required configuration or lookup fails
      */
     public BigDecimal calculateBaseSalary(
             String ruleSystemCode,
             String employeeTypeCode,
             String employeeNumber,
             LocalDate effectiveDate
-    ) {
+    ) throws PayrollConceptNotApplicableException {
         // Step 0: Resolve employee ID from business key
         Long employeeId = employeeByBusinessKeyLookup.resolveEmployeeId(
                 ruleSystemCode,
                 employeeTypeCode,
                 employeeNumber
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "Employee not found: " + employeeNumber
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: Employee not found: " + employeeNumber
         ));
 
         // Step 1: Resolve agreement code from employee + date
@@ -79,8 +81,8 @@ public class CalculateBaseSalaryService {
         String categoryCode = employeeAgreementCategoryLookup.resolveAgreementCategoryCode(
                 employeeId,
                 effectiveDate
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No agreement category found for employee " + employeeNumber + " on " + effectiveDate
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No agreement category found for employee " + employeeNumber + " on " + effectiveDate
         ));
 
         // Step 3: Verify concept activation
@@ -92,7 +94,7 @@ public class CalculateBaseSalaryService {
                 "BASE_SALARY"
         );
         if (!baseSalaryActivated) {
-            throw new IllegalArgumentException(
+            throw new PayrollConceptNotApplicableException(
                     "BASE_SALARY is not active for agreement " + agreementCode
             );
         }
@@ -103,8 +105,8 @@ public class CalculateBaseSalaryService {
                 "AGREEMENT",
                 agreementCode,
                 "BASE_SALARY_TABLE"
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No base salary table binding found for agreement " + agreementCode
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No base salary table binding found for agreement " + agreementCode
         ));
 
         // Step 5: Resolve table row and get monthly value
@@ -113,8 +115,8 @@ public class CalculateBaseSalaryService {
                 tableCode,
                 categoryCode,
                 effectiveDate
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No base salary row found in table " + tableCode +
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No base salary row found in table " + tableCode +
                         " for category " + categoryCode + " on " + effectiveDate
         ));
     }

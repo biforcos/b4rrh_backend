@@ -7,6 +7,7 @@ import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeByBusine
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectActivationLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
+import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -104,7 +105,7 @@ class CalculateBaseSalaryServiceRealAgreementFlywayIntegrationTest {
     }
 
     @Test
-    void calculateBaseSalaryResolvesMonthlyValueFromRealAgreementTableRow() {
+    void calculateBaseSalaryResolvesMonthlyValueFromRealAgreementTableRow() throws PayrollConceptNotApplicableException {
         LocalDate effectiveDate = LocalDate.of(2026, 1, 15);
         String employeeNumber = "EMP" + (empCounter++);
 
@@ -125,7 +126,7 @@ class CalculateBaseSalaryServiceRealAgreementFlywayIntegrationTest {
     }
 
     @Test
-    void calculateBaseSalaryForDifferentCategories() {
+    void calculateBaseSalaryForDifferentCategories() throws PayrollConceptNotApplicableException {
         LocalDate effectiveDate = LocalDate.of(2026, 1, 15);
 
         // Category G1
@@ -192,7 +193,7 @@ class CalculateBaseSalaryServiceRealAgreementFlywayIntegrationTest {
             deactivateBaseSalaryActivation();
 
             assertThrows(
-                IllegalArgumentException.class,
+                PayrollConceptNotApplicableException.class,
                 () -> service.calculateBaseSalary(
                     RULE_SYSTEM_CODE,
                     EMPLOYEE_TYPE_CODE,

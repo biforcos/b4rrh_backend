@@ -6,6 +6,7 @@ import com.b4rrhh.payroll.basesalary.domain.EmployeeAgreementCategoryLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectActivationLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectBindingLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowLookupPort;
+import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -60,22 +61,22 @@ public class CalculateAgreementPlusService {
      * @param employeeNumber   the employee business key
      * @param effectiveDate    the date for which to calculate
      * @return the monthly agreement plus amount
-     * @throws IllegalArgumentException if required configuration is missing or inactive
-     * @throws IllegalStateException    if no valid labor classification exists
+     * @throws PayrollConceptNotApplicableException if PLUS_CONVENIO is not activated
+     * @throws IllegalStateException    if configuration or lookup fails
      */
     public BigDecimal calculateAgreementPlus(
             String ruleSystemCode,
             String employeeTypeCode,
             String employeeNumber,
             LocalDate effectiveDate
-    ) {
+    ) throws PayrollConceptNotApplicableException {
         // Step 0: Resolve employee ID from business key
         Long employeeId = employeeByBusinessKeyLookup.resolveEmployeeId(
                 ruleSystemCode,
                 employeeTypeCode,
                 employeeNumber
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "Employee not found: " + employeeNumber
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: Employee not found: " + employeeNumber
         ));
 
         // Step 1: Resolve agreement context (ruleSystemCode + agreementCode)
@@ -90,8 +91,8 @@ public class CalculateAgreementPlusService {
         String categoryCode = employeeAgreementCategoryLookup.resolveAgreementCategoryCode(
                 employeeId,
                 effectiveDate
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No agreement category found for employee " + employeeNumber + " on " + effectiveDate
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No agreement category found for employee " + employeeNumber + " on " + effectiveDate
         ));
 
         // Step 3: Verify PLUS_CONVENIO concept activation
@@ -103,7 +104,7 @@ public class CalculateAgreementPlusService {
                 "PLUS_CONVENIO"
         );
         if (!plusConvenioActivated) {
-            throw new IllegalArgumentException(
+            throw new PayrollConceptNotApplicableException(
                     "PLUS_CONVENIO is not active for agreement " + agreementCode
             );
         }
@@ -114,8 +115,8 @@ public class CalculateAgreementPlusService {
                 "AGREEMENT",
                 agreementCode,
                 "AGREEMENT_PLUS_TABLE"
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No agreement plus table binding found for agreement " + agreementCode
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No agreement plus table binding found for agreement " + agreementCode
         ));
 
         // Step 5: Resolve table row and return monthly value
@@ -124,8 +125,8 @@ public class CalculateAgreementPlusService {
                 tableCode,
                 categoryCode,
                 effectiveDate
-        ).orElseThrow(() -> new IllegalArgumentException(
-                "No agreement plus row found in table " + tableCode +
+        ).orElseThrow(() -> new IllegalStateException(
+                "Configuration error: No agreement plus row found in table " + tableCode +
                         " for category " + categoryCode + " on " + effectiveDate
         ));
     }

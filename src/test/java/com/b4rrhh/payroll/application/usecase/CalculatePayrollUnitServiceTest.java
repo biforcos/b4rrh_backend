@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
+import com.b4rrhh.payroll.application.service.RealPayrollConceptLinesCalculator;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
@@ -37,7 +38,8 @@ class CalculatePayrollUnitServiceTest {
         private ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase;
         @Mock
         private PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
-
+        @Mock
+    private RealPayrollConceptLinesCalculator calculateRealPayrollConceptLinesService;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -47,7 +49,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             executeEligiblePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
-            properties
+            properties,
+            calculateRealPayrollConceptLinesService
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -104,7 +107,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             executeEligiblePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
-            properties
+            properties,
+            calculateRealPayrollConceptLinesService
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -173,7 +177,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             executeEligiblePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
-            properties
+            properties,
+            calculateRealPayrollConceptLinesService
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -206,6 +211,177 @@ class CalculatePayrollUnitServiceTest {
 
         assertEquals("MONTHLY_SALARY_NOT_CONFIGURED", ex.getReasonCode());
         verifyNoInteractions(executeEligiblePayrollUseCase);
+    }
+
+    @Test
+    void minimalRealMode_bothConceptsActive_persistsTwoConcepts() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+                calculatePayrollUseCase,
+                executeEligiblePayrollUseCase,
+                payrollLaunchEligibleInputLookupPort,
+                properties,
+                calculateRealPayrollConceptLinesService
+        );
+
+        when(calculateRealPayrollConceptLinesService.calculateConceptLines(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(
+                        new com.b4rrhh.payroll.domain.model.PayrollConcept(
+                                1, "BASE_SALARY", "Base salary", new BigDecimal("1500.00"),
+                                BigDecimal.ONE, new BigDecimal("1500.00"), "EARNING", "202501", 1),
+                        new com.b4rrhh.payroll.domain.model.PayrollConcept(
+                                2, "PLUS_CONVENIO", "Agreement bonus", new BigDecimal("250.00"),
+                                BigDecimal.ONE, new BigDecimal("250.00"), "EARNING", "202501", 2)
+                ));
+
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+                .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+                "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
+                LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
+        ));
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+
+        CalculatePayrollCommand command = captor.getValue();
+        assertEquals(2, command.concepts().size(), "Should persist both BASE_SALARY and PLUS_CONVENIO");
+        assertEquals("BASE_SALARY", command.concepts().get(0).getConceptCode());
+        assertEquals("PLUS_CONVENIO", command.concepts().get(1).getConceptCode());
+    }
+
+    @Test
+    void minimalRealMode_onlyBaseSalaryActive_persistsOneBaseSalaryConcept() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+                calculatePayrollUseCase,
+                executeEligiblePayrollUseCase,
+                payrollLaunchEligibleInputLookupPort,
+                properties,
+                calculateRealPayrollConceptLinesService
+        );
+
+        when(calculateRealPayrollConceptLinesService.calculateConceptLines(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(
+                        new com.b4rrhh.payroll.domain.model.PayrollConcept(
+                                1, "BASE_SALARY", "Base salary", new BigDecimal("1500.00"),
+                                BigDecimal.ONE, new BigDecimal("1500.00"), "EARNING", "202501", 1)
+                ));
+
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+                .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+                "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
+                LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
+        ));
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+
+        CalculatePayrollCommand command = captor.getValue();
+        assertEquals(1, command.concepts().size(), "Should persist only BASE_SALARY");
+        assertEquals("BASE_SALARY", command.concepts().get(0).getConceptCode());
+    }
+
+    @Test
+    void minimalRealMode_onlyPlusConvenioActive_persistsOnePlusConvenioConcept() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+                calculatePayrollUseCase,
+                executeEligiblePayrollUseCase,
+                payrollLaunchEligibleInputLookupPort,
+                properties,
+                calculateRealPayrollConceptLinesService
+        );
+
+        when(calculateRealPayrollConceptLinesService.calculateConceptLines(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(
+                        new com.b4rrhh.payroll.domain.model.PayrollConcept(
+                                2, "PLUS_CONVENIO", "Agreement bonus", new BigDecimal("250.00"),
+                                BigDecimal.ONE, new BigDecimal("250.00"), "EARNING", "202501", 2)
+                ));
+
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+                .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+                "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
+                LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
+        ));
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+
+        CalculatePayrollCommand command = captor.getValue();
+        assertEquals(1, command.concepts().size(), "Should persist only PLUS_CONVENIO");
+        assertEquals("PLUS_CONVENIO", command.concepts().get(0).getConceptCode());
+    }
+
+    @Test
+    void minimalRealMode_bothInactive_persistsEmptyConceptList() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+                calculatePayrollUseCase,
+                executeEligiblePayrollUseCase,
+                payrollLaunchEligibleInputLookupPort,
+                properties,
+                calculateRealPayrollConceptLinesService
+        );
+
+        when(calculateRealPayrollConceptLinesService.calculateConceptLines(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+
+        when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
+                .thenReturn(payroll());
+
+        service.calculate(new CalculatePayrollUnitCommand(
+                "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
+                LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
+        ));
+
+        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
+        verify(calculatePayrollUseCase).calculate(captor.capture());
+
+        CalculatePayrollCommand command = captor.getValue();
+        assertEquals(0, command.concepts().size(), "Should persist empty concept list when both are inactive");
+    }
+
+    @Test
+    void minimalRealMode_conceptMisconfigured_propagatesException() {
+        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
+        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
+
+        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
+                calculatePayrollUseCase,
+                executeEligiblePayrollUseCase,
+                payrollLaunchEligibleInputLookupPort,
+                properties,
+                calculateRealPayrollConceptLinesService
+        );
+
+        when(calculateRealPayrollConceptLinesService.calculateConceptLines(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new IllegalStateException("Configuration error: BASE_SALARY binding missing"));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.calculate(new CalculatePayrollUnitCommand(
+                        "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
+                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
+                )),
+                "Should propagate configuration errors from concept service"
+        );
+
+        verifyNoInteractions(calculatePayrollUseCase);
     }
 
     private Payroll payroll() {

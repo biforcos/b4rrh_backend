@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
+import com.b4rrhh.payroll.application.service.RealPayrollConceptLinesCalculator;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
@@ -29,25 +30,29 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase;
     private final PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
     private final PayrollLaunchExecutionProperties payrollLaunchExecutionProperties;
+    private final RealPayrollConceptLinesCalculator calculateRealPayrollConceptLinesService;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
             ExecuteEligiblePayrollUseCase executeEligiblePayrollUseCase,
             PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort,
-            PayrollLaunchExecutionProperties payrollLaunchExecutionProperties
+            PayrollLaunchExecutionProperties payrollLaunchExecutionProperties,
+            RealPayrollConceptLinesCalculator calculateRealPayrollConceptLinesService
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.executeEligiblePayrollUseCase = executeEligiblePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
         this.payrollLaunchExecutionProperties = payrollLaunchExecutionProperties;
+        this.calculateRealPayrollConceptLinesService = calculateRealPayrollConceptLinesService;
     }
 
     @Override
     public Payroll calculate(CalculatePayrollUnitCommand command) {
-        if (payrollLaunchExecutionProperties.getMode() == PayrollExecutionMode.ELIGIBLE_REAL) {
-            return calculateEligibleReal(command);
-        }
-        return calculateFake(command);
+        return switch (payrollLaunchExecutionProperties.getMode()) {
+            case ELIGIBLE_REAL -> calculateEligibleReal(command);
+            case MINIMAL_REAL -> calculateMinimalReal(command);
+            case FAKE -> calculateFake(command);
+        };
     }
 
     private Payroll calculateFake(CalculatePayrollUnitCommand command) {
@@ -224,6 +229,74 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             return new PayrollContextSnapshot(
                 "EMPLOYEE_PAYROLL_CONTEXT",
                 "PAYROLL_ENGINE",
+                toJson(sourceKey),
+                toJson(payload)
+            );
+            }
+
+            private Payroll calculateMinimalReal(CalculatePayrollUnitCommand command) {
+            // Calculate BASE_SALARY and PLUS_CONVENIO concepts
+            List<PayrollConcept> minimalConcepts = calculateRealPayrollConceptLinesService.calculateConceptLines(command);
+
+            // If no concepts were calculated (none activated), return empty list
+            // This is a valid state — not all agreements have all concepts active
+            if (minimalConcepts.isEmpty()) {
+                minimalConcepts = List.of(); // Empty payroll allowed for minimal_real mode
+            }
+
+            return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.payrollPeriodCode(),
+                command.payrollTypeCode(),
+                command.presenceNumber(),
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.now(),
+                command.calculationEngineCode(),
+                command.calculationEngineVersion(),
+                List.of(minimalRealWarning(command, minimalConcepts)),
+                minimalConcepts,
+                List.of(minimalRealSnapshot(command, minimalConcepts))
+            ));
+            }
+
+            private PayrollWarning minimalRealWarning(CalculatePayrollUnitCommand command, List<PayrollConcept> concepts) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("executionMode", PayrollExecutionMode.MINIMAL_REAL.name());
+            details.put("employeeTypeCode", command.employeeTypeCode());
+            details.put("employeeNumber", command.employeeNumber());
+            details.put("conceptCount", concepts.size());
+            details.put("conceptCodes", concepts.stream().map(PayrollConcept::getConceptCode).toList());
+            return new PayrollWarning(
+                null,
+                null,
+                "MINIMAL_REAL_EXECUTION",
+                "INFO",
+                "Payroll generated by minimal real concept calculation (BASE_SALARY, PLUS_CONVENIO)",
+                toJson(details)
+            );
+            }
+
+            private PayrollContextSnapshot minimalRealSnapshot(CalculatePayrollUnitCommand command, List<PayrollConcept> concepts) {
+            Map<String, Object> sourceKey = new LinkedHashMap<>();
+            sourceKey.put("ruleSystemCode", command.ruleSystemCode());
+            sourceKey.put("employeeTypeCode", command.employeeTypeCode());
+            sourceKey.put("employeeNumber", command.employeeNumber());
+            sourceKey.put("payrollPeriodCode", command.payrollPeriodCode());
+            sourceKey.put("payrollTypeCode", command.payrollTypeCode());
+            sourceKey.put("presenceNumber", command.presenceNumber());
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("executionMode", PayrollExecutionMode.MINIMAL_REAL.name());
+            payload.put("calculatedAt", LocalDateTime.now().toString());
+            payload.put("conceptCount", concepts.size());
+            payload.put("conceptCodes", concepts.stream().map(PayrollConcept::getConceptCode).toList());
+
+            return new PayrollContextSnapshot(
+                "EMPLOYEE_PAYROLL_CONTEXT",
+                "PAYROLL_LAUNCH",
                 toJson(sourceKey),
                 toJson(payload)
             );

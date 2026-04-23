@@ -7,6 +7,7 @@ import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeByBusine
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectActivationLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
+import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -102,7 +103,7 @@ class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
     }
 
     @Test
-    void calculateAgreementPlusResolvesMonthlyValueForGrupoII() {
+    void calculateAgreementPlusResolvesMonthlyValueForGrupoII() throws PayrollConceptNotApplicableException {
         LocalDate effectiveDate = LocalDate.of(2026, 1, 15);
         String employeeNumber = "EMP" + (empCounter++);
 
@@ -123,7 +124,7 @@ class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
     }
 
     @Test
-    void calculateAgreementPlusResolvesCorrectAmountForAllThreeGroups() {
+    void calculateAgreementPlusResolvesCorrectAmountForAllThreeGroups() throws PayrollConceptNotApplicableException {
         LocalDate effectiveDate = LocalDate.of(2026, 1, 15);
 
         // Grupo I
@@ -184,7 +185,7 @@ class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
         deactivatePlusConvenioActivation();
 
         assertThrows(
-                IllegalArgumentException.class,
+                PayrollConceptNotApplicableException.class,
                 () -> service.calculateAgreementPlus(
                         RULE_SYSTEM_CODE,
                         EMPLOYEE_TYPE_CODE,

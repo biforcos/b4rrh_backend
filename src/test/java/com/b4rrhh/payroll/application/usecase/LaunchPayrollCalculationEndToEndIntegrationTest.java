@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.flyway.enabled=false",
+        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
         "spring.datasource.url=jdbc:h2:mem:payroll_e2e;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
@@ -34,7 +35,7 @@ class LaunchPayrollCalculationEndToEndIntegrationTest {
                 employeeNumber = "E2E" + (System.nanoTime() % 1_000_000_000L);
 
         jdbcTemplate.update(
-                "merge into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at) key(code) values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "insert into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at) values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 "ESP",
                 "Spain",
                 "ESP",

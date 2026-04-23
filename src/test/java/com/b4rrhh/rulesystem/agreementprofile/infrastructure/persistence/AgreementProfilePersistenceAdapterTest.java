@@ -11,7 +11,11 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+    "spring.flyway.enabled=false",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true"
+})
 @Import(AgreementProfilePersistenceAdapter.class)
 class AgreementProfilePersistenceAdapterTest {
 

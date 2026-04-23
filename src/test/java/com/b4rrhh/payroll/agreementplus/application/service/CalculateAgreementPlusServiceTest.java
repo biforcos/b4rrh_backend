@@ -7,6 +7,7 @@ import com.b4rrhh.payroll.basesalary.domain.EmployeeAgreementCategoryLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectActivationLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectBindingLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowLookupPort;
+import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,7 +67,7 @@ class CalculateAgreementPlusServiceTest {
     }
 
     @Test
-    void calculateAgreementPlusSucceedsWhenAllLookupsResolveCorrectly() {
+    void calculateAgreementPlusSucceedsWhenAllLookupsResolveCorrectly() throws PayrollConceptNotApplicableException {
         when(employeeByBusinessKeyLookup.resolveEmployeeId(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER))
                 .thenReturn(Optional.of(EMPLOYEE_ID));
         when(agreementContextLookup.resolveContext(EMPLOYEE_ID, EFFECTIVE_DATE))
@@ -91,7 +92,7 @@ class CalculateAgreementPlusServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                IllegalStateException.class,
                 () -> service.calculateAgreementPlus(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER, EFFECTIVE_DATE)
         );
     }
@@ -119,7 +120,7 @@ class CalculateAgreementPlusServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                IllegalStateException.class,
                 () -> service.calculateAgreementPlus(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER, EFFECTIVE_DATE)
         );
     }
@@ -136,7 +137,7 @@ class CalculateAgreementPlusServiceTest {
                 .thenReturn(false);
 
         assertThrows(
-                IllegalArgumentException.class,
+                PayrollConceptNotApplicableException.class,
                 () -> service.calculateAgreementPlus(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER, EFFECTIVE_DATE)
         );
     }
@@ -155,7 +156,7 @@ class CalculateAgreementPlusServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                IllegalStateException.class,
                 () -> service.calculateAgreementPlus(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER, EFFECTIVE_DATE)
         );
     }
@@ -176,13 +177,13 @@ class CalculateAgreementPlusServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                IllegalStateException.class,
                 () -> service.calculateAgreementPlus(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER, EFFECTIVE_DATE)
         );
     }
 
     @Test
-    void calculateAgreementPlusUsesAgreementPlusTableBindingRole() {
+    void calculateAgreementPlusUsesAgreementPlusTableBindingRole() throws PayrollConceptNotApplicableException {
         // Validates that the service uses AGREEMENT_PLUS_TABLE and not BASE_SALARY_TABLE
         when(employeeByBusinessKeyLookup.resolveEmployeeId(RULE_SYSTEM, EMPLOYEE_TYPE, EMPLOYEE_NUMBER))
                 .thenReturn(Optional.of(EMPLOYEE_ID));

@@ -51,6 +51,43 @@ The backend follows these architectural principles:
 
 ---
 
+## Run With Local Profile
+
+The backend base configuration expects PostgreSQL running on `localhost:5432` with these credentials:
+
+- database: `b4rrhh`
+- user: `b4rrhh`
+- password: `b4rrhh`
+
+You can start the local PostgreSQL instance defined in this repository with:
+
+```bash
+docker compose -f docker/postgres/docker-compose.yaml up -d
+```
+
+The `local` profile loads `application-local.yml` and enables local development helpers such as `app.dev-auth`.
+
+Start the backend with Maven and the `local` profile:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+Alternatively, you can activate it with an environment variable:
+
+```bash
+SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+```
+
+In PowerShell, use:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+mvn spring-boot:run
+```
+
+---
+
 ## Package Organization
 
 The codebase is organized **by business capability first**, then by layer:

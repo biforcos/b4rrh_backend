@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
+        <byte-buddy.version>1.15.4</byte-buddy.version>
     </properties>
 
     <dependencies>
@@ -67,6 +68,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>${byte-buddy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>${byte-buddy.version}</version>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
