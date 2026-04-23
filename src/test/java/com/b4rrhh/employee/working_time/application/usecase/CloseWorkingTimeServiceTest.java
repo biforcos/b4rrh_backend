@@ -2,7 +2,7 @@ package com.b4rrhh.employee.working_time.application.usecase;
 
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.FixedWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
@@ -36,7 +36,7 @@ class CloseWorkingTimeServiceTest {
     private static final String RULE_SYSTEM_CODE = "ESP";
     private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
     private static final String EMPLOYEE_NUMBER = "EMP001";
-        private static final FixedWorkingTimeDerivationPolicy DERIVATION_POLICY = new FixedWorkingTimeDerivationPolicy();
+        private static final StandardWorkingTimeDerivationPolicy DERIVATION_POLICY = new StandardWorkingTimeDerivationPolicy();
 
     @Mock
     private WorkingTimeRepository workingTimeRepository;
@@ -159,7 +159,7 @@ class CloseWorkingTimeServiceTest {
     }
 
         private WorkingTime workingTime(int number, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
-                WorkingTimeDerivedHours derivedHours = DERIVATION_POLICY.derive(percentage);
+                WorkingTimeDerivedHours derivedHours = DERIVATION_POLICY.derive(percentage, new java.math.BigDecimal("1736"));
 
         return WorkingTime.rehydrate(
                 (long) number,

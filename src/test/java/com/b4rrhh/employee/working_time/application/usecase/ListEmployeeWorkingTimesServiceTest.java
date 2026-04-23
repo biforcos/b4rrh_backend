@@ -2,7 +2,7 @@ package com.b4rrhh.employee.working_time.application.usecase;
 
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.FixedWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ListEmployeeWorkingTimesServiceTest {
 
-    private static final FixedWorkingTimeDerivationPolicy DERIVATION_POLICY = new FixedWorkingTimeDerivationPolicy();
+    private static final StandardWorkingTimeDerivationPolicy DERIVATION_POLICY = new StandardWorkingTimeDerivationPolicy();
 
     @Mock
     private WorkingTimeRepository workingTimeRepository;
@@ -58,7 +58,7 @@ class ListEmployeeWorkingTimesServiceTest {
 
     private WorkingTime workingTime(int number, LocalDate startDate) {
         BigDecimal percentage = new BigDecimal("100");
-        WorkingTimeDerivedHours derivedHours = DERIVATION_POLICY.derive(percentage);
+        WorkingTimeDerivedHours derivedHours = DERIVATION_POLICY.derive(percentage, new java.math.BigDecimal("1736"));
 
         return WorkingTime.rehydrate(
                 (long) number,

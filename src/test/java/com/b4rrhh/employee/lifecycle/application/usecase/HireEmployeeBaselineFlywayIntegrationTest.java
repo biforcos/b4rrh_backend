@@ -55,6 +55,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
         copyMigration(migrationDirectory, "V52__seed_esp_baseline_relationships.sql");
 
         registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDirectory.toAbsolutePath());
+    writeAgreementProfilesMigration(migrationDirectory.resolve("V53__baseline_agreement_profiles.sql"));
     }
 
         @ParameterizedTest(name = "{0}")
@@ -227,6 +228,27 @@ class HireEmployeeBaselineFlywayIntegrationTest {
         }
         }
 
+    private static void writeAgreementProfilesMigration(Path filePath) throws IOException {
+        Files.writeString(filePath, """
+                insert into rulesystem.agreement_profile (
+                    agreement_rule_entity_id,
+                    official_agreement_number,
+                    display_name,
+                    annual_hours,
+                    is_active
+                )
+                select
+                    re.id,
+                    re.code,
+                    re.name,
+                    1736.00,
+                    true
+                from rulesystem.rule_entity re
+                where re.rule_entity_type_code = 'AGREEMENT'
+                  and re.code in ('AGR_OFFICE', 'AGR_TECH');
+                """, StandardCharsets.UTF_8);
+    }
+
     private static void copyMigration(Path migrationDirectory, String fileName) throws IOException {
         Path source = Path.of(
                 "src",
@@ -282,6 +304,20 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                     constraint uk_rule_entity_business unique (rule_system_code, rule_entity_type_code, code),
                     constraint chk_rule_entity_dates check (end_date is null or start_date <= end_date)
                 );
+
+                    create table rulesystem.agreement_profile (
+                        id bigint generated always as identity primary key,
+                        agreement_rule_entity_id bigint not null,
+                        official_agreement_number varchar(50) not null,
+                        display_name varchar(200) not null,
+                        short_name varchar(50),
+                        annual_hours numeric(7, 2) not null,
+                        is_active boolean not null default true,
+                        created_at timestamp not null default now(),
+                        updated_at timestamp not null default now(),
+                        constraint uk_agreement_profile_rule_entity unique (agreement_rule_entity_id),
+                        constraint fk_agreement_profile_rule_entity foreign key (agreement_rule_entity_id) references rulesystem.rule_entity(id)
+                    );
 
                 create table rulesystem.agreement_category_relation (
                     id bigint generated always as identity primary key,

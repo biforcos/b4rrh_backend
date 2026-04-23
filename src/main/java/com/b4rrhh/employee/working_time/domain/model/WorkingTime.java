@@ -59,6 +59,7 @@ public class WorkingTime {
             LocalDate endDate,
             BigDecimal workingTimePercentage,
             WorkingTimeDerivedHours derivedHours,
+            BigDecimal annualHours,
             WorkingTimeDerivationPolicy derivationPolicy
     ) {
         return buildForCreate(
@@ -69,6 +70,7 @@ public class WorkingTime {
                 endDate,
                 workingTimePercentage,
                 derivedHours,
+                annualHours,
                 null,
                 null,
                 derivationPolicy
@@ -107,6 +109,7 @@ public class WorkingTime {
             LocalDate endDate,
             BigDecimal workingTimePercentage,
             WorkingTimeDerivedHours derivedHours,
+            BigDecimal annualHours,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             WorkingTimeDerivationPolicy derivationPolicy
@@ -116,7 +119,7 @@ public class WorkingTime {
         BigDecimal normalizedWorkingTimePercentage = normalizeWorkingTimePercentage(workingTimePercentage);
         WorkingTimeDerivedHours normalizedDerivedHours = normalizeDerivedHours(derivedHours);
         validateDerivedHours(normalizedDerivedHours);
-        validateDerivedHoursConsistency(normalizedWorkingTimePercentage, normalizedDerivedHours, derivationPolicy);
+        validateDerivedHoursConsistency(normalizedWorkingTimePercentage, normalizedDerivedHours, annualHours, derivationPolicy);
 
         return new WorkingTime(
                 id,
@@ -257,13 +260,18 @@ public class WorkingTime {
     private static void validateDerivedHoursConsistency(
             BigDecimal workingTimePercentage,
             WorkingTimeDerivedHours actualDerivedHours,
+            BigDecimal annualHours,
             WorkingTimeDerivationPolicy derivationPolicy
     ) {
         if (derivationPolicy == null) {
             throw new IllegalArgumentException("workingTimeDerivationPolicy is required");
         }
+        if (annualHours == null) {
+            throw new IllegalArgumentException("annualHours is required for derived hours consistency check");
+        }
 
-        WorkingTimeDerivedHours expectedDerivedHours = normalizeDerivedHours(derivationPolicy.derive(workingTimePercentage));
+        WorkingTimeDerivedHours expectedDerivedHours = normalizeDerivedHours(
+                derivationPolicy.derive(workingTimePercentage, annualHours));
 
         boolean matches = expectedDerivedHours.weeklyHours().compareTo(actualDerivedHours.weeklyHours()) == 0
                 && expectedDerivedHours.dailyHours().compareTo(actualDerivedHours.dailyHours()) == 0

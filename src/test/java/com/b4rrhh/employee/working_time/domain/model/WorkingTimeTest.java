@@ -1,6 +1,6 @@
 package com.b4rrhh.employee.working_time.domain.model;
 
-import com.b4rrhh.employee.working_time.application.service.FixedWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimeDateRangeException;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
@@ -87,7 +87,8 @@ class WorkingTimeTest {
                                 new BigDecimal("4.00"),
                                 new BigDecimal("83.33")
                         ),
-                        new FixedWorkingTimeDerivationPolicy()
+                        new BigDecimal("1736"),
+                        new StandardWorkingTimeDerivationPolicy()
                 )
         );
     }
@@ -117,7 +118,7 @@ class WorkingTimeTest {
 
     @Test
     void doesNotTreatCurrentFortyAndEightHourBasisAsAggregateInvariant() {
-        WorkingTimeDerivationPolicy customPolicy = percentage -> new WorkingTimeDerivedHours(
+        WorkingTimeDerivationPolicy customPolicy = (percentage, annualHours) -> new WorkingTimeDerivedHours(
                 new BigDecimal("60.00"),
                 new BigDecimal("12.00"),
                 new BigDecimal("250.00")
@@ -134,6 +135,7 @@ class WorkingTimeTest {
                         new BigDecimal("12.00"),
                         new BigDecimal("250.00")
                 ),
+                new BigDecimal("1736"),
                 customPolicy
         );
 
@@ -142,7 +144,8 @@ class WorkingTimeTest {
     }
 
     private WorkingTime workingTime(LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
-        WorkingTimeDerivedHours derivedHours = new FixedWorkingTimeDerivationPolicy().derive(percentage);
+        WorkingTimeDerivedHours derivedHours = new StandardWorkingTimeDerivationPolicy()
+                .derive(percentage, new BigDecimal("1736"));
 
         return WorkingTime.rehydrate(
                 1L,

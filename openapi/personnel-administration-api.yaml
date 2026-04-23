@@ -30,6 +30,10 @@ tags:
     description: Functional aggregated company resource backed by COMPANY rule entities and company_profile enrichment.
   - name: Company Profile
     description: Enriched company profile reads and updates backed by the COMPANY occurrence applicable on the current date.
+  - name: Agreement
+    description: Functional aggregated agreement resource backed by AGREEMENT rule entities and agreement_profile enrichment.
+  - name: Agreement Profile
+    description: Enriched agreement profile reads and updates backed by the AGREEMENT base entity with annual hours and labor terms.
   - name: Work Center
     description: Functional aggregated work center resource backed by WORK_CENTER rule entities and work_center_profile enrichment.
   - name: Work Center Contact
@@ -3292,6 +3296,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompanyProfileErrorResponse"
 
+  /agreements/{ruleSystemCode}/{agreementCode}/profile:
+    get:
+      operationId: getAgreementProfile
+      summary: Get enriched agreement profile by business key
+      tags:
+        - Agreement Profile
+      description: |
+        Retrieves the agreement profile enrichment for an agreement identified by ruleSystemCode and agreementCode.
+        The agreement profile contains annual hours and other labor terms used for working time derivation.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: agreementCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        "200":
+          description: Agreement profile found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileResponse"
+        "404":
+          description: Agreement does not exist or profile has not been created yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileErrorResponse"
+        "400":
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileErrorResponse"
+    put:
+      operationId: upsertAgreementProfile
+      summary: Create or update enriched agreement profile by business key
+      tags:
+        - Agreement Profile
+      description: |
+        Creates or updates the agreement profile enrichment for an agreement identified by ruleSystemCode and agreementCode.
+        The profile includes annual hours (required, used for working time derivation), official agreement number, and display names.
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: agreementCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertAgreementProfileRequest"
+      responses:
+        "200":
+          description: Agreement profile stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileResponse"
+        "400":
+          description: Invalid request payload or invalid business key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileErrorResponse"
+        "404":
+          description: Agreement does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementProfileErrorResponse"
+
   /work-centers:
     post:
       operationId: createWorkCenter
@@ -6065,6 +6157,63 @@ components:
       properties:
         message:
           type: string
+    AgreementProfileResponse:
+      type: object
+      required:
+        - officialAgreementNumber
+        - displayName
+        - annualHours
+        - active
+      properties:
+        officialAgreementNumber:
+          type: string
+          maxLength: 50
+        displayName:
+          type: string
+          maxLength: 200
+        shortName:
+          type: string
+          maxLength: 50
+          nullable: true
+        annualHours:
+          type: number
+          format: decimal
+          description: Annual working hours used for derivation of weekly, daily, and monthly hours. Typical values 1560 (Spain 40 hours/week), 1800 (40h/week * 45 weeks), etc.
+        active:
+          type: boolean
+          description: Whether the agreement profile is currently active
+    AgreementProfileErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    UpsertAgreementProfileRequest:
+      type: object
+      required:
+        - officialAgreementNumber
+        - displayName
+        - annualHours
+      properties:
+        officialAgreementNumber:
+          type: string
+          maxLength: 50
+        displayName:
+          type: string
+          maxLength: 200
+        shortName:
+          type: string
+          maxLength: 50
+          nullable: true
+        annualHours:
+          type: number
+          format: decimal
+          description: Annual working hours for working time derivation. Range 1-9999.99.
+        active:
+          type: boolean
+          nullable: true
+          description: Whether the agreement profile should be active. Defaults to true if not specified.
     WorkCenterAddress:
       type: object
       properties:

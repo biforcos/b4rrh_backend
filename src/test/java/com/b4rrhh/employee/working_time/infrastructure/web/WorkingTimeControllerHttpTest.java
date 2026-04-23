@@ -8,7 +8,7 @@ import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusi
 import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusinessKeyUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
-import com.b4rrhh.employee.working_time.application.service.FixedWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
@@ -50,7 +50,7 @@ class WorkingTimeControllerHttpTest {
     @Mock
     private CloseWorkingTimeUseCase closeWorkingTimeUseCase;
 
-        private final FixedWorkingTimeDerivationPolicy derivationPolicy = new FixedWorkingTimeDerivationPolicy();
+        private final StandardWorkingTimeDerivationPolicy derivationPolicy = new StandardWorkingTimeDerivationPolicy();
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -84,7 +84,7 @@ class WorkingTimeControllerHttpTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.workingTimeNumber").value(1))
                 .andExpect(jsonPath("$.workingTimePercentage").value(50))
-                .andExpect(jsonPath("$.weeklyHours").value(20.00))
+                        .andExpect(jsonPath("$.weeklyHours").value(16.69))
                 .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<CreateWorkingTimeCommand> captor = ArgumentCaptor.forClass(CreateWorkingTimeCommand.class);
@@ -118,7 +118,7 @@ class WorkingTimeControllerHttpTest {
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/working-times"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].workingTimeNumber").value(1))
-                .andExpect(jsonPath("$[0].dailyHours").value(6.0))
+                        .andExpect(jsonPath("$[0].dailyHours").value(5.01))
                 .andExpect(jsonPath("$[0].id").doesNotExist());
     }
 
@@ -130,7 +130,7 @@ class WorkingTimeControllerHttpTest {
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/working-times/3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.workingTimeNumber").value(3))
-                .andExpect(jsonPath("$.monthlyHours").value(166.67));
+                        .andExpect(jsonPath("$.monthlyHours").value(144.67));
     }
 
     @Test
@@ -181,7 +181,7 @@ class WorkingTimeControllerHttpTest {
             LocalDate endDate,
             BigDecimal percentage
     ) {
-        WorkingTimeDerivedHours derivedHours = derivationPolicy.derive(percentage);
+        WorkingTimeDerivedHours derivedHours = derivationPolicy.derive(percentage, new java.math.BigDecimal("1736"));
 
         return WorkingTime.rehydrate(
                 (long) workingTimeNumber,

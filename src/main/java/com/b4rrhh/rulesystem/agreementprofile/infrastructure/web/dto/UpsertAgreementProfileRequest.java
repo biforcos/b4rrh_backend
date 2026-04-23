@@ -1,0 +1,12 @@
+package com.b4rrhh.rulesystem.agreementprofile.infrastructure.web.dto;
+
+import java.math.BigDecimal;
+
+public record UpsertAgreementProfileRequest(
+        String officialAgreementNumber,
+        String displayName,
+        String shortName,
+        BigDecimal annualHours,
+        boolean active
+) {
+}

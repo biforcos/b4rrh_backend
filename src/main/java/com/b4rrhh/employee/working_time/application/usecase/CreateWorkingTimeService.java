@@ -1,5 +1,8 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
+import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
+import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
@@ -14,22 +17,30 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
 
     private final WorkingTimeRepository workingTimeRepository;
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
+    private final EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
+    private final AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
     private final WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
     private final WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
     public CreateWorkingTimeService(
             WorkingTimeRepository workingTimeRepository,
             EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort,
+            EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort,
+            AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort,
             WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator,
             WorkingTimeDerivationPolicy workingTimeDerivationPolicy
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
+        this.employeeAgreementContextLookupPort = employeeAgreementContextLookupPort;
+        this.agreementAnnualHoursLookupPort = agreementAnnualHoursLookupPort;
         this.workingTimePresenceConsistencyValidator = workingTimePresenceConsistencyValidator;
         this.workingTimeDerivationPolicy = workingTimeDerivationPolicy;
     }
@@ -57,7 +68,20 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
                 .map(value -> value + 1)
                 .orElse(1);
 
-        WorkingTimeDerivedHours derivedHours = workingTimeDerivationPolicy.derive(command.workingTimePercentage());
+        // Step 1: Resolve which agreement applies to this employee at the working time start date
+        EmployeeAgreementContext agreementContext = employeeAgreementContextLookupPort
+                .resolveContext(employee.employeeId(), command.startDate());
+
+        // Step 2: Resolve annual hours from agreement_profile using the agreement business key
+        BigDecimal annualHours = agreementAnnualHoursLookupPort.resolveAnnualHours(
+                agreementContext.ruleSystemCode(),
+                agreementContext.agreementCode()
+        );
+
+        WorkingTimeDerivedHours derivedHours = workingTimeDerivationPolicy.derive(
+                command.workingTimePercentage(),
+                annualHours
+        );
 
         WorkingTime newWorkingTime = WorkingTime.create(
                 employee.employeeId(),
@@ -65,8 +89,9 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
                 command.startDate(),
                 null,
                 command.workingTimePercentage(),
-            derivedHours,
-            workingTimeDerivationPolicy
+                derivedHours,
+                annualHours,
+                workingTimeDerivationPolicy
         );
 
         if (workingTimeRepository.existsOverlappingPeriod(

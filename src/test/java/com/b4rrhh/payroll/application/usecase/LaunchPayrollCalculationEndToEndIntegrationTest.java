@@ -11,8 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=true"
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false",
+        "spring.datasource.url=jdbc:h2:mem:payroll_e2e;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
 })
 @Transactional
 class LaunchPayrollCalculationEndToEndIntegrationTest {
@@ -30,14 +34,14 @@ class LaunchPayrollCalculationEndToEndIntegrationTest {
                 employeeNumber = "E2E" + (System.nanoTime() % 1_000_000_000L);
 
         jdbcTemplate.update(
-                "insert into rulesystem.rule_system (code, name, country_code, active) values (?, ?, ?, ?) on conflict (code) do nothing",
+                "merge into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at) key(code) values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 "ESP",
                 "Spain",
                 "ESP",
                 true
         );
         jdbcTemplate.update(
-                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status) values (?, ?, ?, ?, ?, ?)",
+                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 "ESP",
                 "INTERNAL",
                 employeeNumber,
@@ -55,7 +59,7 @@ class LaunchPayrollCalculationEndToEndIntegrationTest {
         assertNotNull(employeeId);
 
         jdbcTemplate.update(
-                "insert into employee.presence (employee_id, presence_number, company_code, entry_reason_code, start_date) values (?, ?, ?, ?, DATE '2025-01-01')",
+                "insert into employee.presence (employee_id, presence_number, company_code, entry_reason_code, start_date, created_at, updated_at) values (?, ?, ?, ?, DATE '2025-01-01', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 employeeId,
                 1,
                 "ES01",
