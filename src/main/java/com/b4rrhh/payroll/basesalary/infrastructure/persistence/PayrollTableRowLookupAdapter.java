@@ -30,7 +30,7 @@ public class PayrollTableRowLookupAdapter implements PayrollTableRowLookupPort {
             String searchCode,
             LocalDate effectiveDate
     ) {
-        return repository.findActiveRowsByDateRange(
+        return repository.findLatestValidByRuleSystemCodeAndTableCodeAndSearchCodeAndEffectiveDate(
                 ruleSystemCode,
                 tableCode,
                 searchCode,

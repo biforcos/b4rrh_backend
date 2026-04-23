@@ -19,7 +19,7 @@ public class EmployeeAgreementCategoryLookupAdapter implements EmployeeAgreement
 
     @Override
     public Optional<String> resolveAgreementCategoryCode(Long employeeId, LocalDate effectiveDate) {
-        return repository.findAgreementCategoryCodesByEmployeeAndEffectiveDate(
+        return repository.findLatestValidByEmployeeIdAndEffectiveDate(
                         employeeId,
                         effectiveDate,
                         PageRequest.of(0, 1)

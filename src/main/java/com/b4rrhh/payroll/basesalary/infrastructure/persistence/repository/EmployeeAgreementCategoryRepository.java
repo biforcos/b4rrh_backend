@@ -19,7 +19,7 @@ public interface EmployeeAgreementCategoryRepository extends JpaRepository<Labor
               and (l.endDate is null or l.endDate >= :effectiveDate)
             order by l.startDate desc
             """)
-    List<String> findAgreementCategoryCodesByEmployeeAndEffectiveDate(
+        List<String> findLatestValidByEmployeeIdAndEffectiveDate(
             @Param("employeeId") Long employeeId,
             @Param("effectiveDate") LocalDate effectiveDate,
             Pageable pageable

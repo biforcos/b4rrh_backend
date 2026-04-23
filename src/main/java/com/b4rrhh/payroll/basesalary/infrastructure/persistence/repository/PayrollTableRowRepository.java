@@ -29,7 +29,7 @@ public interface PayrollTableRowRepository extends JpaRepository<PayrollTableRow
           and (r.endDate is null or r.endDate >= :effectiveDate)
         order by r.startDate desc
         """)
-    List<PayrollTableRowEntity> findActiveRowsByDateRange(
+    List<PayrollTableRowEntity> findLatestValidByRuleSystemCodeAndTableCodeAndSearchCodeAndEffectiveDate(
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("tableCode") String tableCode,
             @Param("searchCode") String searchCode,
