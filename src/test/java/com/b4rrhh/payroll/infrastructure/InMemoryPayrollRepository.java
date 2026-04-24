@@ -33,6 +33,7 @@ public class InMemoryPayrollRepository implements PayrollRepository {
                 payroll.getCalculatedAt(),
                 payroll.getCalculationEngineCode(),
                 payroll.getCalculationEngineVersion(),
+                payroll.getWarnings(),
                 payroll.getConcepts(),
                 payroll.getContextSnapshots(),
                 payroll.getCreatedAt() == null ? LocalDateTime.now() : payroll.getCreatedAt(),

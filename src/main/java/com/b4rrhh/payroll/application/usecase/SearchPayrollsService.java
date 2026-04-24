@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ public class SearchPayrollsService implements SearchPayrollsUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Payroll> search(SearchPayrollsQuery query) {
         return payrollRepository.findByFilters(
                 query.ruleSystemCode(),

@@ -14,6 +14,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,7 +59,7 @@ class SearchPayrollsServiceTest {
 
         service.search(new SearchPayrollsQuery("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED));
 
-        // no exception = filters were forwarded correctly
+        verify(payrollRepository).findByFilters("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED);
     }
 
     private Payroll minimalPayroll(String employeeNumber, String periodCode, PayrollStatus status) {

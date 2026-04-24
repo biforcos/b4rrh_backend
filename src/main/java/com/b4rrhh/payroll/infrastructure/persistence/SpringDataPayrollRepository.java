@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +32,7 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("payrollPeriodCode") String payrollPeriodCode,
             @Param("employeeNumber") String employeeNumber,
-            @Param("status") PayrollStatus status
+            @Param("status") PayrollStatus status,
+            Pageable pageable
     );
 }
