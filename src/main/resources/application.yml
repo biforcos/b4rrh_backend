@@ -40,3 +40,8 @@ logging:
 app:
   jwt:
     secret: "b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm"
+
+payroll:
+  launch:
+    execution:
+      mode: ELIGIBLE_REAL
