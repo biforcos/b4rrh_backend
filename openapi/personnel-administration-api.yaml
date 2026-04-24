@@ -3953,6 +3953,11 @@ paths:
       tags:
         - Payroll
       parameters:
+        - name: ruleSystemCode
+          in: query
+          required: false
+          schema:
+            type: string
         - name: payrollPeriodCode
           in: query
           required: false
@@ -3978,6 +3983,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PayrollSummaryResponse"
+        "400":
+          description: Invalid query parameters
 
   /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/recalculate:
     post:
@@ -4016,6 +4023,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int32
       responses:
         "200":
           description: Recalculated payroll
@@ -4023,6 +4031,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PayrollResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
         "409":
           description: Payroll is not in NOT_VALID status
           content:
