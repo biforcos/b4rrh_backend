@@ -98,6 +98,8 @@ class RecalculatePayrollServiceTest {
     }
 
     private Payroll payroll(String employeeNumber, String periodCode, PayrollStatus status, String engCode, String engVer) {
+        // id, ruleSystemCode, employeeTypeCode, employeeNumber, periodCode, payrollTypeCode, presenceNumber,
+        // status, statusReasonCode (null=none), calculatedAt, engCode, engVer, warnings, concepts, contextSnapshots, createdAt, updatedAt
         return Payroll.rehydrate(
                 1L, "MAS", "EMP", employeeNumber, periodCode, "MENSUAL", 1,
                 status, null, LocalDateTime.now(), engCode, engVer,

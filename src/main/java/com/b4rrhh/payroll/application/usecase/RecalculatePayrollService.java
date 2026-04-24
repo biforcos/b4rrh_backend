@@ -1,15 +1,22 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Service
 public class RecalculatePayrollService implements RecalculatePayrollUseCase {
+
+    private static final DateTimeFormatter PAYROLL_PERIOD_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
 
     private final PayrollRepository payrollRepository;
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
@@ -23,6 +30,7 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
     }
 
     @Override
+    @Transactional
     public Payroll recalculate(RecalculatePayrollCommand command) {
         Payroll payroll = payrollRepository.findByBusinessKey(
                 command.ruleSystemCode(),
@@ -60,8 +68,10 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
     }
 
     private LocalDate parsePeriodStart(String periodCode) {
-        int year = Integer.parseInt(periodCode.substring(0, 4));
-        int month = Integer.parseInt(periodCode.substring(4, 6));
-        return LocalDate.of(year, month, 1);
+        try {
+            return YearMonth.parse(periodCode, PAYROLL_PERIOD_FORMATTER).atDay(1);
+        } catch (DateTimeParseException ex) {
+            throw new InvalidPayrollArgumentException("payrollPeriodCode must be in yyyyMM format, got: " + periodCode);
+        }
     }
 }
