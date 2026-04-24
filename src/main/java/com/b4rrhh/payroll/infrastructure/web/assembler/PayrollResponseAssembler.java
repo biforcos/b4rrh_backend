@@ -4,6 +4,7 @@ import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollWarningResponse;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +53,19 @@ public class PayrollResponseAssembler {
                                 snapshot.getSnapshotPayloadJson()
                         ))
                         .toList()
+        );
+    }
+
+    public PayrollSummaryResponse toSummaryResponse(Payroll payroll) {
+        return new PayrollSummaryResponse(
+                payroll.getRuleSystemCode(),
+                payroll.getEmployeeTypeCode(),
+                payroll.getEmployeeNumber(),
+                payroll.getPayrollPeriodCode(),
+                payroll.getPayrollTypeCode(),
+                payroll.getPresenceNumber(),
+                payroll.getStatus().name(),
+                payroll.getCalculatedAt()
         );
     }
 }

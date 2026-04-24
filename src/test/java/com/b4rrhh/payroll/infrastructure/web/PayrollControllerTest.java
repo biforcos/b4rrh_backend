@@ -240,6 +240,15 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
+
+        ArgumentCaptor<SearchPayrollsQuery> queryCaptor = ArgumentCaptor.forClass(SearchPayrollsQuery.class);
+        verify(searchPayrollsUseCase).search(queryCaptor.capture());
+        assertEquals("202604", queryCaptor.getValue().payrollPeriodCode());
+        assertEquals(PayrollStatus.CALCULATED, queryCaptor.getValue().status());
+
+        PayrollSummaryResponse first = response.getBody().getFirst();
+        assertEquals("CALCULATED", first.status());
+        assertEquals("EMP001", first.employeeNumber());
     }
 
     @Test

@@ -243,15 +243,19 @@ public class PayrollController {
             @RequestParam(required = false) String employeeNumber,
             @RequestParam(required = false) String status
     ) {
-        PayrollStatus parsedStatus = status != null ? PayrollStatus.valueOf(status) : null;
+        PayrollStatus parsedStatus = null;
+        if (status != null) {
+            try {
+                parsedStatus = PayrollStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException(
+                    "Invalid status value: '" + status + "'. Valid values: " + java.util.Arrays.toString(PayrollStatus.values()));
+            }
+        }
         List<PayrollSummaryResponse> body = searchPayrollsUseCase
                 .search(new SearchPayrollsQuery(ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus))
                 .stream()
-                .map(p -> new PayrollSummaryResponse(
-                        p.getRuleSystemCode(), p.getEmployeeTypeCode(), p.getEmployeeNumber(),
-                        p.getPayrollPeriodCode(), p.getPayrollTypeCode(), p.getPresenceNumber(),
-                        p.getStatus().name(), p.getCalculatedAt()
-                ))
+                .map(payrollResponseAssembler::toSummaryResponse)
                 .toList();
         return ResponseEntity.ok(body);
     }
