@@ -25,14 +25,22 @@ import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
+import com.b4rrhh.payroll.application.usecase.RecalculatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.RecalculatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.SearchPayrollsQuery;
+import com.b4rrhh.payroll.application.usecase.SearchPayrollsUseCase;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/payrolls")
@@ -44,6 +52,8 @@ public class PayrollController {
     private final ValidatePayrollUseCase validatePayrollUseCase;
     private final FinalizePayrollUseCase finalizePayrollUseCase;
     private final BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
+    private final SearchPayrollsUseCase searchPayrollsUseCase;
+    private final RecalculatePayrollUseCase recalculatePayrollUseCase;
     private final PayrollResponseAssembler payrollResponseAssembler;
 
     public PayrollController(
@@ -53,6 +63,8 @@ public class PayrollController {
             ValidatePayrollUseCase validatePayrollUseCase,
             FinalizePayrollUseCase finalizePayrollUseCase,
             BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase,
+            SearchPayrollsUseCase searchPayrollsUseCase,
+            RecalculatePayrollUseCase recalculatePayrollUseCase,
             PayrollResponseAssembler payrollResponseAssembler
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
@@ -61,6 +73,8 @@ public class PayrollController {
         this.validatePayrollUseCase = validatePayrollUseCase;
         this.finalizePayrollUseCase = finalizePayrollUseCase;
         this.bulkInvalidatePayrollUseCase = bulkInvalidatePayrollUseCase;
+        this.searchPayrollsUseCase = searchPayrollsUseCase;
+        this.recalculatePayrollUseCase = recalculatePayrollUseCase;
         this.payrollResponseAssembler = payrollResponseAssembler;
     }
 
@@ -219,6 +233,43 @@ public class PayrollController {
                 result.totalSkippedNotFound(),
                 result.statusReasonCode()
         ));
+    }
+
+
+    @GetMapping
+    public ResponseEntity<List<PayrollSummaryResponse>> search(
+            @RequestParam(required = false) String ruleSystemCode,
+            @RequestParam(required = false) String payrollPeriodCode,
+            @RequestParam(required = false) String employeeNumber,
+            @RequestParam(required = false) String status
+    ) {
+        PayrollStatus parsedStatus = status != null ? PayrollStatus.valueOf(status) : null;
+        List<PayrollSummaryResponse> body = searchPayrollsUseCase
+                .search(new SearchPayrollsQuery(ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus))
+                .stream()
+                .map(p -> new PayrollSummaryResponse(
+                        p.getRuleSystemCode(), p.getEmployeeTypeCode(), p.getEmployeeNumber(),
+                        p.getPayrollPeriodCode(), p.getPayrollTypeCode(), p.getPresenceNumber(),
+                        p.getStatus().name(), p.getCalculatedAt()
+                ))
+                .toList();
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/recalculate")
+    public ResponseEntity<PayrollResponse> recalculate(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable String payrollPeriodCode,
+            @PathVariable String payrollTypeCode,
+            @PathVariable Integer presenceNumber
+    ) {
+        Payroll payroll = recalculatePayrollUseCase.recalculate(new RecalculatePayrollCommand(
+                ruleSystemCode, employeeTypeCode, employeeNumber,
+                payrollPeriodCode, payrollTypeCode, presenceNumber
+        ));
+        return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
     }
 
     private PayrollLaunchTargetSelection toTargetSelection(PayrollLaunchTargetSelectionRequest request) {

@@ -38,6 +38,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.b4rrhh.payroll.application.usecase.RecalculatePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.RecalculatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.SearchPayrollsQuery;
+import com.b4rrhh.payroll.application.usecase.SearchPayrollsUseCase;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,6 +64,10 @@ class PayrollControllerTest {
     private FinalizePayrollUseCase finalizePayrollUseCase;
     @Mock
     private BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
+    @Mock
+    private SearchPayrollsUseCase searchPayrollsUseCase;
+    @Mock
+    private RecalculatePayrollUseCase recalculatePayrollUseCase;
 
     private PayrollController controller;
 
@@ -71,6 +80,8 @@ class PayrollControllerTest {
                 validatePayrollUseCase,
                 finalizePayrollUseCase,
                 bulkInvalidatePayrollUseCase,
+                searchPayrollsUseCase,
+                recalculatePayrollUseCase,
                 new PayrollResponseAssembler()
         );
     }
@@ -216,6 +227,33 @@ class PayrollControllerTest {
         assertEquals(0, response.getBody().totalSkippedProtected());
         assertEquals("BULK_RESET", response.getBody().statusReasonCode());
         verify(bulkInvalidatePayrollUseCase).invalidateBulk(any());
+    }
+
+
+    @Test
+    void searchesPayrollsByFilters() {
+        Payroll payroll = payroll(PayrollStatus.CALCULATED, null);
+        when(searchPayrollsUseCase.search(any(SearchPayrollsQuery.class))).thenReturn(List.of(payroll));
+
+        ResponseEntity<List<PayrollSummaryResponse>> response = controller.search(null, "202604", "MAS000001", "CALCULATED");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+    }
+
+    @Test
+    void recalculatesPayroll() {
+        Payroll recalculated = payroll(PayrollStatus.CALCULATED, null);
+        when(recalculatePayrollUseCase.recalculate(any(RecalculatePayrollCommand.class))).thenReturn(recalculated);
+
+        ResponseEntity<PayrollResponse> response = controller.recalculate(
+                "MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("CALCULATED", response.getBody().status().name());
     }
 
     private Payroll payroll(PayrollStatus status, String statusReasonCode) {
