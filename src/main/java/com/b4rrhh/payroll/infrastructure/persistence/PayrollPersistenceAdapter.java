@@ -3,11 +3,13 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -38,6 +40,15 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                         presenceNumber
                 )
                 .map(this::toDomain);
+    }
+
+    @Override
+    public List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status) {
+        return springDataPayrollRepository
+                .findByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status)
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override

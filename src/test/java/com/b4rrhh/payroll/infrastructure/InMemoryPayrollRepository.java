@@ -1,10 +1,13 @@
 package com.b4rrhh.payroll.infrastructure;
 
 import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,6 +50,16 @@ public class InMemoryPayrollRepository implements PayrollRepository {
     @Override
     public void deleteById(Long id) {
         storage.remove(id);
+    }
+
+    @Override
+    public List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status) {
+        return storage.values().stream()
+                .filter(p -> ruleSystemCode == null || Objects.equals(p.getRuleSystemCode(), ruleSystemCode))
+                .filter(p -> payrollPeriodCode == null || Objects.equals(p.getPayrollPeriodCode(), payrollPeriodCode))
+                .filter(p -> employeeNumber == null || Objects.equals(p.getEmployeeNumber(), employeeNumber))
+                .filter(p -> status == null || Objects.equals(p.getStatus(), status))
+                .toList();
     }
 
     @Override
