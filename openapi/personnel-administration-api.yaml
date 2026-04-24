@@ -3986,6 +3986,153 @@ paths:
         "400":
           description: Invalid query parameters
 
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}:
+    get:
+      tags: [Payroll]
+      operationId: getPayrollByBusinessKey
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeNumber
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollPeriodCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: presenceNumber
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Payroll found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/invalidate:
+    post:
+      tags: [Payroll]
+      operationId: invalidatePayroll
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeNumber
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollPeriodCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: presenceNumber
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvalidatePayrollRequest"
+      responses:
+        "200":
+          description: Payroll invalidated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Transition not allowed in current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/validate:
+    post:
+      tags: [Payroll]
+      operationId: validatePayroll
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeNumber
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollPeriodCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: presenceNumber
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Payroll validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollResponse"
+        "404":
+          description: Payroll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+        "409":
+          description: Transition not allowed in current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
+
   /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/recalculate:
     post:
       summary: Recalculate a payroll (only allowed from NOT_VALID)
@@ -6716,6 +6863,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PayrollConceptResponse'
+    InvalidatePayrollRequest:
+      type: object
+      required:
+        - statusReasonCode
+      properties:
+        statusReasonCode:
+          type: string
     PayrollConceptResponse:
       type: object
       required:
