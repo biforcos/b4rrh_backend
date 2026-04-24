@@ -34,4 +34,18 @@ public interface SpringDataWorkingTimeRepository extends JpaRepository<WorkingTi
             @Param("effectiveEndDate") LocalDate effectiveEndDate,
             @Param("maxDate") LocalDate maxDate
     );
+
+    @Query("""
+            select w
+            from WorkingTimeEntity w
+            where w.employeeId = :employeeId
+              and w.startDate <= :periodEnd
+              and (w.endDate is null or w.endDate >= :periodStart)
+            order by w.startDate asc, w.workingTimeNumber asc
+            """)
+    List<WorkingTimeEntity> findOverlappingByEmployeeIdAndPeriodOrdered(
+            @Param("employeeId") Long employeeId,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd") LocalDate periodEnd
+    );
 }

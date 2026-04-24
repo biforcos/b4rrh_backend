@@ -1,13 +1,19 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceEntity;
+import com.b4rrhh.employee.presence.infrastructure.persistence.SpringDataPresenceRepository;
+import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
+import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
+import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextRepository;
+import com.b4rrhh.employee.working_time.infrastructure.persistence.SpringDataWorkingTimeRepository;
+import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimeEntity;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
-import jakarta.persistence.EntityManager;
+import com.b4rrhh.payroll.basesalary.infrastructure.persistence.repository.EmployeeAgreementCategoryRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -15,10 +21,24 @@ import java.util.Optional;
 @Component
 public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEligibleInputLookupPort {
 
-    private final EntityManager entityManager;
+    private final EmployeeBusinessKeyLookupSupport employeeLookupSupport;
+    private final SpringDataPresenceRepository presenceRepository;
+    private final EmployeeAgreementContextRepository agreementContextRepository;
+    private final EmployeeAgreementCategoryRepository agreementCategoryRepository;
+    private final SpringDataWorkingTimeRepository workingTimeRepository;
 
-    public PayrollLaunchEligibleInputLookupAdapter(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public PayrollLaunchEligibleInputLookupAdapter(
+            EmployeeBusinessKeyLookupSupport employeeLookupSupport,
+            SpringDataPresenceRepository presenceRepository,
+            EmployeeAgreementContextRepository agreementContextRepository,
+            EmployeeAgreementCategoryRepository agreementCategoryRepository,
+            SpringDataWorkingTimeRepository workingTimeRepository
+    ) {
+        this.employeeLookupSupport = employeeLookupSupport;
+        this.presenceRepository = presenceRepository;
+        this.agreementContextRepository = agreementContextRepository;
+        this.agreementCategoryRepository = agreementCategoryRepository;
+        this.workingTimeRepository = workingTimeRepository;
     }
 
     @Override
@@ -30,94 +50,69 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
             LocalDate periodStart,
             LocalDate periodEnd
     ) {
-        List<?> headerRows = entityManager.createNativeQuery("""
-            select p.company_code,
-                   lc.agreement_code
-              from employee.employee e
-              join employee.presence p
-                on p.employee_id = e.id
-         left join lateral (
-                    select lcx.agreement_code
-                      from employee.labor_classification lcx
-                     where lcx.employee_id = e.id
-                       and lcx.start_date <= :periodEnd
-                       and (lcx.end_date is null or lcx.end_date >= :periodStart)
-                     order by lcx.start_date desc, lcx.id desc
-                     limit 1
-                ) lc on true
-             where upper(trim(e.rule_system_code)) = :ruleSystemCode
-               and upper(trim(e.employee_type_code)) = :employeeTypeCode
-               and trim(e.employee_number) = :employeeNumber
-               and p.presence_number = :presenceNumber
-               and p.start_date <= :periodEnd
-               and (p.end_date is null or p.end_date >= :periodStart)
-            """)
-                .setParameter("ruleSystemCode", ruleSystemCode)
-                .setParameter("employeeTypeCode", employeeTypeCode)
-                .setParameter("employeeNumber", employeeNumber)
-                .setParameter("presenceNumber", presenceNumber)
-                .setParameter("periodStart", periodStart)
-                .setParameter("periodEnd", periodEnd)
-                .getResultList();
+        Optional<Long> employeeIdOpt = employeeLookupSupport.findByBusinessKey(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber
+                )
+                .map(employee -> employee.getId());
 
-        if (headerRows.isEmpty()) {
+        if (employeeIdOpt.isEmpty()) {
             return Optional.empty();
         }
 
-        Object headerRow = headerRows.getFirst();
-        if (!(headerRow instanceof Object[] columns) || columns.length < 2) {
-            throw new IllegalStateException("Unexpected row shape for payroll launch eligible input header query");
+        Long employeeId = employeeIdOpt.get();
+        Optional<PresenceEntity> presenceOpt = presenceRepository.findByEmployeeIdAndPresenceNumber(employeeId, presenceNumber)
+                .filter(presence -> isOverlapping(presence.getStartDate(), presence.getEndDate(), periodStart, periodEnd));
+
+        if (presenceOpt.isEmpty()) {
+            return Optional.empty();
         }
 
-        String companyCode = (String) columns[0];
-        String agreementCode = (String) columns[1];
+        PresenceEntity presence = presenceOpt.get();
+        List<EmployeeAgreementContext> agreementContexts = agreementContextRepository.findLatestValidByEmployeeIdAndEffectiveDate(
+                employeeId,
+                periodEnd,
+                PageRequest.of(0, 1)
+        );
+        String agreementCode = agreementContexts.isEmpty() ? null : agreementContexts.getFirst().agreementCode();
 
-        List<?> workingTimeRows = entityManager.createNativeQuery("""
-            select wt.start_date,
-                   wt.end_date,
-                   wt.working_time_percentage
-              from employee.employee e
-              join employee.working_time wt
-                on wt.employee_id = e.id
-             where upper(trim(e.rule_system_code)) = :ruleSystemCode
-               and upper(trim(e.employee_type_code)) = :employeeTypeCode
-               and trim(e.employee_number) = :employeeNumber
-               and wt.start_date <= :periodEnd
-               and (wt.end_date is null or wt.end_date >= :periodStart)
-             order by wt.start_date asc, wt.working_time_number asc
-            """)
-                .setParameter("ruleSystemCode", ruleSystemCode)
-                .setParameter("employeeTypeCode", employeeTypeCode)
-                .setParameter("employeeNumber", employeeNumber)
-                .setParameter("periodStart", periodStart)
-                .setParameter("periodEnd", periodEnd)
-                .getResultList();
+        List<String> categories = agreementCategoryRepository.findLatestValidByEmployeeIdAndEffectiveDate(
+                employeeId,
+                periodEnd,
+                PageRequest.of(0, 1)
+        );
+        String agreementCategoryCode = categories.isEmpty() ? null : categories.getFirst();
 
-        List<PayrollLaunchWorkingTimeWindowContext> windows = workingTimeRows.stream()
+        List<PayrollLaunchWorkingTimeWindowContext> windows = workingTimeRepository
+                .findOverlappingByEmployeeIdAndPeriodOrdered(employeeId, periodStart, periodEnd)
+                .stream()
                 .map(this::toWorkingTimeWindow)
                 .toList();
 
-        return Optional.of(new PayrollLaunchEligibleInputContext(companyCode, agreementCode, windows));
+        return Optional.of(new PayrollLaunchEligibleInputContext(
+                presence.getCompanyCode(),
+                agreementCode,
+                agreementCategoryCode,
+                windows
+        ));
     }
 
-    private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(Object row) {
-        if (!(row instanceof Object[] columns) || columns.length < 3) {
-            throw new IllegalStateException("Unexpected row shape for payroll launch eligible input working-time query");
-        }
+    private boolean isOverlapping(
+            LocalDate sourceStart,
+            LocalDate sourceEnd,
+            LocalDate queryStart,
+            LocalDate queryEnd
+    ) {
+        return !sourceStart.isAfter(queryEnd)
+                && (sourceEnd == null || !sourceEnd.isBefore(queryStart));
+    }
+
+    private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(WorkingTimeEntity workingTime) {
         return new PayrollLaunchWorkingTimeWindowContext(
-                toLocalDate(columns[0]),
-                toLocalDate(columns[1]),
-                (BigDecimal) columns[2]
+                workingTime.getStartDate(),
+                workingTime.getEndDate(),
+                workingTime.getWorkingTimePercentage()
         );
-    }
-
-    private LocalDate toLocalDate(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Date date) {
-            return date.toLocalDate();
-        }
-        return (LocalDate) value;
     }
 }

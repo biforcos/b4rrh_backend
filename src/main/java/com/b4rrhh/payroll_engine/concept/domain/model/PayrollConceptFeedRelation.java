@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.concept.domain.model;
 
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
+import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,13 +46,13 @@ public class PayrollConceptFeedRelation {
         if (effectiveFrom == null) {
             throw new IllegalArgumentException("effectiveFrom is required");
         }
-        if (sourceObject.getObjectTypeCode() != com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode.CONCEPT) {
+        if (!isAllowedSourceType(sourceObject.getObjectTypeCode())) {
             throw new IllegalArgumentException(
-                    "Feed relation sourceObject must be of type CONCEPT, but got: "
+                "Feed relation sourceObject must be one of [CONCEPT, TABLE, CONSTANT], but got: "
                             + sourceObject.getObjectTypeCode()
             );
         }
-        if (targetObject.getObjectTypeCode() != com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode.CONCEPT) {
+        if (targetObject.getObjectTypeCode() != PayrollObjectTypeCode.CONCEPT) {
             throw new IllegalArgumentException(
                     "Feed relation targetObject must be of type CONCEPT, but got: "
                             + targetObject.getObjectTypeCode()
@@ -83,6 +84,12 @@ public class PayrollConceptFeedRelation {
     public LocalDate getEffectiveTo() { return effectiveTo; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    private boolean isAllowedSourceType(PayrollObjectTypeCode sourceType) {
+        return sourceType == PayrollObjectTypeCode.CONCEPT
+                || sourceType == PayrollObjectTypeCode.TABLE
+                || sourceType == PayrollObjectTypeCode.CONSTANT;
+    }
 
     public boolean isActiveAt(LocalDate referenceDate) {
         return !referenceDate.isBefore(effectiveFrom)

@@ -38,4 +38,20 @@ public class PayrollTableRowLookupAdapter implements PayrollTableRowLookupPort {
                 PageRequest.of(0, 1)
         ).stream().findFirst().map(PayrollTableRowEntity::getMonthlyValue);
     }
+
+    @Override
+    public Optional<BigDecimal> resolveDailyValue(
+            String ruleSystemCode,
+            String tableCode,
+            String searchCode,
+            LocalDate effectiveDate
+    ) {
+        return repository.findLatestValidByRuleSystemCodeAndTableCodeAndSearchCodeAndEffectiveDate(
+                ruleSystemCode,
+                tableCode,
+                searchCode,
+                effectiveDate,
+                PageRequest.of(0, 1)
+        ).stream().findFirst().map(PayrollTableRowEntity::getDailyValue);
+    }
 }

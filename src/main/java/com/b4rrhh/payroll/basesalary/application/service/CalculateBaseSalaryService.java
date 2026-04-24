@@ -13,11 +13,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
+ * Legacy spike service kept for backward compatibility/tests.
+ * Not part of the canonical payroll launch flow.
+ * Canonical flow uses PayrollConceptGraphCalculator.calculateConceptResult("101", ...).
+ * Will be removed in a future cleanup.
+ *
  * Application service for calculating base salary.
  * Orchestrates the resolution of agreement, category, binding, and table row
  * to return the monthly base salary.
  */
 @Service
+@Deprecated
 public class CalculateBaseSalaryService {
 
         private final EmployeeByBusinessKeyLookupPort employeeByBusinessKeyLookup;

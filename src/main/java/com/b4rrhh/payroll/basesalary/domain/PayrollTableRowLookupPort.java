@@ -25,4 +25,11 @@ public interface PayrollTableRowLookupPort {
             String searchCode,
             LocalDate effectiveDate
     );
+
+    Optional<BigDecimal> resolveDailyValue(
+            String ruleSystemCode,
+            String tableCode,
+            String searchCode,
+            LocalDate effectiveDate
+    );
 }

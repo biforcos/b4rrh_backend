@@ -13,6 +13,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
+ * Legacy spike service kept for backward compatibility/tests.
+ * Not part of the canonical payroll launch flow.
+ * Canonical flow uses PayrollConceptGraphCalculator.calculateConceptResult("101", ...).
+ * Will be removed in a future cleanup.
+ *
  * Application service for calculating the monthly agreement plus (PLUS_CONVENIO).
  *
  * Strictly parallel to CalculateBaseSalaryService.
@@ -28,6 +33,7 @@ import java.time.LocalDate;
  *   Step 6: return monthly_value
  */
 @Service
+@Deprecated
 public class CalculateAgreementPlusService {
 
     private final EmployeeByBusinessKeyLookupPort employeeByBusinessKeyLookup;

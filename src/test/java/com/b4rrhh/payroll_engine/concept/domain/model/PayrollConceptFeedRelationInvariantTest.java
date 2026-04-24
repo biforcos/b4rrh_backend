@@ -29,16 +29,13 @@ class PayrollConceptFeedRelationInvariantTest {
     }
 
     @Test
-    void sourceObjectMustBeConceptType() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> validRelation(
-                        tableObject(1L, "TABLA1"),
-                        conceptObject(2L, "IRPF"),
-                        LocalDate.of(2025, 1, 1), null
-                ));
-
-        assertTrue(ex.getMessage().contains("sourceObject must be of type CONCEPT"));
-    }
+        void sourceObjectAllowsTableType() {
+        validRelation(
+            tableObject(1L, "TABLA1"),
+            conceptObject(2L, "IRPF"),
+            LocalDate.of(2025, 1, 1), null
+        );
+        }
 
     @Test
     void targetObjectMustBeConceptType() {

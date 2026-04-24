@@ -5,12 +5,16 @@ package com.b4rrhh.payroll.application.usecase;
  *
  * <ul>
  *   <li>{@link #FAKE}: deterministic fake concept materialization (current safe default).</li>
- *   <li>{@link #ELIGIBLE_REAL}: delegates to payroll_engine eligible execution flow.</li>
- *   <li>{@link #MINIMAL_REAL}: calculates BASE_SALARY and PLUS_CONVENIO concepts directly (minimal real plan).</li>
+ *   <li>{@link #ELIGIBLE_REAL}: canonical pilot path based on concept-graph resolution.</li>
+ *   <li>{@link #MINIMAL_REAL}: legacy mode. Not supported. Will be removed.</li>
  * </ul>
  */
 public enum PayrollExecutionMode {
     FAKE,
     ELIGIBLE_REAL,
+    /**
+     * Legacy mode. Not supported. Will be removed.
+     */
+    @Deprecated
     MINIMAL_REAL
 }
