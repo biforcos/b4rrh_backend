@@ -109,16 +109,15 @@ Dark bar (`#212529`), white text. The net-pay amount is rendered from the backen
 | `CALCULATED` | Invalidar | `NOT_VALID` | Invalidar | Red |
 | `CALCULATED` | Validar | `EXPLICIT_VALIDATED` | Validar | Blue |
 | `NOT_VALID` | Recalcular | `CALCULATED` (engine decides) | Recalcular | Amber |
-| `CALCULATED` | Recalcular | `CALCULATED` (engine decides) | Recalcular | Amber |
 
-**Rule: `NOT_VALID` cannot transition directly to any valid state.** Only the calculation engine can promote a `NOT_VALID` payroll to `CALCULATED`. There is no "Validar" button for a `NOT_VALID` payroll.
+**Rule: `NOT_VALID` cannot transition directly to any valid state.** Only the calculation engine can promote a `NOT_VALID` payroll to `CALCULATED` via Recalcular. The backend endpoint enforces this — it rejects recalculate requests for any state other than `NOT_VALID`.
 
 ### 5.2 Button visibility per state
 
 | State | Invalidar | Validar | Recalcular |
 |---|---|---|---|
 | `NOT_VALID` | — | — | ✓ |
-| `CALCULATED` | ✓ | ✓ | ✓ |
+| `CALCULATED` | ✓ | ✓ | — |
 | `EXPLICIT_VALIDATED` | — | — | — |
 | `DEFINITIVE` | — | — | — |
 
@@ -204,6 +203,5 @@ No arithmetic is performed in any component, store, or gateway.
 | # | Question | Impact |
 |---|---|---|
 | 1 | Exact `FunctionalNature` enum value names for aggregates | Frontend rendering constants |
-| 2 | Is `Recalcular` available from `EXPLICIT_VALIDATED`? | Button visibility table §5.2 |
-| 3 | Pagination vs flat list for payroll search? | Gateway + list component |
-| 4 | Company/employee header data source (bounded context integration) | Folio header §4.1 |
+| 2 | Pagination vs flat list for payroll search? | Gateway + list component |
+| 3 | Company/employee header data source (bounded context integration) | Folio header §4.1 |
