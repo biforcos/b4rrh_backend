@@ -1,7 +1,7 @@
 # ADR-040 — Macro-grafo, activación de conceptos y plan de cálculo efectivo
 
 ## Estado
-Propuesto
+Implementado (ver ADR-045)
 
 ---
 

@@ -1,7 +1,7 @@
 ADR — Primer cálculo real de salario base mediante conceptos tipados y grafo mínimo
 Estado
 
-Propuesto
+Implementado (ver ADR-045)
 
 Contexto
 

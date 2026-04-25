@@ -1,7 +1,7 @@
 ﻿# ADR Bundle
 
 > Fichero generado automÃ¡ticamente. No editar a mano.
-> Fecha de generaciÃ³n: 2026-04-23 20:41:39
+> Fecha de generaciÃ³n: 2026-04-25 23:42:37
 
 ---
 
@@ -49,6 +49,7 @@
 - [ADR-042-Separación-entre-payrol-y-payroll_engine.md](#file-adr-042-separaci-n-entre-payrol-y-payroll-engine-md)
 - [ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md](#file-adr-043-agreement-profile-y-activaci-n-de-payroll-basada-en-contexto-md)
 - [ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md](#file-adr-044-primer-c-lculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-m-nimo-md)
+- [ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md](#file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md)
 - [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
 
 ---
@@ -9615,7 +9616,7 @@ Los cambios en la naturaleza del concepto implican la creaciÃ³n de un nuevo co
 # ADR-036 â€” TipologÃ­as canÃ³nicas de cÃ¡lculo de `PayrollConcept`
 
 ## Estado
-Propuesto
+Aceptado
 
 ---
 
@@ -9741,25 +9742,74 @@ La complejidad se desplaza a la obtenciÃ³n del porcentaje, no al tipo de cÃ¡
 ### 4. `AGGREGATE`
 
 #### DefiniciÃ³n
-El resultado del concepto se obtiene combinando resultados de otros conceptos ya calculados.
+El resultado del concepto se obtiene combinando resultados de otros conceptos ya calculados, pudiendo invertir el signo de cada contribuyente individualmente.
 
 #### Forma general
 
-resultado = SUM(miembros)
+resultado = SUM(feed_i Ã— sign_i)
 
+donde `sign_i` es +1 si la relaciÃ³n de feed tiene `invert_sign = false`, y âˆ’1 si tiene `invert_sign = true`.
+
+#### El flag `invert_sign` en la relaciÃ³n de feed
+
+El flag `invert_sign` reside en la **relaciÃ³n de feed** (no en el concepto fuente). Esto permite que un mismo concepto contribuya positivamente a un agregado y negativamente a otro:
+
+| Concepto fuente       | Feeds aggregate | `invert_sign` | Efecto         |
+|-----------------------|-----------------|---------------|----------------|
+| 101 SALARIO_BASE      | 970             | false         | + importe      |
+| 101 SALARIO_BASE      | 990             | false         | + importe      |
+| concepto deducciÃ³n X  | 980             | false         | + importe      |
+| concepto deducciÃ³n X  | 990             | true          | âˆ’ importe      |
+
+#### Modelo de grafo plano (flat graph)
+
+Los conceptos hoja alimentan **directamente** tanto su agregado lateral (devengos o deducciones) como el agregado de lÃ­quido neto (990). El concepto 990 **nunca depende de 970 ni de 980**; agrega los mismos conceptos hoja que ellos.
+
+```
+EARNING leaf â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º  970 (invert=false)
+                    â””â”€â”€â”€â”€â–º  990 (invert=false)
+
+DEDUCTION leaf â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º  980 (invert=false)
+                    â””â”€â”€â”€â”€â–º  990 (invert=true)
+```
+
+Esto evita dependencias en cascada entre agregados y garantiza que el grafo de cÃ¡lculo sea siempre un DAG sin nodos intermedios de agregado encadenados.
+
+#### ActivaciÃ³n explÃ­cita
+
+Los conceptos AGGREGATE **no se activan automÃ¡ticamente** por el hecho de que sus fuentes estÃ©n activadas. Requieren una fila explÃ­cita en `payroll_object_activation`, igual que el resto de conceptos.
 
 #### CaracterÃ­sticas
 - No opera sobre datos primarios, sino sobre resultados previos.
-- Representa composiciÃ³n o acumulaciÃ³n.
+- Representa composiciÃ³n o acumulaciÃ³n con signo controlado a nivel de relaciÃ³n.
 
 #### Ejemplos
+- total devengos (970)
+- total deducciones (980)
+- lÃ­quido a pagar / neto (990)
 - bases de cotizaciÃ³n
 - bases fiscales
-- total devengos
-- total deducciones
 
 #### Nota importante
-La forma de determinar los miembros no forma parte de la tipologÃ­a, sino de una capa adicional (definida en ADR posterior).
+La estrategia de agregaciÃ³n con signo queda definida aquÃ­. La forma de registrar las relaciones de feed y persistirlas se trata en los ADRs de infraestructura del motor de nÃ³mina.
+
+---
+
+## `FunctionalNature` para conceptos agregados totales
+
+Los conceptos de tipo `AGGREGATE` que representan totales de nÃ³mina reciben valores especÃ­ficos en el enum `FunctionalNature` para que el frontend pueda distinguirlos de las lÃ­neas de detalle al renderizar el recibo de salario.
+
+Se aÃ±aden los siguientes valores al enum:
+
+| Valor              | SemÃ¡ntica                                      | Concepto tÃ­pico |
+|--------------------|------------------------------------------------|-----------------|
+| `TOTAL_EARNING`    | Suma de todos los devengos                     | 970             |
+| `TOTAL_DEDUCTION`  | Suma de todas las deducciones                  | 980             |
+| `NET_PAY`          | LÃ­quido a pagar (devengos âˆ’ deducciones)       | 990             |
+
+Estos tres valores coexisten con los valores preexistentes (`EARNING`, `DEDUCTION`, `BASE`, `INFORMATIONAL`).
+
+La `FunctionalNature` es un atributo de presentaciÃ³n/semÃ¡ntica del concepto; no altera la lÃ³gica de cÃ¡lculo. Un concepto con `calculationType = AGGREGATE` y `functionalNature = NET_PAY` ejecuta exactamente la misma operaciÃ³n `SUM(feed_i Ã— sign_i)` que cualquier otro AGGREGATE.
 
 ---
 
@@ -9849,8 +9899,7 @@ Este ADR no define:
 - cÃ³mo se versionan las reglas;
 - el orden de ejecuciÃ³n de los conceptos;
 - el modelo de persistencia;
-- la API de configuraciÃ³n;
-- la estrategia de agregaciÃ³n de `AGGREGATE`.
+- la API de configuraciÃ³n.
 
 ---
 
@@ -10848,7 +10897,7 @@ Este modelo constituye la base para la futura ejecuciÃ³n del motor de cÃ¡lcu
 # ADR-040 â€” Macro-grafo, activaciÃ³n de conceptos y plan de cÃ¡lculo efectivo
 
 ## Estado
-Propuesto
+Implementado (ver ADR-045)
 
 ---
 
@@ -11952,8 +12001,417 @@ Binding (fuentes)
 
 <!-- BEGIN FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md -->
 
+ADR â€” Primer cÃ¡lculo real de salario base mediante conceptos tipados y grafo mÃ­nimo
+Estado
+
+Implementado (ver ADR-045)
+
+Contexto
+
+En iteraciones recientes se ha construido un slice funcional que permite:
+
+activar conceptos por convenio
+vincular tablas mediante binding
+resolver filas temporales por convenio/categorÃ­a/fecha
+integrar conceptos reales en el lanzador de nÃ³mina
+
+Ese trabajo ha sido Ãºtil para validar:
+
+activation
+binding
+payroll_table_row
+resoluciÃ³n temporal
+integraciÃ³n con el launch
+
+Sin embargo, la implementaciÃ³n actual de conceptos como BASE_SALARY o PLUS_CONVENIO se ha materializado mediante servicios concretos por concepto. Ese enfoque ha servido como spike tÃ©cnico, pero no representa la arquitectura objetivo del motor de nÃ³mina.
+
+El bundle de diseÃ±o ya fijaba una lÃ­nea distinta: los conceptos de nÃ³mina deben resolverse por tipologÃ­a de cÃ¡lculo y por sources tipados, no por servicios hardcodeados por concepto. En particular, el bundle ya contempla tipologÃ­as como DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE y AGGREGATE, y ademÃ¡s permite que un operando se resuelva a partir de otro CONCEPT. El ejemplo conceptual del salario base ya estaba descrito como una composiciÃ³n de cantidad y precio.
+
+Se necesita, por tanto, una reconducciÃ³n controlada:
+
+aprovechar las piezas ya validadas
+dejar de codificar conceptos de negocio â€œa manoâ€
+empezar a ejecutar un mini grafo real
+Problema
+
+Se quiere obtener una primera nÃ³mina no fake con un salario base mÃ­nimo pero real, disparado desde el convenio y resuelto mediante conceptos configurados en base de datos.
+
+Ese primer caso debe ser lo bastante simple para ser implementable en pocas iteraciones, pero lo bastante correcto como para validar la arquitectura del motor.
+
+DecisiÃ³n
+1. Separar explÃ­citamente concepto de negocio y concepto tÃ©cnico
+
+Se distinguen dos familias de conceptos:
+
+Conceptos de negocio
+
+Son los que representan lÃ­neas reales de nÃ³mina y pueden persistirse como resultado final.
+
+Ejemplo:
+
+101 - SALARIO_BASE
+Conceptos tÃ©cnicos
+
+Son nodos auxiliares de cÃ¡lculo, reutilizables, y no tienen por quÃ© persistirse como lÃ­neas finales de nÃ³mina.
+
+Ejemplos:
+
+D01 - DIAS_PRESENCIA
+P01 - PRECIO_DIA_TEORICO
+
+Los conceptos tÃ©cnicos podrÃ¡n ser reutilizados por varios conceptos de negocio futuros.
+
+2. El salario base piloto se modela como RATE_BY_QUANTITY
+
+El primer concepto real de negocio serÃ¡:
+
+101 - SALARIO_BASE
+
+Su tipologÃ­a serÃ¡:
+
+RATE_BY_QUANTITY
+
+SemÃ¡ntica:
+
+quantity = CONCEPT(D01)
+rate = CONCEPT(P01)
+
+Resultado:
+
+101 = P01 Ã— D01
+
+Esto sigue la lÃ­nea ya fijada en el bundle para salario base como combinaciÃ³n de cantidad y precio.
+
+3. D01 - DIAS_PRESENCIA se introduce como concepto tÃ©cnico temporalmente simplificado
+
+Se define:
+
+D01 - DIAS_PRESENCIA
+
+TipologÃ­a inicial:
+
+DIRECT_AMOUNT
+
+Valor inicial:
+
+30
+
+Esta simplificaciÃ³n es deliberada.
+No se calcularÃ¡n todavÃ­a dÃ­as reales de presencia ni segmentaciÃ³n.
+
+Objetivo de esta iteraciÃ³n:
+
+validar la dependencia tÃ©cnica
+validar la ejecuciÃ³n por grafo
+no bloquear el avance por la falta de cÃ¡lculo temporal detallado
+
+En iteraciones futuras, D01 podrÃ¡ evolucionar para resolverse por segmento o por ventana real de presencia sin cambiar la estructura del concepto 101.
+
+4. P01 - PRECIO_DIA_TEORICO se introduce como concepto tÃ©cnico valorizado por tabla binded
+
+Se define:
+
+P01 - PRECIO_DIA_TEORICO
+
+TipologÃ­a inicial:
+
+DIRECT_AMOUNT resuelto por source TABLE
+o, equivalentemente, un nodo tÃ©cnico cuyo valor proviene de lookup a tabla binded
+
+Valor:
+
+daily_value de payroll_table_row
+
+Lookup por:
+
+convenio aplicable
+categorÃ­a aplicable
+fecha efectiva
+
+El binding del convenio apuntarÃ¡ a la tabla salarial correspondiente, y P01 se resolverÃ¡ leyendo daily_value de la fila vigente.
+
+Esto aprovecha directamente la estructura ya existente en payroll_table_row, que ya contiene daily_value. No se requiere derivar el precio diario a partir del mensual. Eso permite un primer caso limpio y escalable.
+
+5. El convenio dispara el concepto final de negocio, no los nodos tÃ©cnicos como lÃ­neas finales
+
+Para el primer caso:
+
+el convenio activa 101 - SALARIO_BASE
+
+El motor, al resolver 101, podrÃ¡ descubrir y ejecutar sus dependencias:
+
+D01
+P01
+
+Pero el resultado persistido en la nÃ³mina serÃ¡, en esta iteraciÃ³n:
+
+101 - SALARIO_BASE
+
+Los conceptos tÃ©cnicos podrÃ¡n existir:
+
+como nodos de ejecuciÃ³n
+como trazabilidad futura
+como snapshot si mÃ¡s adelante interesa
+
+Pero no se consideran todavÃ­a lÃ­neas finales de nÃ³mina.
+
+6. La ejecuciÃ³n se harÃ¡ mediante un grafo mÃ­nimo, no mediante servicios concretos por concepto de negocio
+
+Se abandona como direcciÃ³n arquitectÃ³nica final la idea de:
+
+CalculateBaseSalaryService
+CalculateAgreementPlusService
+etc.
+
+Esos servicios se reinterpretan como spikes o resolvedores transitorios Ãºtiles para validar piezas del pipeline.
+
+La direcciÃ³n correcta pasa a ser:
+
+resolver conceptos por tipologÃ­a
+resolver operandos por source
+permitir que un concepto dependa de otro CONCEPT
+
+Para la primera iteraciÃ³n no se construirÃ¡ un motor genÃ©rico completo, pero sÃ­ un mini dispatcher suficiente para ejecutar:
+
+DIRECT_AMOUNT
+RATE_BY_QUANTITY
+
+y para resolver operandos tipo:
+
+CONCEPT
+TABLE
+7. El lanzador de nÃ³mina deberÃ¡ enchufarse al mini grafo real
+
+El endpoint de cÃ¡lculo / lanzador ya existente dejarÃ¡ de inyectar un concepto fake para este caso y pasarÃ¡ a:
+
+identificar que el convenio dispara 101 - SALARIO_BASE
+resolver el mini grafo:
+D01
+P01
+101
+persistir 101 como lÃ­nea final real de nÃ³mina
+
+El camino fake podrÃ¡ mantenerse temporalmente como fallback o modo alternativo, pero el caso piloto de salario base debe pasar a ejecutarse ya con grafo mÃ­nimo real.
+
+Consecuencias
+Positivas
+Se reconduce el diseÃ±o hacia el motor real sin tirar piezas Ãºtiles.
+Se valida el uso real de:
+trigger por convenio
+binding de tabla
+source CONCEPT
+source TABLE
+tipologÃ­a RATE_BY_QUANTITY
+Se evita seguir creando servicios por concepto como arquitectura final.
+Se prepara una base escalable:
+maÃ±ana D01 podrÃ¡ calcularse por segmento
+maÃ±ana P02 podrÃ¡ depender de P01 y J01
+maÃ±ana se podrÃ¡n introducir coeficientes de jornada sin reescribir 101
+Negativas / Costes
+Lo ya implementado como cÃ¡lculo directo de BASE_SALARY y PLUS_CONVENIO pasa a ser transitorio.
+Hay que introducir un primer wiring real de dependencias entre conceptos.
+El launch tendrÃ¡ que dejar de pensar en â€œconceptos hardcodeadosâ€ y empezar a ejecutar un mini plan de cÃ¡lculo.
+No objetivos de esta iteraciÃ³n
+
+No se pretende todavÃ­a:
+
+calcular dÃ­as reales de presencia
+aplicar coeficiente real de jornada
+introducir segmentaciÃ³n temporal
+modelar dependencias arbitrarias complejas
+persistir todos los conceptos tÃ©cnicos como lÃ­neas de nÃ³mina
+construir un motor genÃ©rico completo con todas las tipologÃ­as posibles
+resolver plus convenio dentro de este mismo salto
+DiseÃ±o mÃ­nimo resultante
+Conceptos iniciales
+101 - SALARIO_BASE
+tipo: RATE_BY_QUANTITY
+quantity source: CONCEPT(D01)
+rate source: CONCEPT(P01)
+D01 - DIAS_PRESENCIA
+tipo: DIRECT_AMOUNT
+valor inicial: 30
+P01 - PRECIO_DIA_TEORICO
+tipo: DIRECT_AMOUNT / valor resuelto por TABLE
+source: tabla binded por convenio
+campo usado: daily_value
+Resultado final
+lÃ­nea final persistida: 101 - SALARIO_BASE
+Estrategia de implementaciÃ³n
+Paso 1
+
+Sembrar en base de datos:
+
+101
+D01
+P01
+sus tipologÃ­as
+sus relaciones/dependencias
+el binding de tabla para P01
+Paso 2
+
+Crear el wiring mÃ­nimo del mini grafo:
+
+resolver 101
+descubrir dependencias
+resolver D01
+resolver P01
+calcular 101
+Paso 3
+
+Enchufar ese mini cÃ¡lculo al lanzador de nÃ³mina existente
+
+Paso 4
+
+Persistir 101 como concepto final real en la tabla de resultados
+
+Nota de transiciÃ³n
+
+Los servicios actuales tipo CalculateBaseSalaryService o CalculateAgreementPlusService no se consideran el diseÃ±o final del motor. Se mantienen Ãºnicamente como apoyo temporal o como material de transiciÃ³n mientras el primer camino real basado en tipologÃ­as y dependencias queda operativo.
+
+DecisiÃ³n prÃ¡ctica inmediata
+
+La siguiente iteraciÃ³n no se enfocarÃ¡ en aÃ±adir mÃ¡s conceptos directos.
+Se enfocarÃ¡ en conseguir que el lanzador calcule un Ãºnico concepto real final (101 - SALARIO_BASE) mediante:
+
+trigger de convenio
+mini grafo
+conceptos tÃ©cnicos
+tipologÃ­as mÃ­nimas
+lookup a tabla binded
 
 <!-- END FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md -->
+
+
+---
+
+# FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md
+<a name="file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md"></a>
+
+<!-- BEGIN FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
+
+# ADR-045 â€” EjecuciÃ³n elegible real basada en `concept_assignment` y plan de cÃ¡lculo
+
+## Estado
+
+Implementado
+
+---
+
+## Contexto
+
+ADR-044 estableciÃ³ la direcciÃ³n tÃ©cnica: abandonar servicios hardcodeados por concepto y ejecutar nÃ³mina mediante un grafo mÃ­nimo de conceptos configurados en base de datos. La primera iteraciÃ³n de ese diseÃ±o se implementÃ³ con un stub PoC en `CalculatePayrollUnitService.calculateEligibleReal()` que calculaba **Ãºnicamente el concepto "101"** mediante una llamada directa a `PayrollConceptGraphCalculator`.
+
+Ese stub sirviÃ³ para validar las piezas del pipeline (convenio, binding, tablas, resoluciÃ³n temporal) pero nunca fue el diseÃ±o final. Para avanzar hacia una nÃ³mina real habÃ­a que:
+
+1. Determinar quÃ© conceptos aplican a un empleado desde parametrizaciÃ³n (no hardcode)
+2. Expandir las dependencias transitivas necesarias para el cÃ¡lculo
+3. Construir un plan de ejecuciÃ³n en orden topolÃ³gico
+4. Ejecutar el plan completo, no solo un concepto
+5. Persistir solo los conceptos con presencia en recibo
+
+En paralelo, se habÃ­an diseÃ±ado las tablas `payroll_engine.concept_assignment` (elegibilidad por contexto) y el pipeline `BuildEligibleExecutionPlanUseCase` (construcciÃ³n del plan), pero ninguno estaba enchufado al lanzador.
+
+---
+
+## DecisiÃ³n
+
+### 1. `concept_assignment` como fuente de elegibilidad canÃ³nica
+
+La tabla `payroll_engine.concept_assignment` es la fuente oficial de quÃ© conceptos aplican a un contexto dado:
+
+| Columna | SemÃ¡ntica |
+|---|---|
+| `rule_system_code` | Ãmbito del sistema de reglas |
+| `concept_code` | Concepto elegible |
+| `company_code` | Wildcardeable (null = aplica a todas las empresas) |
+| `agreement_code` | Convenio aplicable |
+| `employee_type_code` | Wildcardeable (null = aplica a todos los tipos) |
+| `valid_from` / `valid_to` | Vigencia temporal |
+| `priority` | ResoluciÃ³n de conflictos cuando hay mÃºltiples asignaciones para el mismo concepto |
+
+La elegibilidad se evalÃºa mediante `EmployeeAssignmentContext` (ruleSystemCode, companyCode, agreementCode, employeeTypeCode) en la fecha de referencia (fin de periodo).
+
+**Divergencia de ADR-043**: ADR-043 proponÃ­a `payroll_object_activation` como mecanismo de activaciÃ³n de conceptos por contexto. Esa tabla existe en el modelo pero no fue el camino tomado para la ejecuciÃ³n elegible. `concept_assignment` es el mecanismo real en producciÃ³n para el motor `payroll_engine`. `payroll_object_activation` queda para futuros casos de uso distintos si los hubiera.
+
+### 2. EliminaciÃ³n del stub PoC en `CalculatePayrollUnitService`
+
+`calculateEligibleReal()` ya no hardcodea el concepto "101". En su lugar:
+
+1. Obtiene el contexto de asignaciÃ³n del empleado desde `PayrollLaunchEligibleInputContext`
+2. Llama a `BuildEligibleExecutionPlanUseCase.build(assignmentContext, periodEnd)`
+3. Itera el plan resultante (`EligibleExecutionPlanResult.executionPlan()`) en orden topolÃ³gico
+4. Aplica la lÃ³gica de cÃ¡lculo segÃºn `calculationType` de cada `ConceptExecutionPlanEntry`
+5. Filtra por `payslipOrderCode != null` para decidir quÃ© conceptos se persisten
+
+### 3. CorrecciÃ³n del grafo de dependencias: edges de operandos
+
+`DefaultConceptDependencyGraphService` ahora aÃ±ade aristas `OPERAND_DEPENDENCY` para conceptos `RATE_BY_QUANTITY` y `PERCENTAGE`. Sin estas aristas, el grafo solo tenÃ­a aristas `FEED_DEPENDENCY`, lo que hacÃ­a que la ordenaciÃ³n topolÃ³gica fuera incorrecta para conceptos con operandos de tipo `CONCEPT`.
+
+Regla: un concepto `X` de tipo `RATE_BY_QUANTITY` cuyos operandos son `CONCEPT(D01)` y `CONCEPT(P01)` tiene dependencias `OPERAND_DEPENDENCY` de `Xâ†’D01` y `Xâ†’P01`. Estas aristas garantizan que D01 y P01 se calculen antes que X.
+
+### 4. ExpansiÃ³n BFS con discovery por operandos
+
+`DefaultEligibleConceptExpansionService` realiza la expansiÃ³n del conjunto elegible en dos fases:
+
+- **Feed-based discovery**: descubre conceptos adicionales accesibles por relaciones `FEED_DEPENDENCY`, pero solo incluye conceptos de tipo `PayrollObjectTypeCode.CONCEPT` (no tablas ni constantes).
+- **Operand-based discovery**: para cada concepto con operandos de tipo `CONCEPT`, incluye los conceptos tÃ©cnicos referenciados como operandos (ej. D01 y P01 para el concepto 101).
+
+Los conceptos descubiertos por expansiÃ³n (D01, P01) no estÃ¡n en `concept_assignment` y no son "elegibles" en sentido de negocio, pero son necesarios para el cÃ¡lculo. El resultado distingue `eligibleConcepts` (asignados directamente) de `expandedConcepts` (conjunto completo incluyendo tÃ©cnicos).
+
+### 5. `payslipOrderCode` como filtro de persistencia
+
+Un concepto calculado se persiste como lÃ­nea de nÃ³mina si y solo si su `payslipOrderCode` no es null. El valor de `payslipOrderCode` determina ademÃ¡s el orden de presentaciÃ³n en el recibo.
+
+Los conceptos tÃ©cnicos (D01, P01) tienen `payslipOrderCode = null` â†’ se calculan pero no se persisten.  
+Los conceptos de negocio (101, 970, 990) tienen `payslipOrderCode` establecido â†’ se persisten y aparecen en el recibo.
+
+### 6. Conceptos AGGREGATE 970, 980, 990
+
+Se introducen tres conceptos de tipo `AGGREGATE`:
+
+| CÃ³digo | MnemÃ³nico | Rol funcional | `payslipOrderCode` |
+|---|---|---|---|
+| 970 | TOTAL_DEVENGOS | `TOTAL_EARNING` | 970 |
+| 980 | TOTAL_DEDUCCIONES | `TOTAL_DEDUCTION` | 980 |
+| 990 | LIQUIDO_A_PAGAR | `NET_PAY` | 990 |
+
+Sus fuentes provienen de relaciones `FEED_DEPENDENCY` desde los conceptos que los alimentan (ej. 101 â†’ 970 y 101 â†’ 990). La ejecuciÃ³n suma los importes de sus fuentes, aplicando inversiÃ³n de signo si `invertSign = true`.
+
+El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientras no haya conceptos de deducciÃ³n reales, ya que el plan builder lanzarÃ­a `MissingAggregateSourcesException` al no encontrar feed sources.
+
+---
+
+## Consecuencias
+
+### Positivas
+
+- El lanzador de nÃ³mina ya no contiene lÃ³gica de negocio especÃ­fica por concepto. La parametrizaciÃ³n en base de datos dicta completamente quÃ© se calcula.
+- AÃ±adir un nuevo concepto elegible es solo insertar una fila en `concept_assignment` y definir las dependencias/fuentes correspondientes.
+- La nÃ³mina persiste 970 y 990 ademÃ¡s de 101, dando una vista real de devengos totales y lÃ­quido a pagar.
+- El pipeline completo (elegibilidad â†’ expansiÃ³n â†’ grafo â†’ plan â†’ ejecuciÃ³n) estÃ¡ cubierto por tests unitarios e integraciÃ³n E2E.
+
+### Costes / Restricciones
+
+- `concept_assignment` debe estar correctamente sembrado para cada convenio. Si estÃ¡ vacÃ­o, no se calcula ningÃºn concepto (sin error implÃ­cito: la nÃ³mina se persistirÃ¡ con 0 lÃ­neas).
+- Los conceptos AGGREGATE con `concept_assignment` activo pero sin feed sources lanzarÃ¡n `MissingAggregateSourcesException` en tiempo de construcciÃ³n del plan.
+- El modo `MINIMAL_REAL` queda retirado (`UnsupportedOperationException`). Solo `ELIGIBLE_REAL` y `FAKE` son modos operativos.
+
+---
+
+## RelaciÃ³n con ADRs previos
+
+| ADR | RelaciÃ³n |
+|---|---|
+| ADR-036 | Define `CalculationType` â€” ahora todos los tipos (DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE, AGGREGATE) se ejecutan en el mismo dispatcher |
+| ADR-038 | Define las relaciones FEED_DEPENDENCY â€” ahora usadas en tiempo de ejecuciÃ³n para AGGREGATE |
+| ADR-039 | Define el grafo de dependencias â€” complementado con aristas OPERAND_DEPENDENCY |
+| ADR-040 | Define el modelo conceptual de macro-grafo + activaciÃ³n + plan â€” este ADR documenta su implementaciÃ³n real |
+| ADR-043 | Propuso `payroll_object_activation` como mecanismo de activaciÃ³n â€” desplazado por `concept_assignment` |
+| ADR-044 | IniciÃ³ la direcciÃ³n del grafo mÃ­nimo real â€” este ADR completa y generaliza esa direcciÃ³n |
+
+
+<!-- END FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
 
 
 ---

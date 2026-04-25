@@ -32,7 +32,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = PermissionEvaluationBusinessKeyController.class)
 @Import({SecurityConfig.class, PermissionEvaluationExceptionHandler.class})
-@TestPropertySource(properties = "app.jwt.secret=b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm")
+@TestPropertySource(properties = {
+        "app.jwt.secret=b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm",
+        "app.dev-auth.enabled=false"
+})
 class SecurityConfigTest {
 
     private static final String SECRET = "b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm";
