@@ -36,3 +36,4 @@ Thumbs.db
 /lib/
 docs/deuda.md
 docs/architecture/adr/ADR_BUNDLE.md
+.claude/

@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
         "spring.datasource.url=jdbc:h2:mem:payroll_e2e;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
-        "spring.datasource.password="
+        "spring.datasource.password=",
+        "payroll.launch.execution.mode=FAKE"
 })
 @Transactional
 class LaunchPayrollCalculationEndToEndIntegrationTest {

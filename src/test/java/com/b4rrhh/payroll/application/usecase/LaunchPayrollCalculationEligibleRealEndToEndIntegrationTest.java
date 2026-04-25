@@ -81,7 +81,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
     }
 
     @Test
-    void launchPersistsOnlyConcept101ForEligibleRealMinimalExecution() {
+    void launchPersistsEligibleConceptsWithAggregates() {
         var run = launchPayrollCalculationUseCase.launch(new LaunchPayrollCalculationCommand(
                 "ESP",
                 "202501",
@@ -117,51 +117,37 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                 Integer.class,
                 payrollId
         );
-        assertEquals(1, conceptCount);
+        assertEquals(3, conceptCount);
 
-        Integer concept101Count = jdbcTemplate.queryForObject(
+        // technical concepts D01 and P01 must NOT be persisted (payslip_order_code is null)
+        assertEquals(0, jdbcTemplate.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                Integer.class,
-                payrollId,
-                "101"
-        );
-        Integer conceptD01Count = jdbcTemplate.queryForObject(
+                Integer.class, payrollId, "D01"));
+        assertEquals(0, jdbcTemplate.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                Integer.class,
-                payrollId,
-                "D01"
-        );
-        Integer conceptP01Count = jdbcTemplate.queryForObject(
-                "select count(*) from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                Integer.class,
-                payrollId,
-                "P01"
-        );
-        assertEquals(1, concept101Count);
-        assertEquals(0, conceptD01Count);
-        assertEquals(0, conceptP01Count);
+                Integer.class, payrollId, "P01"));
 
-        BigDecimal amount = jdbcTemplate.queryForObject(
+        BigDecimal amount101 = jdbcTemplate.queryForObject(
                 "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                BigDecimal.class,
-                payrollId,
-                "101"
-        );
-        BigDecimal quantity = jdbcTemplate.queryForObject(
+                BigDecimal.class, payrollId, "101");
+        BigDecimal quantity101 = jdbcTemplate.queryForObject(
                 "select quantity from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                BigDecimal.class,
-                payrollId,
-                "101"
-        );
-        BigDecimal rate = jdbcTemplate.queryForObject(
+                BigDecimal.class, payrollId, "101");
+        BigDecimal rate101 = jdbcTemplate.queryForObject(
                 "select rate from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
-                BigDecimal.class,
-                payrollId,
-                "101"
-        );
-        assertEquals(0, new BigDecimal("1425.00").compareTo(amount));
-        assertEquals(0, new BigDecimal("30").compareTo(quantity));
-        assertEquals(0, new BigDecimal("47.50").compareTo(rate));
+                BigDecimal.class, payrollId, "101");
+        assertEquals(0, new BigDecimal("1425.00").compareTo(amount101));
+        assertEquals(0, new BigDecimal("30").compareTo(quantity101));
+        assertEquals(0, new BigDecimal("47.50").compareTo(rate101));
+
+        BigDecimal amount970 = jdbcTemplate.queryForObject(
+                "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                BigDecimal.class, payrollId, "970");
+        BigDecimal amount990 = jdbcTemplate.queryForObject(
+                "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                BigDecimal.class, payrollId, "990");
+        assertEquals(0, new BigDecimal("1425.00").compareTo(amount970));
+        assertEquals(0, new BigDecimal("1425.00").compareTo(amount990));
 
         Integer warningCount = jdbcTemplate.queryForObject(
                 "select count(*) from payroll.payroll_warning where payroll_id = ? and warning_code = ?",
@@ -283,13 +269,51 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
         );
 
         jdbcTemplate.update(
+                "insert into payroll_engine.payroll_object (rule_system_code, object_type_code, object_code, created_at, updated_at) values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "ESP", "CONCEPT", "970"
+        );
+        jdbcTemplate.update(
+                "insert into payroll_engine.payroll_object (rule_system_code, object_type_code, object_code, created_at, updated_at) values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "ESP", "CONCEPT", "990"
+        );
+
+        Long concept970ObjectId = objectId("CONCEPT", "970");
+        Long concept990ObjectId = objectId("CONCEPT", "990");
+
+        jdbcTemplate.update(
+                "insert into payroll_engine.payroll_concept (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode, payslip_order_code, execution_scope, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                concept970ObjectId, "TOTAL_DEVENGOS", "AGGREGATE", "TOTAL_EARNING", "REPLACE", "970", "PERIOD"
+        );
+        jdbcTemplate.update(
+                "insert into payroll_engine.payroll_concept (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode, payslip_order_code, execution_scope, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                concept990ObjectId, "LIQUIDO_A_PAGAR", "AGGREGATE", "NET_PAY", "REPLACE", "990", "PERIOD"
+        );
+
+        jdbcTemplate.update(
+                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                concept101ObjectId, concept970ObjectId, "FEED_BY_SOURCE", null
+        );
+        jdbcTemplate.update(
+                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                concept101ObjectId, concept990ObjectId, "FEED_BY_SOURCE", null
+        );
+
+        jdbcTemplate.update(
+                "insert into payroll_engine.concept_assignment (rule_system_code, concept_code, company_code, agreement_code, employee_type_code, valid_from, valid_to, priority, created_at, updated_at) values (?, ?, ?, ?, ?, DATE '2025-01-01', null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "ESP", "101", null, "99002405011982", null, 10
+        );
+        jdbcTemplate.update(
+                "insert into payroll_engine.concept_assignment (rule_system_code, concept_code, company_code, agreement_code, employee_type_code, valid_from, valid_to, priority, created_at, updated_at) values (?, ?, ?, ?, ?, DATE '2025-01-01', null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "ESP", "970", null, "99002405011982", null, 970
+        );
+        jdbcTemplate.update(
+                "insert into payroll_engine.concept_assignment (rule_system_code, concept_code, company_code, agreement_code, employee_type_code, valid_from, valid_to, priority, created_at, updated_at) values (?, ?, ?, ?, ?, DATE '2025-01-01', null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "ESP", "990", null, "99002405011982", null, 990
+        );
+
+        jdbcTemplate.update(
                 "insert into payroll.payroll_object_activation (rule_system_code, owner_type_code, owner_code, target_object_type_code, target_object_code, active) values (?, ?, ?, ?, ?, ?)",
-                "ESP",
-                "AGREEMENT",
-                "99002405011982",
-                "PAYROLL_CONCEPT",
-                "101",
-                true
+                "ESP", "AGREEMENT", "99002405011982", "PAYROLL_CONCEPT", "101", true
         );
         jdbcTemplate.update(
                 "insert into payroll.payroll_object_binding (rule_system_code, owner_type_code, owner_code, binding_role_code, bound_object_type_code, bound_object_code, active) values (?, ?, ?, ?, ?, ?, ?)",

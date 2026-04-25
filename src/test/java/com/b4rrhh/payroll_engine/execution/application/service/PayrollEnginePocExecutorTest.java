@@ -43,7 +43,7 @@ class PayrollEnginePocExecutorTest {
             new DefaultPayrollEnginePocExecutor(
                     new DefaultWorkingTimeSegmentBuilder(),
                     stubConceptRepository("ESP"),
-                    new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
+                    new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP"), pocOperandRepo("ESP")),
                     new DefaultExecutionPlanBuilder(
                             pocOperandRepo("ESP"),
                             new OperandConfigurationValidator(),
@@ -198,14 +198,9 @@ class PayrollEnginePocExecutorTest {
                 new DefaultPayrollEnginePocExecutor(
                         new DefaultWorkingTimeSegmentBuilder(),
                         emptyConceptRepository(),
-                        new DefaultConceptDependencyGraphService(emptyFeedRelationRepo()),
+                        new DefaultConceptDependencyGraphService(emptyFeedRelationRepo(), emptyOperandRepo()),
                         new DefaultExecutionPlanBuilder(
-                                new PayrollConceptOperandRepository() {
-                                    @Override
-                                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                                    @Override
-                                    public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
-                                },
+                                emptyOperandRepo(),
                                 new OperandConfigurationValidator(),
                                 emptyFeedRelationRepo()),
                         new DefaultSegmentExecutionEngine(
@@ -332,6 +327,15 @@ class PayrollEnginePocExecutorTest {
             public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
                 return relsByTarget.getOrDefault(id, Collections.emptyList());
             }
+        };
+    }
+
+    private static PayrollConceptOperandRepository emptyOperandRepo() {
+        return new PayrollConceptOperandRepository() {
+            @Override
+            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+            @Override
+            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
         };
     }
 

@@ -126,9 +126,9 @@ class DefaultEligiblePayrollExecutorTest {
         ConceptAssignmentRepository assignmentRepo = fixedAssignmentRepo(RS, eligibleCodes);
         DefaultConceptEligibilityResolver eligibilityResolver = new DefaultConceptEligibilityResolver(assignmentRepo);
         DefaultEligibleConceptExpansionService expansionService =
-                new DefaultEligibleConceptExpansionService(conceptRepo, feedRepo);
+                new DefaultEligibleConceptExpansionService(conceptRepo, feedRepo, operandRepo);
         DefaultConceptDependencyGraphService graphService =
-                new DefaultConceptDependencyGraphService(feedRepo);
+                new DefaultConceptDependencyGraphService(feedRepo, operandRepo);
         DefaultExecutionPlanBuilder planBuilder =
                 new DefaultExecutionPlanBuilder(operandRepo, new OperandConfigurationValidator(), feedRepo);
 

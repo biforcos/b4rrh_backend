@@ -6,8 +6,10 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
 import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
@@ -59,7 +61,7 @@ class ConceptDependencyGraphServiceTest {
     @Test
     void graphContainsAllInputConceptsAsNodes() {
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase());
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo());
+        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
 
         ConceptDependencyGraph graph = service.build(concepts, REF);
 
@@ -72,7 +74,7 @@ class ConceptDependencyGraphServiceTest {
     void salarioBaseDependsOnBothTechnicalConceptsWhenRelationsPersisted() {
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase());
         ConceptDependencyGraphService service =
-                new DefaultConceptDependencyGraphService(pocFeedRelationRepo(diasPresencia(), precioDia(), salarioBase()));
+                new DefaultConceptDependencyGraphService(pocFeedRelationRepo(diasPresencia(), precioDia(), salarioBase()), emptyOperandRepo());
 
         ConceptDependencyGraph graph = service.build(concepts, REF);
 
@@ -99,7 +101,7 @@ class ConceptDependencyGraphServiceTest {
         relsByTarget.put(3L, List.of(feedRelation(external, salarioBase)));
 
         ConceptDependencyGraphService service =
-                new DefaultConceptDependencyGraphService(repoFromMap(relsByTarget));
+                new DefaultConceptDependencyGraphService(repoFromMap(relsByTarget), emptyOperandRepo());
 
         // Input list does NOT include externalConcept
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase);
@@ -126,7 +128,7 @@ class ConceptDependencyGraphServiceTest {
         List<PayrollConcept> concepts = List.of(unpersisted);
 
         // Repo stub that would record calls if invoked; we use an empty repo that never returns data.
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo());
+        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
 
         ConceptDependencyGraph graph = service.build(concepts, REF);
 
@@ -143,13 +145,13 @@ class ConceptDependencyGraphServiceTest {
 
     @Test
     void nullConceptListIsRejected() {
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo());
+        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
         assertThrows(IllegalArgumentException.class, () -> service.build(null, REF));
     }
 
     @Test
     void nullReferenceDateIsRejected() {
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo());
+        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
         assertThrows(IllegalArgumentException.class, () -> service.build(List.of(), null));
     }
 
@@ -222,5 +224,14 @@ class ConceptDependencyGraphServiceTest {
 
     private static PayrollConceptFeedRelationRepository emptyRepo() {
         return repoFromMap(Collections.emptyMap());
+    }
+
+    private static PayrollConceptOperandRepository emptyOperandRepo() {
+        return new PayrollConceptOperandRepository() {
+            @Override
+            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+            @Override
+            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
+        };
     }
 }

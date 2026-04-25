@@ -7,7 +7,9 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.dependency.application.service.DefaultConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
@@ -122,7 +124,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
                 ID_TOTAL_DEVENGOS,  List.of(feedRel(salarioBase, totalDevengos), feedRel(plusTransporte, totalDevengos))
         ));
 
-        graphService = new DefaultConceptDependencyGraphService(feedRepo);
+        graphService = new DefaultConceptDependencyGraphService(feedRepo, emptyOperandRepo());
     }
 
     // ── test: integration — expansion and plan construction ─────────────────
@@ -225,8 +227,8 @@ class DefaultEligibleExecutionPlanBuilderTest {
         ));
         // ghost is deliberately NOT added to conceptRepo
 
-        DefaultConceptDependencyGraphService gs = new DefaultConceptDependencyGraphService(brokenFeedRepo);
-        DefaultEligibleConceptExpansionService es = new DefaultEligibleConceptExpansionService(conceptRepo, brokenFeedRepo);
+        DefaultConceptDependencyGraphService gs = new DefaultConceptDependencyGraphService(brokenFeedRepo, emptyOperandRepo());
+        DefaultEligibleConceptExpansionService es = new DefaultEligibleConceptExpansionService(conceptRepo, brokenFeedRepo, emptyOperandRepo());
         DefaultEligibleExecutionPlanBuilder builder = new DefaultEligibleExecutionPlanBuilder(
                 eligibilityResolverWith("SALARIO_BASE"),
                 conceptRepo,
@@ -247,7 +249,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
 
     private DefaultEligibleExecutionPlanBuilder builderWith(DefaultConceptEligibilityResolver eligibilityResolver) {
         DefaultEligibleConceptExpansionService expansionService =
-                new DefaultEligibleConceptExpansionService(conceptRepo, feedRepo);
+                new DefaultEligibleConceptExpansionService(conceptRepo, feedRepo, emptyOperandRepo());
         return new DefaultEligibleExecutionPlanBuilder(
                 eligibilityResolver,
                 conceptRepo,
@@ -374,6 +376,15 @@ class DefaultEligibleExecutionPlanBuilderTest {
         public boolean existsByBusinessKey(String ruleSystemCode, String conceptCode) {
             return byCode.containsKey(conceptCode);
         }
+    }
+
+    private static PayrollConceptOperandRepository emptyOperandRepo() {
+        return new PayrollConceptOperandRepository() {
+            @Override
+            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
+            @Override
+            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return List.of(); }
+        };
     }
 
     private static final class FakeFeedRelationRepository implements PayrollConceptFeedRelationRepository {

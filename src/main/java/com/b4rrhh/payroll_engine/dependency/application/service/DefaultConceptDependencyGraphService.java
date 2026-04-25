@@ -1,8 +1,11 @@
 package com.b4rrhh.payroll_engine.dependency.application.service;
 
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
@@ -11,7 +14,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ConceptDependencyGraphService}.
@@ -21,38 +26,27 @@ import java.util.Set;
  *   <li>Add all input concepts as nodes.</li>
  *   <li>Build a set of known node identities for source filtering.</li>
  *   <li>For each concept (target), query active feed relations by technical object ID
- *       and reference date — one repository call per target concept.</li>
- *   <li>For each relation whose source is a known concept, add a FEED_DEPENDENCY edge:
- *       target depends on source.</li>
+ *       and reference date — one repository call per target concept. Only relations
+ *       whose source is a CONCEPT within the known set are added as FEED_DEPENDENCY edges.</li>
+ *   <li>For each RATE_BY_QUANTITY or PERCENTAGE concept, load its operand definitions
+ *       and add OPERAND_DEPENDENCY edges for each source concept in the known set.
+ *       This ensures topological ordering places operand sources before their dependents
+ *       even when operand relationships are not encoded as feed relations.</li>
  *   <li>Build and validate the graph (cycle detection).</li>
  * </ol>
- *
- * <h3>Current design constraints</h3>
- * <p><strong>One lookup per target concept.</strong>
- * The current implementation performs one {@link PayrollConceptFeedRelationRepository}
- * call per concept in the input list. This is acceptable for the PoC scale, but should
- * be replaced by a bulk lookup once the concept set grows.
- *
- * <p><strong>Null-ID concepts are skipped.</strong>
- * Concepts whose {@link com.b4rrhh.payroll_engine.object.domain.model.PayrollObject} ID
- * is {@code null} have not been persisted and therefore cannot have persisted feed
- * relations. They are still added as graph nodes but no relation lookup is performed
- * for them.
- *
- * <p><strong>External-source relations are silently ignored.</strong>
- * When a feed relation's source concept is not present in the provided input concept set,
- * that relation is intentionally skipped and no node is created for the external source.
- * This is the correct behaviour for this iteration: the executor provides an explicit,
- * bounded list of concepts for the PoC. If a required source is absent, the execution
- * plan builder will fail explicitly when it cannot satisfy a dependency.
  */
 @Service
 public class DefaultConceptDependencyGraphService implements ConceptDependencyGraphService {
 
     private final PayrollConceptFeedRelationRepository feedRelationRepository;
+    private final PayrollConceptOperandRepository operandRepository;
 
-    public DefaultConceptDependencyGraphService(PayrollConceptFeedRelationRepository feedRelationRepository) {
+    public DefaultConceptDependencyGraphService(
+            PayrollConceptFeedRelationRepository feedRelationRepository,
+            PayrollConceptOperandRepository operandRepository
+    ) {
         this.feedRelationRepository = feedRelationRepository;
+        this.operandRepository = operandRepository;
     }
 
     @Override
@@ -64,37 +58,48 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
             throw new IllegalArgumentException("referenceDate must not be null");
         }
 
-        // Index of known identities — used to filter out relations whose source
-        // falls outside the provided concept set.
         Set<ConceptNodeIdentity> knownIdentities = new HashSet<>();
         for (PayrollConcept concept : concepts) {
             knownIdentities.add(new ConceptNodeIdentity(concept.getRuleSystemCode(), concept.getConceptCode()));
         }
+
+        Map<String, PayrollConcept> conceptByCode = concepts.stream()
+                .collect(Collectors.toMap(PayrollConcept::getConceptCode, c -> c));
 
         ConceptDependencyGraphBuilder builder = new ConceptDependencyGraphBuilder()
                 .addNodes(concepts);
 
         for (PayrollConcept target : concepts) {
             Long targetId = target.getObject().getId();
-            if (targetId == null) {
-                // Concept is not yet persisted; no feed relations can exist in the repository.
-                // The concept is still a valid graph node — it is already added via addNodes above.
-                continue;
+            if (targetId != null) {
+                List<PayrollConceptFeedRelation> relations =
+                        feedRelationRepository.findActiveByTargetObjectId(targetId, referenceDate);
+
+                for (PayrollConceptFeedRelation relation : relations) {
+                    ConceptNodeIdentity sourceIdentity = new ConceptNodeIdentity(
+                            relation.getSourceObject().getRuleSystemCode(),
+                            relation.getSourceObject().getObjectCode()
+                    );
+                    if (knownIdentities.contains(sourceIdentity)) {
+                        builder.addFeedRelation(relation);
+                    }
+                }
             }
 
-            List<PayrollConceptFeedRelation> relations =
-                    feedRelationRepository.findActiveByTargetObjectId(targetId, referenceDate);
+            CalculationType calcType = target.getCalculationType();
+            if (calcType == CalculationType.RATE_BY_QUANTITY || calcType == CalculationType.PERCENTAGE) {
+                List<PayrollConceptOperand> operands =
+                        operandRepository.findByTarget(target.getRuleSystemCode(), target.getConceptCode());
 
-            for (PayrollConceptFeedRelation relation : relations) {
-                ConceptNodeIdentity sourceIdentity = new ConceptNodeIdentity(
-                        relation.getSourceObject().getRuleSystemCode(),
-                        relation.getSourceObject().getObjectCode()
-                );
-                if (knownIdentities.contains(sourceIdentity)) {
-                    builder.addFeedRelation(relation);
+                for (PayrollConceptOperand operand : operands) {
+                    String sourceCode = operand.getSourceObject().getObjectCode();
+                    ConceptNodeIdentity sourceIdentity =
+                            new ConceptNodeIdentity(target.getRuleSystemCode(), sourceCode);
+                    if (knownIdentities.contains(sourceIdentity)) {
+                        PayrollConcept sourceConcept = conceptByCode.get(sourceCode);
+                        builder.addOperandDependency(target, sourceConcept);
+                    }
                 }
-                // Relations whose source is outside the input concept set are intentionally
-                // ignored: no new node is introduced for the external source.
             }
         }
 

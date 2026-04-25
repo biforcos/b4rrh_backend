@@ -8,6 +8,16 @@ import com.b4rrhh.payroll.application.service.PayrollConceptGraphCalculator;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
+import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
+import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
+import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
+import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
+import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
+import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -36,7 +46,9 @@ class CalculatePayrollUnitServiceTest {
     @Mock
     private PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
     @Mock
-        private PayrollConceptGraphCalculator payrollConceptGraphCalculator;
+    private PayrollConceptGraphCalculator payrollConceptGraphCalculator;
+    @Mock
+    private BuildEligibleExecutionPlanUseCase buildEligibleExecutionPlanUseCase;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -46,7 +58,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
             properties,
-                        payrollConceptGraphCalculator
+            payrollConceptGraphCalculator,
+            buildEligibleExecutionPlanUseCase
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -102,7 +115,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
             properties,
-                        payrollConceptGraphCalculator
+            payrollConceptGraphCalculator,
+            buildEligibleExecutionPlanUseCase
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -128,6 +142,19 @@ class CalculatePayrollUnitServiceTest {
                 ));
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
             .thenReturn(payroll());
+
+        PayrollObject obj101 = new PayrollObject(1L, "ESP", PayrollObjectTypeCode.CONCEPT, "101", null, null);
+        com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept101 =
+                new com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept(
+                        obj101, "SALARIO_BASE", CalculationType.DIRECT_AMOUNT, FunctionalNature.EARNING,
+                        ResultCompositionMode.REPLACE, "101", ExecutionScope.PERIOD, null, null);
+        ConceptExecutionPlanEntry entry101 = new ConceptExecutionPlanEntry(
+                new ConceptNodeIdentity("ESP", "101"), CalculationType.DIRECT_AMOUNT);
+        EligibleExecutionPlanResult planResult = new EligibleExecutionPlanResult(
+                List.of(), List.of(), List.of(engineConcept101), null, List.of(entry101));
+        when(buildEligibleExecutionPlanUseCase.build(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(planResult);
 
         service.calculate(new CalculatePayrollUnitCommand(
             "ESP",
@@ -164,7 +191,8 @@ class CalculatePayrollUnitServiceTest {
             calculatePayrollUseCase,
             payrollLaunchEligibleInputLookupPort,
             properties,
-                        payrollConceptGraphCalculator
+            payrollConceptGraphCalculator,
+            buildEligibleExecutionPlanUseCase
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -209,7 +237,8 @@ class CalculatePayrollUnitServiceTest {
                 calculatePayrollUseCase,
                 payrollLaunchEligibleInputLookupPort,
                 properties,
-                payrollConceptGraphCalculator
+                payrollConceptGraphCalculator,
+                buildEligibleExecutionPlanUseCase
         );
 
         UnsupportedOperationException ex = assertThrows(
