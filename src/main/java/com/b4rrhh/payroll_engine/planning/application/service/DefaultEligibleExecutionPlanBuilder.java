@@ -11,6 +11,8 @@ import com.b4rrhh.payroll_engine.execution.application.service.ExecutionPlanBuil
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingEligibleConceptDefinitionException;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -51,6 +53,8 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecutionPlanUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultEligibleExecutionPlanBuilder.class);
+
     private final ResolveApplicableConceptsUseCase eligibilityResolver;
     private final PayrollConceptRepository conceptRepository;
     private final EligibleConceptExpansionService expansionService;
@@ -73,19 +77,23 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
 
     @Override
     public EligibleExecutionPlanResult build(EmployeeAssignmentContext context, LocalDate referenceDate) {
-        // Step 1: resolve applicable assignments
+        log.debug("[ENGINE] ── Paso 1/5 ELEGIBILIDAD | RS={} empresa={} convenio={} tipo={} ref={}",
+                context.getRuleSystemCode(), context.getCompanyCode(),
+                context.getAgreementCode(), context.getEmployeeTypeCode(), referenceDate);
+
         List<ResolvedConceptAssignment> applicableAssignments =
                 eligibilityResolver.resolve(context, referenceDate);
 
-        // Step 2: load eligible concept definitions
         Set<String> eligibleCodes = applicableAssignments.stream()
                 .map(ResolvedConceptAssignment::getConceptCode)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        log.debug("[ENGINE] ✓ Paso 1/5 | {} conceptos elegibles → [{}]",
+                eligibleCodes.size(), String.join(", ", eligibleCodes));
 
+        log.debug("[ENGINE] ── Paso 2/5 DEFINICIONES | cargando {} definiciones de concepto", eligibleCodes.size());
         List<PayrollConcept> eligibleConcepts =
                 conceptRepository.findAllByCodes(context.getRuleSystemCode(), eligibleCodes);
 
-        // Fail fast if any eligible concept code has no matching definition
         Set<String> foundCodes = eligibleConcepts.stream()
                 .map(PayrollConcept::getConceptCode)
                 .collect(Collectors.toSet());
@@ -94,15 +102,27 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
                 throw new MissingEligibleConceptDefinitionException(context.getRuleSystemCode(), code);
             }
         }
+        log.debug("[ENGINE] ✓ Paso 2/5 | {} definiciones cargadas: [{}]",
+                eligibleConcepts.size(),
+                eligibleConcepts.stream()
+                        .map(c -> c.getConceptCode() + "(" + c.getCalculationType() + ")")
+                        .collect(Collectors.joining(", ")));
 
-        // Step 3: expand dependencies (iteratively discovers and loads all structural dependencies)
+        log.debug("[ENGINE] ── Paso 3/5 EXPANSIÓN BFS | descubriendo dependencias transitivas");
         List<PayrollConcept> expandedConcepts = expansionService.expand(eligibleConcepts, referenceDate);
+        log.debug("[ENGINE] ✓ Paso 3/5 | {} conceptos tras expansión → [{}]",
+                expandedConcepts.size(),
+                expandedConcepts.stream().map(PayrollConcept::getConceptCode).collect(Collectors.joining(", ")));
 
-        // Step 4: build dependency graph over the full expanded concept set
+        log.debug("[ENGINE] ── Paso 4/5 GRAFO | construyendo grafo de dependencias sobre {} nodos", expandedConcepts.size());
         ConceptDependencyGraph dependencyGraph = graphService.build(expandedConcepts, referenceDate);
+        log.debug("[ENGINE] ✓ Paso 4/5 | grafo construido");
 
-        // Step 5: build ordered execution plan
+        log.debug("[ENGINE] ── Paso 5/5 PLAN | ordenación topológica y wiring de operandos");
         List<ConceptExecutionPlanEntry> executionPlan = planBuilder.build(dependencyGraph, expandedConcepts, referenceDate);
+        log.debug("[ENGINE] ✓ Paso 5/5 | {} entradas en plan → [{}]",
+                executionPlan.size(),
+                executionPlan.stream().map(e -> e.identity().getConceptCode()).collect(Collectors.joining(" → ")));
 
         return new EligibleExecutionPlanResult(
                 applicableAssignments,

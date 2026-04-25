@@ -9,6 +9,8 @@ import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandReposi
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -38,6 +40,8 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultConceptDependencyGraphService implements ConceptDependencyGraphService {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultConceptDependencyGraphService.class);
+
     private final PayrollConceptFeedRelationRepository feedRelationRepository;
     private final PayrollConceptOperandRepository operandRepository;
 
@@ -66,8 +70,13 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
         Map<String, PayrollConcept> conceptByCode = concepts.stream()
                 .collect(Collectors.toMap(PayrollConcept::getConceptCode, c -> c));
 
+        log.debug("[ENGINE]   GRAFO | {} nodos", concepts.size());
+
         ConceptDependencyGraphBuilder builder = new ConceptDependencyGraphBuilder()
                 .addNodes(concepts);
+
+        int feedEdges = 0;
+        int operandEdges = 0;
 
         for (PayrollConcept target : concepts) {
             Long targetId = target.getObject().getId();
@@ -82,6 +91,11 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
                     );
                     if (knownIdentities.contains(sourceIdentity)) {
                         builder.addFeedRelation(relation);
+                        feedEdges++;
+                        log.debug("[ENGINE]     FEED_DEPENDENCY: {} → {} (invertSign={})",
+                                relation.getSourceObject().getObjectCode(),
+                                target.getConceptCode(),
+                                relation.isInvertSign());
                     }
                 }
             }
@@ -98,11 +112,15 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
                     if (knownIdentities.contains(sourceIdentity)) {
                         PayrollConcept sourceConcept = conceptByCode.get(sourceCode);
                         builder.addOperandDependency(target, sourceConcept);
+                        operandEdges++;
+                        log.debug("[ENGINE]     OPERAND_DEPENDENCY: {} → {} (rol={})",
+                                sourceCode, target.getConceptCode(), operand.getOperandRole());
                     }
                 }
             }
         }
 
+        log.debug("[ENGINE]   GRAFO listo | {} aristas FEED + {} aristas OPERAND", feedEdges, operandEdges);
         return builder.build();
     }
 }

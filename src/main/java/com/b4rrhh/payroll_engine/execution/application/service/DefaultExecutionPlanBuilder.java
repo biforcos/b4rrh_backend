@@ -17,6 +17,8 @@ import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefini
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -60,6 +62,8 @@ import java.util.stream.Collectors;
 @Component
 public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultExecutionPlanBuilder.class);
+
     private final PayrollConceptOperandRepository operandRepository;
     private final OperandConfigurationValidator configurationValidator;
     private final PayrollConceptFeedRelationRepository feedRelationRepository;
@@ -84,6 +88,11 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
         Map<ConceptNodeIdentity, PayrollConcept> conceptIndex = buildIndex(concepts);
         List<ConceptNodeIdentity> orderedNodes = graph.topologicalOrder();
+
+        log.debug("[ENGINE]   PLAN | orden topológico → [{}]",
+                orderedNodes.stream().map(ConceptNodeIdentity::getConceptCode)
+                        .collect(java.util.stream.Collectors.joining(" → ")));
+
         List<ConceptExecutionPlanEntry> plan = new ArrayList<>(orderedNodes.size());
 
         for (ConceptNodeIdentity identity : orderedNodes) {
@@ -117,7 +126,6 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
                 throw new MissingAggregateSourcesException(identity);
             }
 
-            // Resolve invertSign from feed relations for this target concept
             Long targetObjectId = concept.getObject().getId();
             List<PayrollConceptFeedRelation> feedRelations =
                     feedRelationRepository.findActiveByTargetObjectId(targetObjectId, referenceDate);
@@ -128,8 +136,6 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
                             PayrollConceptFeedRelation::isInvertSign
                     ));
 
-            // The graph uses a Set, so structural duplicates are impossible.
-            // Validate defensively against any future bypass of the graph.
             Set<ConceptNodeIdentity> seen = new HashSet<>();
             List<AggregateSourceEntry> sources = new ArrayList<>();
             for (ConceptNodeIdentity source : graphDeps) {
@@ -140,6 +146,12 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
                 sources.add(new AggregateSourceEntry(source, invertSign));
             }
 
+            log.debug("[ENGINE]     PLAN {} | AGGREGATE ← fuentes=[{}]",
+                    identity.getConceptCode(),
+                    sources.stream()
+                            .map(s -> s.identity().getConceptCode() + (s.invertSign() ? "(−)" : "(+)"))
+                            .collect(java.util.stream.Collectors.joining(", ")));
+
             return new ConceptExecutionPlanEntry(
                     identity,
                     calculationType,
@@ -149,15 +161,26 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.RATE_BY_QUANTITY) {
-            return buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
                     OperandRole.QUANTITY, OperandRole.RATE);
+            log.debug("[ENGINE]     PLAN {} | RATE_BY_QUANTITY: QUANTITY={} RATE={}",
+                    identity.getConceptCode(),
+                    entry.operands().get(OperandRole.QUANTITY).getConceptCode(),
+                    entry.operands().get(OperandRole.RATE).getConceptCode());
+            return entry;
         }
 
         if (calculationType == CalculationType.PERCENTAGE) {
-            return buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
                     OperandRole.BASE, OperandRole.PERCENTAGE);
+            log.debug("[ENGINE]     PLAN {} | PERCENTAGE: BASE={} PCT={}",
+                    identity.getConceptCode(),
+                    entry.operands().get(OperandRole.BASE).getConceptCode(),
+                    entry.operands().get(OperandRole.PERCENTAGE).getConceptCode());
+            return entry;
         }
 
+        log.debug("[ENGINE]     PLAN {} | {} (sin operandos)", identity.getConceptCode(), calculationType);
         return new ConceptExecutionPlanEntry(identity, calculationType);
     }
 

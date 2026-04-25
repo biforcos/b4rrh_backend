@@ -9,6 +9,8 @@ import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingDependencyConceptDefinitionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -42,6 +44,8 @@ import java.util.Queue;
 @Service
 public class DefaultEligibleConceptExpansionService implements EligibleConceptExpansionService {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultEligibleConceptExpansionService.class);
+
     private final PayrollConceptRepository conceptRepository;
     private final PayrollConceptFeedRelationRepository feedRelationRepository;
     private final PayrollConceptOperandRepository operandRepository;
@@ -67,15 +71,18 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                 toProcess.add(concept);
             }
         }
+        log.debug("[ENGINE]   BFS init | {} conceptos elegibles en cola → [{}]",
+                loaded.size(),
+                loaded.keySet().stream().collect(java.util.stream.Collectors.joining(", ")));
 
         while (!toProcess.isEmpty()) {
             PayrollConcept current = toProcess.poll();
             String ruleSystemCode = current.getRuleSystemCode();
+            String currentCode = current.getConceptCode();
+            log.debug("[ENGINE]   BFS procesando {} ({})", currentCode, current.getCalculationType());
 
-            // Operand-based discovery: ensures RATE_BY_QUANTITY / PERCENTAGE source concepts
-            // are included even when they have no feed relations pointing to the current concept.
             List<PayrollConceptOperand> operands =
-                    operandRepository.findByTarget(ruleSystemCode, current.getConceptCode());
+                    operandRepository.findByTarget(ruleSystemCode, currentCode);
             for (PayrollConceptOperand operand : operands) {
                 String sourceCode = operand.getSourceObject().getObjectCode();
                 if (!loaded.containsKey(sourceCode)) {
@@ -85,14 +92,16 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                                     ruleSystemCode, sourceCode));
                     loaded.put(sourceCode, sourceConcept);
                     toProcess.add(sourceConcept);
+                    log.debug("[ENGINE]     operando {} → descubierto {} ({})",
+                            operand.getOperandRole(), sourceCode, sourceConcept.getCalculationType());
+                } else {
+                    log.debug("[ENGINE]     operando {} → {} (ya cargado)", operand.getOperandRole(), sourceCode);
                 }
             }
 
-            // Feed-relation-based discovery: only CONCEPT-typed sources are followed.
-            // CONSTANT and TABLE sources feed values into concepts but are not concept
-            // definitions themselves and cannot be expanded further.
             Long objectId = current.getObject().getId();
             if (objectId == null) {
+                log.debug("[ENGINE]     sin objectId, sin feed relations");
                 continue;
             }
 
@@ -101,6 +110,8 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
             for (PayrollConceptFeedRelation relation : relations) {
                 PayrollObject source = relation.getSourceObject();
                 if (source.getObjectTypeCode() != PayrollObjectTypeCode.CONCEPT) {
+                    log.debug("[ENGINE]     feed source {} omitido (tipo={})",
+                            source.getObjectCode(), source.getObjectTypeCode());
                     continue;
                 }
                 if (!ruleSystemCode.equals(source.getRuleSystemCode())) {
@@ -114,10 +125,17 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                                     ruleSystemCode, sourceCode));
                     loaded.put(sourceCode, sourceConcept);
                     toProcess.add(sourceConcept);
+                    log.debug("[ENGINE]     feed source → descubierto {} ({})",
+                            sourceCode, sourceConcept.getCalculationType());
+                } else {
+                    log.debug("[ENGINE]     feed source → {} (ya cargado)", sourceCode);
                 }
             }
         }
 
+        log.debug("[ENGINE]   BFS completo | {} conceptos expandidos → [{}]",
+                loaded.size(),
+                loaded.keySet().stream().collect(java.util.stream.Collectors.joining(", ")));
         return new ArrayList<>(loaded.values());
     }
 }

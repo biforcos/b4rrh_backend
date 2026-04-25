@@ -18,6 +18,8 @@ import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -34,6 +36,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(CalculatePayrollUnitService.class);
 
     private final CalculatePayrollUseCase calculatePayrollUseCase;
     private final PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
@@ -67,6 +71,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     }
 
     private Payroll calculateEligibleReal(CalculatePayrollUnitCommand command) {
+        log.info("[NÓMINA] ▶ Iniciando cálculo ELIGIBLE_REAL | empleado={} tipo={} periodo={} presencia={}",
+                command.employeeNumber(), command.employeeTypeCode(),
+                command.payrollPeriodCode(), command.presenceNumber());
+
         Optional<PayrollLaunchEligibleInputContext> inputOpt = payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
                 command.ruleSystemCode(),
                 command.employeeTypeCode(),
@@ -105,14 +113,26 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             );
         }
 
+        log.info("[NÓMINA] Contexto resuelto | empresa={} convenio={} categoría={} ventanas={}",
+                input.companyCode(), input.agreementCode(), input.agreementCategoryCode(),
+                input.workingTimeWindows() != null ? input.workingTimeWindows().size() : 0);
+
         EmployeeAssignmentContext assignmentContext = new EmployeeAssignmentContext(
                 command.ruleSystemCode(),
                 input.companyCode(),
                 input.agreementCode(),
                 command.employeeTypeCode()
         );
+
+        log.debug("[ENGINE] Construyendo plan de ejecución | RS={} convenio={} ref={}",
+                command.ruleSystemCode(), input.agreementCode(), command.periodEnd());
         EligibleExecutionPlanResult planResult =
                 buildEligibleExecutionPlanUseCase.build(assignmentContext, command.periodEnd());
+
+        List<ConceptExecutionPlanEntry> plan = planResult.executionPlan();
+        log.info("[NÓMINA] Plan de ejecución: {} pasos → {}",
+                plan.size(),
+                plan.stream().map(e -> e.identity().getConceptCode()).collect(Collectors.joining(" → ")));
 
         Map<String, com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept> engineConceptByCode =
                 planResult.expandedConcepts().stream()
@@ -133,7 +153,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         Map<String, BigDecimal> quantityByCode = new LinkedHashMap<>();
         Map<String, BigDecimal> rateByCode = new LinkedHashMap<>();
 
-        for (ConceptExecutionPlanEntry entry : planResult.executionPlan()) {
+        int step = 0;
+        int total = plan.size();
+        for (ConceptExecutionPlanEntry entry : plan) {
+            step++;
             String conceptCode = entry.identity().getConceptCode();
             BigDecimal amount;
             BigDecimal quantity = null;
@@ -141,11 +164,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
 
             switch (entry.calculationType()) {
                 case DIRECT_AMOUNT -> {
+                    log.info("[NÓMINA] [{}/{}] {} DIRECT_AMOUNT → calculador externo",
+                            step, total, conceptCode);
                     PayrollConceptExecutionResult result =
                             payrollConceptGraphCalculator.calculateConceptResult(conceptCode, calcContext);
                     amount = result.amount();
                     quantity = result.quantity();
                     rate = result.rate();
+                    log.info("[NÓMINA] [{}/{}] {} = {} (cant={} tasa={})",
+                            step, total, conceptCode, amount, quantity, rate);
                 }
                 case RATE_BY_QUANTITY -> {
                     ConceptNodeIdentity quantityId = entry.operands().get(OperandRole.QUANTITY);
@@ -153,6 +180,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     quantity = requireStateAmount(executionState, quantityId);
                     rate = requireStateAmount(executionState, rateId);
                     amount = quantity.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} RATE_BY_QUANTITY → {}({}) × {}({}) = {}",
+                            step, total, conceptCode,
+                            quantityId.getConceptCode(), quantity,
+                            rateId.getConceptCode(), rate,
+                            amount);
                 }
                 case PERCENTAGE -> {
                     ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
@@ -160,14 +192,28 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     BigDecimal base = requireStateAmount(executionState, baseId);
                     BigDecimal pct = requireStateAmount(executionState, pctId);
                     amount = base.multiply(pct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} PERCENTAGE → {}({}) × {}% = {}",
+                            step, total, conceptCode,
+                            baseId.getConceptCode(), base, pct, amount);
                 }
                 case AGGREGATE -> {
                     BigDecimal sum = BigDecimal.ZERO;
+                    StringBuilder sourceDesc = new StringBuilder();
                     for (AggregateSourceEntry source : entry.aggregateSources()) {
                         BigDecimal sourceAmount = requireStateAmount(executionState, source.identity());
                         sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
+                        if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
+                        if (source.invertSign()) {
+                            sourceDesc.append("-").append(source.identity().getConceptCode())
+                                    .append("(").append(sourceAmount).append(")");
+                        } else {
+                            sourceDesc.append(source.identity().getConceptCode())
+                                    .append("(").append(sourceAmount).append(")");
+                        }
                     }
                     amount = sum.setScale(2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
+                            step, total, conceptCode, sourceDesc, amount);
                 }
                 default -> throw new UnsupportedOperationException(
                         "Unsupported calculation type: " + entry.calculationType()
@@ -200,6 +246,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         }
         rows.sort(Comparator.comparingInt(ConceptRow::displayOrder));
 
+        log.info("[NÓMINA] Filtro recibo | {} de {} conceptos con payslipOrderCode → [{}]",
+                rows.size(), amountByCode.size(),
+                rows.stream().map(ConceptRow::conceptCode).collect(Collectors.joining(", ")));
+
         List<PayrollConcept> payrollConcepts = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
             ConceptRow r = rows.get(i);
@@ -216,7 +266,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             ));
         }
 
-        return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
+        Payroll result = calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
                 command.ruleSystemCode(),
                 command.employeeTypeCode(),
                 command.employeeNumber(),
@@ -232,6 +282,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 payrollConcepts,
                 List.of(eligibleRealSnapshot(command, input))
         ));
+        log.info("[NÓMINA] ✓ Cálculo completado | empleado={} periodo={} → {} líneas en recibo",
+                command.employeeNumber(), command.payrollPeriodCode(), payrollConcepts.size());
+        return result;
     }
 
     private record ConceptRow(
