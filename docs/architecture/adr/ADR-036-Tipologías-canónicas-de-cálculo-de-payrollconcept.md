@@ -1,7 +1,7 @@
 # ADR-036 — Tipologías canónicas de cálculo de `PayrollConcept`
 
 ## Estado
-Propuesto
+Aceptado
 
 ---
 
@@ -127,25 +127,74 @@ La complejidad se desplaza a la obtención del porcentaje, no al tipo de cálcul
 ### 4. `AGGREGATE`
 
 #### Definición
-El resultado del concepto se obtiene combinando resultados de otros conceptos ya calculados.
+El resultado del concepto se obtiene combinando resultados de otros conceptos ya calculados, pudiendo invertir el signo de cada contribuyente individualmente.
 
 #### Forma general
 
-resultado = SUM(miembros)
+resultado = SUM(feed_i × sign_i)
 
+donde `sign_i` es +1 si la relación de feed tiene `invert_sign = false`, y −1 si tiene `invert_sign = true`.
+
+#### El flag `invert_sign` en la relación de feed
+
+El flag `invert_sign` reside en la **relación de feed** (no en el concepto fuente). Esto permite que un mismo concepto contribuya positivamente a un agregado y negativamente a otro:
+
+| Concepto fuente       | Feeds aggregate | `invert_sign` | Efecto         |
+|-----------------------|-----------------|---------------|----------------|
+| 101 SALARIO_BASE      | 970             | false         | + importe      |
+| 101 SALARIO_BASE      | 990             | false         | + importe      |
+| concepto deducción X  | 980             | false         | + importe      |
+| concepto deducción X  | 990             | true          | − importe      |
+
+#### Modelo de grafo plano (flat graph)
+
+Los conceptos hoja alimentan **directamente** tanto su agregado lateral (devengos o deducciones) como el agregado de líquido neto (990). El concepto 990 **nunca depende de 970 ni de 980**; agrega los mismos conceptos hoja que ellos.
+
+```
+EARNING leaf ──────────►  970 (invert=false)
+                    └────►  990 (invert=false)
+
+DEDUCTION leaf ─────────►  980 (invert=false)
+                    └────►  990 (invert=true)
+```
+
+Esto evita dependencias en cascada entre agregados y garantiza que el grafo de cálculo sea siempre un DAG sin nodos intermedios de agregado encadenados.
+
+#### Activación explícita
+
+Los conceptos AGGREGATE **no se activan automáticamente** por el hecho de que sus fuentes estén activadas. Requieren una fila explícita en `payroll_object_activation`, igual que el resto de conceptos.
 
 #### Características
 - No opera sobre datos primarios, sino sobre resultados previos.
-- Representa composición o acumulación.
+- Representa composición o acumulación con signo controlado a nivel de relación.
 
 #### Ejemplos
+- total devengos (970)
+- total deducciones (980)
+- líquido a pagar / neto (990)
 - bases de cotización
 - bases fiscales
-- total devengos
-- total deducciones
 
 #### Nota importante
-La forma de determinar los miembros no forma parte de la tipología, sino de una capa adicional (definida en ADR posterior).
+La estrategia de agregación con signo queda definida aquí. La forma de registrar las relaciones de feed y persistirlas se trata en los ADRs de infraestructura del motor de nómina.
+
+---
+
+## `FunctionalNature` para conceptos agregados totales
+
+Los conceptos de tipo `AGGREGATE` que representan totales de nómina reciben valores específicos en el enum `FunctionalNature` para que el frontend pueda distinguirlos de las líneas de detalle al renderizar el recibo de salario.
+
+Se añaden los siguientes valores al enum:
+
+| Valor              | Semántica                                      | Concepto típico |
+|--------------------|------------------------------------------------|-----------------|
+| `TOTAL_EARNING`    | Suma de todos los devengos                     | 970             |
+| `TOTAL_DEDUCTION`  | Suma de todas las deducciones                  | 980             |
+| `NET_PAY`          | Líquido a pagar (devengos − deducciones)       | 990             |
+
+Estos tres valores coexisten con los valores preexistentes (`EARNING`, `DEDUCTION`, `BASE`, `INFORMATIONAL`).
+
+La `FunctionalNature` es un atributo de presentación/semántica del concepto; no altera la lógica de cálculo. Un concepto con `calculationType = AGGREGATE` y `functionalNature = NET_PAY` ejecuta exactamente la misma operación `SUM(feed_i × sign_i)` que cualquier otro AGGREGATE.
 
 ---
 
@@ -235,8 +284,7 @@ Este ADR no define:
 - cómo se versionan las reglas;
 - el orden de ejecución de los conceptos;
 - el modelo de persistencia;
-- la API de configuración;
-- la estrategia de agregación de `AGGREGATE`.
+- la API de configuración.
 
 ---
 
