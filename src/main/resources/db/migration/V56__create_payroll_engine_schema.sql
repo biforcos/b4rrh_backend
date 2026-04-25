@@ -35,6 +35,7 @@ create table payroll_engine.payroll_concept_feed_relation (
     target_object_id bigint         not null,
     feed_mode        varchar(30)    not null,
     feed_value       numeric(19, 6),
+    invert_sign      boolean        not null default false,
     effective_from   date           not null,
     effective_to     date,
     created_at       timestamp      not null default now(),

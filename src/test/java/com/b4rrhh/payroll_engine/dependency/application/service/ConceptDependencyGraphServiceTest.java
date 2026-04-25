@@ -179,6 +179,7 @@ class ConceptDependencyGraphServiceTest {
                 target.getObject(),
                 FeedMode.FEED_BY_SOURCE,
                 null,
+                false,
                 LocalDate.of(2020, 1, 1),
                 null,
                 LocalDateTime.now(),

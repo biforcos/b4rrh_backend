@@ -6,6 +6,7 @@ import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptResultException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingPlannedOperandException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
+import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
@@ -71,7 +72,8 @@ class SegmentExecutionEngineTest {
                 node("TOTAL_DEVENGOS_SEGMENTO"),
                 CalculationType.AGGREGATE,
                 Map.of(),
-                List.of(node("SALARIO_BASE"), node("PLUS_TRANSPORTE"))
+                List.of(new AggregateSourceEntry(node("SALARIO_BASE"), false),
+                        new AggregateSourceEntry(node("PLUS_TRANSPORTE"), false))
         );
     }
 

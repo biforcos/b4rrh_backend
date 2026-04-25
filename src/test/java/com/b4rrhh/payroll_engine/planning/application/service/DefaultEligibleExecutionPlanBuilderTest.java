@@ -262,7 +262,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
      * Does not require operand configuration — suitable for plan-assembly tests.
      */
     private ExecutionPlanBuilder simplePlanBuilder() {
-        return (graph, concepts) -> {
+        return (graph, concepts, referenceDate) -> {
             Map<ConceptNodeIdentity, PayrollConcept> idx = concepts.stream()
                     .collect(Collectors.toMap(
                             c -> new ConceptNodeIdentity(c.getRuleSystemCode(), c.getConceptCode()),
@@ -310,7 +310,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
                 source.getObject(),
                 target.getObject(),
                 FeedMode.FEED_BY_SOURCE,
-                null,
+                null, false,
                 LocalDate.of(2025, 1, 1),
                 null,
                 NOW,

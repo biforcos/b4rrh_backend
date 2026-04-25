@@ -268,14 +268,14 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
         );
 
         jdbcTemplate.update(
-                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 d01ConstantObjectId,
                 conceptD01ObjectId,
                 "FEED_BY_SOURCE",
                 new BigDecimal("30")
         );
         jdbcTemplate.update(
-                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 p01TableRoleObjectId,
                 conceptP01ObjectId,
                 "FEED_BY_SOURCE",

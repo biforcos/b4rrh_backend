@@ -3,7 +3,9 @@ package com.b4rrhh.payroll_engine.execution.application.service;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
@@ -13,15 +15,18 @@ import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateOperandDefi
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingAggregateSourcesException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
+import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ExecutionPlanBuilder}.
@@ -57,17 +62,20 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
 
     private final PayrollConceptOperandRepository operandRepository;
     private final OperandConfigurationValidator configurationValidator;
+    private final PayrollConceptFeedRelationRepository feedRelationRepository;
 
     public DefaultExecutionPlanBuilder(
             PayrollConceptOperandRepository operandRepository,
-            OperandConfigurationValidator configurationValidator
+            OperandConfigurationValidator configurationValidator,
+            PayrollConceptFeedRelationRepository feedRelationRepository
     ) {
         this.operandRepository = operandRepository;
         this.configurationValidator = configurationValidator;
+        this.feedRelationRepository = feedRelationRepository;
     }
 
     @Override
-    public List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts) {
+    public List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts, LocalDate referenceDate) {
         if (graph == null) {
             throw new IllegalArgumentException("graph must not be null");
         }
@@ -83,7 +91,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             if (concept == null) {
                 throw new MissingConceptDefinitionException(identity);
             }
-            plan.add(buildEntry(graph, identity, concept));
+            plan.add(buildEntry(graph, identity, concept, referenceDate));
         }
 
         return plan;
@@ -92,12 +100,14 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
     /**
      * Builds a single plan entry. For RATE_BY_QUANTITY and PERCENTAGE, loads and validates
      * operand definitions and embeds them into the entry. For AGGREGATE, resolves the source
-     * concept identities from the dependency graph and embeds them into the entry.
+     * concept identities from the dependency graph, enriches each with its invertSign flag
+     * from the active feed relations, and embeds them into the entry.
      */
     private ConceptExecutionPlanEntry buildEntry(
             ConceptDependencyGraph graph,
             ConceptNodeIdentity identity,
-            PayrollConcept concept
+            PayrollConcept concept,
+            LocalDate referenceDate
     ) {
         CalculationType calculationType = concept.getCalculationType();
 
@@ -106,19 +116,35 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             if (graphDeps.isEmpty()) {
                 throw new MissingAggregateSourcesException(identity);
             }
+
+            // Resolve invertSign from feed relations for this target concept
+            Long targetObjectId = concept.getObject().getId();
+            List<PayrollConceptFeedRelation> feedRelations =
+                    feedRelationRepository.findActiveByTargetObjectId(targetObjectId, referenceDate);
+
+            Map<String, Boolean> invertSignBySourceCode = feedRelations.stream()
+                    .collect(Collectors.toMap(
+                            r -> r.getSourceObject().getObjectCode(),
+                            PayrollConceptFeedRelation::isInvertSign
+                    ));
+
             // The graph uses a Set, so structural duplicates are impossible.
             // Validate defensively against any future bypass of the graph.
             Set<ConceptNodeIdentity> seen = new HashSet<>();
+            List<AggregateSourceEntry> sources = new ArrayList<>();
             for (ConceptNodeIdentity source : graphDeps) {
                 if (!seen.add(source)) {
                     throw new DuplicateAggregateSourceException(identity, source);
                 }
+                boolean invertSign = invertSignBySourceCode.getOrDefault(source.getConceptCode(), false);
+                sources.add(new AggregateSourceEntry(source, invertSign));
             }
+
             return new ConceptExecutionPlanEntry(
                     identity,
                     calculationType,
                     Map.of(),
-                    List.copyOf(graphDeps)
+                    List.copyOf(sources)
             );
         }
 

@@ -149,7 +149,7 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
         ConceptDependencyGraph graph = graphService.build(pocConcepts, period.getPeriodStart());
 
         // Translate graph + concept definitions into an ordered execution plan.
-        List<ConceptExecutionPlanEntry> plan = executionPlanBuilder.build(graph, pocConcepts);
+        List<ConceptExecutionPlanEntry> plan = executionPlanBuilder.build(graph, pocConcepts, period.getPeriodStart());
 
         List<CalculationSegment> segments = segmentBuilder.build(period, request.getWorkingTimeWindows());
 

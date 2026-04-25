@@ -17,11 +17,14 @@ import com.b4rrhh.payroll_engine.execution.domain.exception.MissingAggregateSour
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -42,7 +45,7 @@ class ExecutionPlanBuilderTest {
     private static final String RS = "ESP";
 
     private final DefaultExecutionPlanBuilder builder =
-            new DefaultExecutionPlanBuilder(pocOperandRepo(), new OperandConfigurationValidator());
+            new DefaultExecutionPlanBuilder(pocOperandRepo(), new OperandConfigurationValidator(), emptyFeedRelationRepo());
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -138,7 +141,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         assertEquals(3, plan.size());
     }
@@ -150,7 +153,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         assertEquals(id("SALARIO_BASE"), plan.get(plan.size() - 1).identity());
     }
@@ -162,7 +165,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
         int diasIdx    = indexOf(plan, "T_DIAS_PRESENCIA_SEGMENTO");
@@ -182,7 +185,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -202,7 +205,7 @@ class ExecutionPlanBuilderTest {
                 .addNode(solo)
                 .build();
 
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(solo));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(solo), LocalDate.of(2025, 1, 1));
 
         assertEquals(1, plan.size());
         assertEquals(id("STANDALONE"), plan.get(0).identity());
@@ -219,7 +222,7 @@ class ExecutionPlanBuilderTest {
                 .addNode(inGraph)
                 .build();
 
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(inGraph, outGraph));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(inGraph, outGraph), LocalDate.of(2025, 1, 1));
 
         assertEquals(1, plan.size());
         assertEquals(id("IN_GRAPH"), plan.get(0).identity());
@@ -237,7 +240,7 @@ class ExecutionPlanBuilderTest {
         ConceptDependencyGraph graph = pocGraph(dias, precio, salario);
 
         // Concept list order is intentionally reversed from the expected execution order.
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, precio, dias));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, precio, dias), LocalDate.of(2025, 1, 1));
 
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
         int diasIdx    = indexOf(plan, "T_DIAS_PRESENCIA_SEGMENTO");
@@ -254,14 +257,14 @@ class ExecutionPlanBuilderTest {
     @Test
     void nullGraphIsRejected() {
         PayrollConcept dias = concept("T_DIAS", CalculationType.DIRECT_AMOUNT);
-        assertThrows(IllegalArgumentException.class, () -> builder.build(null, List.of(dias)));
+        assertThrows(IllegalArgumentException.class, () -> builder.build(null, List.of(dias), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
     void nullConceptListIsRejected() {
         PayrollConcept dias = concept("T_DIAS", CalculationType.DIRECT_AMOUNT);
         ConceptDependencyGraph graph = new ConceptDependencyGraphBuilder().addNode(dias).build();
-        assertThrows(IllegalArgumentException.class, () -> builder.build(graph, null));
+        assertThrows(IllegalArgumentException.class, () -> builder.build(graph, null, LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -275,7 +278,7 @@ class ExecutionPlanBuilderTest {
 
         // Supply only 2 of the 3 concepts — SALARIO_BASE is missing from the list.
         assertThrows(MissingConceptDefinitionException.class,
-                () -> builder.build(graph, List.of(dias, precio)));
+                () -> builder.build(graph, List.of(dias, precio), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -291,7 +294,7 @@ class ExecutionPlanBuilderTest {
 
         // Same identity appears twice in the list.
         assertThrows(DuplicateConceptIdentityException.class,
-                () -> builder.build(graph, List.of(dias, diasDupe, salario)));
+                () -> builder.build(graph, List.of(dias, diasDupe, salario), LocalDate.of(2025, 1, 1)));
     }
 
     // ── operand enrichment ────────────────────────────────────────────────────
@@ -303,7 +306,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -319,7 +322,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -348,14 +351,15 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? rateOnly : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
+                emptyFeedRelationRepo());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         assertThrows(MissingOperandDefinitionException.class,
-                () -> missingQuantityBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario)));
+                () -> missingQuantityBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -386,7 +390,8 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? duplicateQuantity : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
+                emptyFeedRelationRepo());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -403,7 +408,7 @@ class ExecutionPlanBuilderTest {
 
         assertThrows(DuplicateOperandDefinitionException.class,
                 () -> duplicateBuilder.build(graphWithExtra, List.of(dias, precio,
-                        otherQuantityConcept, salario)));
+                        otherQuantityConcept, salario), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -430,7 +435,8 @@ class ExecutionPlanBuilderTest {
                         return "SALARIO_BASE".equals(code) ? mismatchedOperands : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
+                emptyFeedRelationRepo());
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -438,7 +444,7 @@ class ExecutionPlanBuilderTest {
 
         // Graph has dias+precio as deps — T_OTHER is NOT a declared dep
         assertThrows(OperandGraphMismatchException.class,
-                () -> mismatchBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario)));
+                () -> mismatchBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1)));
     }
 
     // ── utility ───────────────────────────────────────────────────────────────
@@ -450,6 +456,21 @@ class ExecutionPlanBuilderTest {
             }
         }
         throw new AssertionError("Concept not found in plan: " + conceptCode);
+    }
+
+    private static PayrollConceptFeedRelationRepository emptyFeedRelationRepo() {
+        return new PayrollConceptFeedRelationRepository() {
+            @Override
+            public com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation save(
+                    com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation r) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public List<com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation> findActiveByTargetObjectId(
+                    Long id, LocalDate date) {
+                return Collections.emptyList();
+            }
+        };
     }
 
     // ── aggregate enrichment ──────────────────────────────────────────────────
@@ -480,7 +501,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept total    = concept("TOTAL_DEVENGOS_SEGMENTO",   CalculationType.AGGREGATE);
 
         ConceptDependencyGraph graph = aggregateGraph(salario, plus, total);
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, plus, total));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, plus, total), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry totalEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("TOTAL_DEVENGOS_SEGMENTO")))
@@ -488,10 +509,10 @@ class ExecutionPlanBuilderTest {
 
         assertEquals(CalculationType.AGGREGATE, totalEntry.calculationType());
         org.junit.jupiter.api.Assertions.assertTrue(
-                totalEntry.aggregateSources().contains(id("SALARIO_BASE")),
+                totalEntry.aggregateSources().stream().anyMatch(s -> s.identity().equals(id("SALARIO_BASE"))),
                 "aggregateSources must include SALARIO_BASE");
         org.junit.jupiter.api.Assertions.assertTrue(
-                totalEntry.aggregateSources().contains(id("PLUS_TRANSPORTE")),
+                totalEntry.aggregateSources().stream().anyMatch(s -> s.identity().equals(id("PLUS_TRANSPORTE"))),
                 "aggregateSources must include PLUS_TRANSPORTE");
         assertEquals(2, totalEntry.aggregateSources().size(),
                 "aggregateSources must contain exactly the two declared sources");
@@ -504,7 +525,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept total    = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.AGGREGATE);
 
         ConceptDependencyGraph graph = aggregateGraph(salario, plus, total);
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total, plus, salario));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total, plus, salario), LocalDate.of(2025, 1, 1));
 
         int totalIdx   = indexOf(plan, "TOTAL_DEVENGOS_SEGMENTO");
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
@@ -525,7 +546,7 @@ class ExecutionPlanBuilderTest {
                 .build();
 
         assertThrows(MissingAggregateSourcesException.class,
-                () -> builder.build(graph, List.of(total)));
+                () -> builder.build(graph, List.of(total), LocalDate.of(2025, 1, 1)));
     }
 
     // ── PERCENTAGE enrichment ─────────────────────────────────────────────────
@@ -555,7 +576,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(totalDevengos, tPctIrpf, retencionIrpf));
+                List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry entry = plan.stream()
                 .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
@@ -572,7 +593,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(totalDevengos, tPctIrpf, retencionIrpf));
+                List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1));
 
         ConceptExecutionPlanEntry entry = plan.stream()
                 .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
@@ -589,7 +610,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(retencionIrpf, tPctIrpf, totalDevengos));
+                List.of(retencionIrpf, tPctIrpf, totalDevengos), LocalDate.of(2025, 1, 1));
 
         int retencionIdx = indexOf(plan, "RETENCION_IRPF_TRAMO");
         int totalIdx     = indexOf(plan, "TOTAL_DEVENGOS_SEGMENTO");
@@ -621,7 +642,8 @@ class ExecutionPlanBuilderTest {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? pctOnly : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
+                emptyFeedRelationRepo());
 
         PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
@@ -630,7 +652,7 @@ class ExecutionPlanBuilderTest {
         assertThrows(MissingOperandDefinitionException.class,
                 () -> missingBaseBuilder.build(
                         percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                        List.of(totalDevengos, tPctIrpf, retencionIrpf)));
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -653,8 +675,9 @@ class ExecutionPlanBuilderTest {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? baseOnly : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
 
+                emptyFeedRelationRepo());
         PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
         PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
@@ -662,7 +685,7 @@ class ExecutionPlanBuilderTest {
         assertThrows(MissingOperandDefinitionException.class,
                 () -> missingPctBuilder.build(
                         percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                        List.of(totalDevengos, tPctIrpf, retencionIrpf)));
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
     }
 
     @Test
@@ -689,7 +712,8 @@ class ExecutionPlanBuilderTest {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? operandsPointingToUndeclaredDep : Collections.emptyList();
                     }
                 },
-                new OperandConfigurationValidator());
+                new OperandConfigurationValidator(),
+                emptyFeedRelationRepo());
 
         // Graph: only T_PCT_IRPF is declared as dep — TOTAL_DEVENGOS_SEGMENTO is absent
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",           CalculationType.DIRECT_AMOUNT);
@@ -702,6 +726,6 @@ class ExecutionPlanBuilderTest {
         assertThrows(OperandGraphMismatchException.class,
                 () -> mismatchBuilder.build(
                         graphWithoutTotalDevengos,
-                        List.of(tPctIrpf, retencionIrpf)));
+                        List.of(tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
     }
 }

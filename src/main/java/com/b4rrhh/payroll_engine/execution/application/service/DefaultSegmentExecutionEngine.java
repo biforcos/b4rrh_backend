@@ -6,7 +6,7 @@ import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.springframework.stereotype.Component;
 
-import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -84,8 +84,9 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
                 case AGGREGATE -> {
                     BigDecimal sum = BigDecimal.ZERO;
-                    for (ConceptNodeIdentity source : entry.aggregateSources()) {
-                        sum = sum.add(state.getRequiredAmount(source));
+                    for (AggregateSourceEntry source : entry.aggregateSources()) {
+                        BigDecimal sourceAmount = state.getRequiredAmount(source.identity());
+                        sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
                     }
                     yield sum.setScale(2, RoundingMode.HALF_UP);
                 }

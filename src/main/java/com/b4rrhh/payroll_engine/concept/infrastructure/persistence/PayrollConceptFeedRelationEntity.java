@@ -38,6 +38,9 @@ public class PayrollConceptFeedRelationEntity {
     @Column(name = "feed_value", precision = 19, scale = 6)
     private BigDecimal feedValue;
 
+    @Column(name = "invert_sign", nullable = false)
+    private boolean invertSign;
+
     @Column(name = "effective_from", nullable = false)
     private LocalDate effectiveFrom;
 
@@ -80,6 +83,9 @@ public class PayrollConceptFeedRelationEntity {
 
     public BigDecimal getFeedValue() { return feedValue; }
     public void setFeedValue(BigDecimal feedValue) { this.feedValue = feedValue; }
+
+    public boolean isInvertSign() { return invertSign; }
+    public void setInvertSign(boolean invertSign) { this.invertSign = invertSign; }
 
     public LocalDate getEffectiveFrom() { return effectiveFrom; }
     public void setEffectiveFrom(LocalDate effectiveFrom) { this.effectiveFrom = effectiveFrom; }

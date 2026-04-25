@@ -18,6 +18,7 @@ public class PayrollConceptFeedRelation {
     private final PayrollObject targetObject;
     private final FeedMode feedMode;
     private final BigDecimal feedValue;
+    private final boolean invertSign;
     private final LocalDate effectiveFrom;
     private final LocalDate effectiveTo;
     private final LocalDateTime createdAt;
@@ -29,6 +30,7 @@ public class PayrollConceptFeedRelation {
             PayrollObject targetObject,
             FeedMode feedMode,
             BigDecimal feedValue,
+            boolean invertSign,
             LocalDate effectiveFrom,
             LocalDate effectiveTo,
             LocalDateTime createdAt,
@@ -69,6 +71,7 @@ public class PayrollConceptFeedRelation {
         this.targetObject = targetObject;
         this.feedMode = feedMode;
         this.feedValue = feedValue;
+        this.invertSign = invertSign;
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.createdAt = createdAt;
@@ -80,6 +83,7 @@ public class PayrollConceptFeedRelation {
     public PayrollObject getTargetObject() { return targetObject; }
     public FeedMode getFeedMode() { return feedMode; }
     public BigDecimal getFeedValue() { return feedValue; }
+    public boolean isInvertSign() { return invertSign; }
     public LocalDate getEffectiveFrom() { return effectiveFrom; }
     public LocalDate getEffectiveTo() { return effectiveTo; }
     public LocalDateTime getCreatedAt() { return createdAt; }

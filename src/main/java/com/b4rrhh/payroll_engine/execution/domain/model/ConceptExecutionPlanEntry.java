@@ -24,15 +24,16 @@ import java.util.Map;
  *
  * <h3>Aggregate sources — AGGREGATE</h3>
  * <p>For {@code AGGREGATE} concepts, {@link #aggregateSources()} carries the ordered list
- * of source concept identities whose computed amounts must be summed within the segment.
- * Sources are resolved from the dependency graph at plan-construction time.
+ * of {@link AggregateSourceEntry} instances describing source concept identities and their
+ * sign inversion flags. Sources are resolved from the dependency graph and feed relations
+ * at plan-construction time.
  * For other calculation types, {@code aggregateSources()} is an empty list.
  */
 public record ConceptExecutionPlanEntry(
         ConceptNodeIdentity identity,
         CalculationType calculationType,
         Map<OperandRole, ConceptNodeIdentity> operands,
-        List<ConceptNodeIdentity> aggregateSources) {
+        List<AggregateSourceEntry> aggregateSources) {
 
     /**
      * Convenience constructor for entries that do not require operand wiring

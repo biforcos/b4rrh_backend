@@ -25,7 +25,7 @@ class PayrollConceptFeedRelationInvariantTest {
             LocalDate from,
             LocalDate to
     ) {
-        return new PayrollConceptFeedRelation(null, source, target, FeedMode.FEED_BY_SOURCE, null, from, to, null, null);
+        return new PayrollConceptFeedRelation(null, source, target, FeedMode.FEED_BY_SOURCE, null, false, from, to, null, null);
     }
 
     @Test

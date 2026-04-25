@@ -41,6 +41,7 @@ public class PayrollConceptFeedRelationPersistenceAdapter implements PayrollConc
         entity.setTargetObject(targetEntity);
         entity.setFeedMode(relation.getFeedMode().name());
         entity.setFeedValue(relation.getFeedValue());
+        entity.setInvertSign(relation.isInvertSign());
         entity.setEffectiveFrom(relation.getEffectiveFrom());
         entity.setEffectiveTo(relation.getEffectiveTo());
         entity.setCreatedAt(relation.getCreatedAt());
@@ -68,6 +69,7 @@ public class PayrollConceptFeedRelationPersistenceAdapter implements PayrollConc
                 target,
                 FeedMode.valueOf(entity.getFeedMode()),
                 entity.getFeedValue(),
+                entity.isInvertSign(),
                 entity.getEffectiveFrom(),
                 entity.getEffectiveTo(),
                 entity.getCreatedAt(),

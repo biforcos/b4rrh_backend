@@ -130,7 +130,7 @@ class DefaultEligiblePayrollExecutorTest {
         DefaultConceptDependencyGraphService graphService =
                 new DefaultConceptDependencyGraphService(feedRepo);
         DefaultExecutionPlanBuilder planBuilder =
-                new DefaultExecutionPlanBuilder(operandRepo, new OperandConfigurationValidator());
+                new DefaultExecutionPlanBuilder(operandRepo, new OperandConfigurationValidator(), feedRepo);
 
         BuildEligibleExecutionPlanUseCase planUseCase = new DefaultEligibleExecutionPlanBuilder(
                 eligibilityResolver, conceptRepo, expansionService, graphService, planBuilder);
@@ -264,7 +264,7 @@ class DefaultEligiblePayrollExecutorTest {
                 source.getObject(),
                 target.getObject(),
                 FeedMode.FEED_BY_SOURCE,
-                null,
+                null, false,
                 LocalDate.of(2020, 1, 1),
                 null,
                 NOW,

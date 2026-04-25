@@ -46,7 +46,8 @@ class PayrollEnginePocExecutorTest {
                     new DefaultConceptDependencyGraphService(pocFeedRelationRepo("ESP")),
                     new DefaultExecutionPlanBuilder(
                             pocOperandRepo("ESP"),
-                            new OperandConfigurationValidator()),
+                            new OperandConfigurationValidator(),
+                            pocFeedRelationRepo("ESP")),
                     new DefaultSegmentExecutionEngine(
                             new SegmentTechnicalValueResolver(),
                             new RateByQuantityOperandResolver(),
@@ -205,7 +206,8 @@ class PayrollEnginePocExecutorTest {
                                     @Override
                                     public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
                                 },
-                                new OperandConfigurationValidator()),
+                                new OperandConfigurationValidator(),
+                                emptyFeedRelationRepo()),
                         new DefaultSegmentExecutionEngine(
                                 new SegmentTechnicalValueResolver(),
                                 new RateByQuantityOperandResolver(),
@@ -394,7 +396,7 @@ class PayrollEnginePocExecutorTest {
 
     private static PayrollConceptFeedRelation feedRelation(PayrollObject source, PayrollObject target) {
         return new PayrollConceptFeedRelation(
-                null, source, target, FeedMode.FEED_BY_SOURCE, null,
+                null, source, target, FeedMode.FEED_BY_SOURCE, null, false,
                 LocalDate.of(2020, 1, 1), null,
                 LocalDateTime.now(), LocalDateTime.now()
         );

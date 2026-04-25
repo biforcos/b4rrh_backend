@@ -51,6 +51,7 @@ class ConceptDependencyGraphTest {
                 target.getObject(),
                 FeedMode.FEED_BY_SOURCE,
                 null,
+                false,
                 LocalDate.of(2025, 1, 1),
                 null,
                 null, null
@@ -173,6 +174,7 @@ class ConceptDependencyGraphTest {
                 targetObj,
                 FeedMode.FEED_BY_SOURCE,
                 null,
+                false,
                 LocalDate.of(2025, 1, 1),
                 null,
                 null, null

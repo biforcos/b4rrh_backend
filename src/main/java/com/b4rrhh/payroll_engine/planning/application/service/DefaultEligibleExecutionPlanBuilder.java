@@ -102,7 +102,7 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
         ConceptDependencyGraph dependencyGraph = graphService.build(expandedConcepts, referenceDate);
 
         // Step 5: build ordered execution plan
-        List<ConceptExecutionPlanEntry> executionPlan = planBuilder.build(dependencyGraph, expandedConcepts);
+        List<ConceptExecutionPlanEntry> executionPlan = planBuilder.build(dependencyGraph, expandedConcepts, referenceDate);
 
         return new EligibleExecutionPlanResult(
                 applicableAssignments,

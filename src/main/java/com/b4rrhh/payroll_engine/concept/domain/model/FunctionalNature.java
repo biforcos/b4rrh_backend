@@ -4,5 +4,8 @@ public enum FunctionalNature {
     EARNING,
     DEDUCTION,
     BASE,
-    INFORMATIONAL
+    INFORMATIONAL,
+    TOTAL_EARNING,
+    TOTAL_DEDUCTION,
+    NET_PAY
 }
