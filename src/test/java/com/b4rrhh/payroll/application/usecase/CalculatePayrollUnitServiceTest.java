@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
+import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
@@ -49,6 +51,10 @@ class CalculatePayrollUnitServiceTest {
     private PayrollConceptGraphCalculator payrollConceptGraphCalculator;
     @Mock
     private BuildEligibleExecutionPlanUseCase buildEligibleExecutionPlanUseCase;
+    @Mock
+    private CompanyProfileLookupPort companyProfileLookupPort;
+    @Mock
+    private EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -59,7 +65,9 @@ class CalculatePayrollUnitServiceTest {
             payrollLaunchEligibleInputLookupPort,
             properties,
             payrollConceptGraphCalculator,
-            buildEligibleExecutionPlanUseCase
+            buildEligibleExecutionPlanUseCase,
+            companyProfileLookupPort,
+            employeePersonalDataLookupPort
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -116,7 +124,9 @@ class CalculatePayrollUnitServiceTest {
             payrollLaunchEligibleInputLookupPort,
             properties,
             payrollConceptGraphCalculator,
-            buildEligibleExecutionPlanUseCase
+            buildEligibleExecutionPlanUseCase,
+            companyProfileLookupPort,
+            employeePersonalDataLookupPort
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -192,7 +202,9 @@ class CalculatePayrollUnitServiceTest {
             payrollLaunchEligibleInputLookupPort,
             properties,
             payrollConceptGraphCalculator,
-            buildEligibleExecutionPlanUseCase
+            buildEligibleExecutionPlanUseCase,
+            companyProfileLookupPort,
+            employeePersonalDataLookupPort
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -238,7 +250,9 @@ class CalculatePayrollUnitServiceTest {
                 payrollLaunchEligibleInputLookupPort,
                 properties,
                 payrollConceptGraphCalculator,
-                buildEligibleExecutionPlanUseCase
+                buildEligibleExecutionPlanUseCase,
+                companyProfileLookupPort,
+                employeePersonalDataLookupPort
         );
 
         UnsupportedOperationException ex = assertThrows(

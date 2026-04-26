@@ -19,6 +19,8 @@ public record PayrollResponse(
         String calculationEngineVersion,
         List<PayrollWarningResponse> warnings,
         List<PayrollConceptResponse> concepts,
-        List<PayrollContextSnapshotResponse> contextSnapshots
+        List<PayrollContextSnapshotResponse> contextSnapshots,
+        PayrollCompanyProfileResponse companyProfile,
+        PayrollEmployeeProfileResponse employeeProfile
 ) {
 }

@@ -1,17 +1,35 @@
 package com.b4rrhh.payroll.infrastructure.web.assembler;
 
 import com.b4rrhh.payroll.domain.model.Payroll;
+import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCompanyProfileResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotResponse;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollEmployeeProfileResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollWarningResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class PayrollResponseAssembler {
 
+    private static final String COMPANY_DATA = "COMPANY_DATA";
+    private static final String EMPLOYEE_DATA = "EMPLOYEE_DATA";
+
+    private final ObjectMapper objectMapper;
+
+    public PayrollResponseAssembler(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     public PayrollResponse toResponse(Payroll payroll) {
+        List<PayrollContextSnapshot> snapshots = payroll.getContextSnapshots();
         return new PayrollResponse(
                 payroll.getRuleSystemCode(),
                 payroll.getEmployeeTypeCode(),
@@ -45,14 +63,16 @@ public class PayrollResponseAssembler {
                                 concept.getDisplayOrder()
                         ))
                         .toList(),
-                payroll.getContextSnapshots().stream()
+                snapshots.stream()
                         .map(snapshot -> new PayrollContextSnapshotResponse(
                                 snapshot.getSnapshotTypeCode(),
                                 snapshot.getSourceVerticalCode(),
                                 snapshot.getSourceBusinessKeyJson(),
                                 snapshot.getSnapshotPayloadJson()
                         ))
-                        .toList()
+                        .toList(),
+                extractCompanyProfile(snapshots),
+                extractEmployeeProfile(snapshots)
         );
     }
 
@@ -67,5 +87,51 @@ public class PayrollResponseAssembler {
                 payroll.getStatus().name(),
                 payroll.getCalculatedAt()
         );
+    }
+
+    private PayrollCompanyProfileResponse extractCompanyProfile(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> COMPANY_DATA.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> parseCompanyProfile(s.getSnapshotPayloadJson()))
+                .orElse(null);
+    }
+
+    private PayrollEmployeeProfileResponse extractEmployeeProfile(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> EMPLOYEE_DATA.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> parseEmployeeProfile(s.getSnapshotPayloadJson()))
+                .orElse(null);
+    }
+
+    private PayrollCompanyProfileResponse parseCompanyProfile(String json) {
+        try {
+            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
+            return new PayrollCompanyProfileResponse(
+                    map.get("legalName"),
+                    map.get("taxIdentifier"),
+                    map.get("street"),
+                    map.get("city"),
+                    map.get("postalCode")
+            );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private PayrollEmployeeProfileResponse parseEmployeeProfile(String json) {
+        try {
+            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
+            return new PayrollEmployeeProfileResponse(
+                    map.get("fullName"),
+                    map.get("nif"),
+                    map.get("street"),
+                    map.get("city"),
+                    map.get("postalCode")
+            );
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

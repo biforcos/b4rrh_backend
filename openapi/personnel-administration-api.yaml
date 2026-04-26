@@ -6863,6 +6863,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PayrollConceptResponse'
+        contextSnapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayrollContextSnapshotResponse'
+        companyProfile:
+          $ref: '#/components/schemas/PayrollCompanyProfileResponse'
+        employeeProfile:
+          $ref: '#/components/schemas/PayrollEmployeeProfileResponse'
+    PayrollContextSnapshotResponse:
+      type: object
+      properties:
+        snapshotTypeCode:
+          type: string
+        sourceVerticalCode:
+          type: string
+        sourceBusinessKeyJson:
+          type: string
+        snapshotPayloadJson:
+          type: string
+    PayrollCompanyProfileResponse:
+      type: object
+      properties:
+        legalName:
+          type: string
+        taxIdentifier:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+    PayrollEmployeeProfileResponse:
+      type: object
+      properties:
+        fullName:
+          type: string
+        nif:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
     InvalidatePayrollRequest:
       type: object
       required:
