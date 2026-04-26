@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.workcenter.infrastructure.persistence;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -49,5 +50,18 @@ public interface SpringDataWorkCenterRepository extends JpaRepository<WorkCenter
             @Param("startDate") LocalDate startDate,
             @Param("effectiveEndDate") LocalDate effectiveEndDate,
             @Param("maxDate") LocalDate maxDate
+    );
+
+    @Query("""
+            select w from WorkCenterEntity w
+            where w.employeeId = :employeeId
+              and w.startDate <= :referenceDate
+              and (w.endDate is null or w.endDate >= :referenceDate)
+            order by w.workCenterAssignmentNumber desc
+            """)
+    List<WorkCenterEntity> findActiveByEmployeeIdAndReferenceDate(
+            @Param("employeeId") Long employeeId,
+            @Param("referenceDate") LocalDate referenceDate,
+            Pageable pageable
     );
 }

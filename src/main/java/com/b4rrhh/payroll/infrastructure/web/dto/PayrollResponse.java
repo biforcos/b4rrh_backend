@@ -22,6 +22,10 @@ public record PayrollResponse(
         List<PayrollContextSnapshotResponse> contextSnapshots,
         PayrollCompanyProfileResponse companyProfile,
         PayrollEmployeeProfileResponse employeeProfile,
-        PayrollAgreementProfileResponse agreementProfile
+        PayrollAgreementProfileResponse agreementProfile,
+        String presenceStartDate,
+        String presenceEndDate,
+        String workCenterCode,
+        String workCenterName
 ) {
 }

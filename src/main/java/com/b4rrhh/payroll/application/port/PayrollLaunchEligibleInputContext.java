@@ -9,6 +9,7 @@ public record PayrollLaunchEligibleInputContext(
         String agreementCategoryCode,
         List<PayrollLaunchWorkingTimeWindowContext> workingTimeWindows,
         LocalDate presenceStartDate,
-        LocalDate presenceEndDate
+        LocalDate presenceEndDate,
+        String workCenterCode
 ) {
 }

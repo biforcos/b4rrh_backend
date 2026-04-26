@@ -125,10 +125,10 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                 Integer.class,
                 payrollId
         );
-        assertEquals(3, conceptCount);
+        assertEquals(6, conceptCount); // 101, 700, 800, 970, 980, 990
 
         // technical/base concepts must NOT be persisted (payslip_order_code is null)
-        for (String unpersisted : new String[]{"D01", "J01", "P01", "P02"}) {
+        for (String unpersisted : new String[]{"D01", "J01", "P01", "P02", "B01", "P_SS", "P_IRPF"}) {
             assertEquals(0, jdbcTemplate.queryForObject(
                     "select count(*) from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
                     Integer.class, payrollId, unpersisted),
@@ -148,14 +148,32 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
         assertEquals(0, new BigDecimal("30").compareTo(quantity101));
         assertEquals(0, new BigDecimal("47.50").compareTo(rate101));
 
+        // 700 = 1425.00 × 6.35 / 100 = 90.4875 → 90.49 (HALF_UP)
+        BigDecimal amount700 = jdbcTemplate.queryForObject(
+                "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                BigDecimal.class, payrollId, "700");
+        assertEquals(0, new BigDecimal("90.49").compareTo(amount700));
+
+        // 800 = 1425.00 × 15.00 / 100 = 213.75
+        BigDecimal amount800 = jdbcTemplate.queryForObject(
+                "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                BigDecimal.class, payrollId, "800");
+        assertEquals(0, new BigDecimal("213.75").compareTo(amount800));
+
         BigDecimal amount970 = jdbcTemplate.queryForObject(
                 "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
                 BigDecimal.class, payrollId, "970");
+        // 980 = 700 + 800 = 90.49 + 213.75 = 304.24
+        BigDecimal amount980 = jdbcTemplate.queryForObject(
+                "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                BigDecimal.class, payrollId, "980");
+        // 990 = 970 − 980 = 1425.00 − 304.24 = 1120.76
         BigDecimal amount990 = jdbcTemplate.queryForObject(
                 "select amount from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
                 BigDecimal.class, payrollId, "990");
         assertEquals(0, new BigDecimal("1425.00").compareTo(amount970));
-        assertEquals(0, new BigDecimal("1425.00").compareTo(amount990));
+        assertEquals(0, new BigDecimal("304.24").compareTo(amount980));
+        assertEquals(0, new BigDecimal("1120.76").compareTo(amount990));
 
         Integer warningCount = jdbcTemplate.queryForObject(
                 "select count(*) from payroll.payroll_warning where payroll_id = ? and warning_code = ?",
@@ -193,7 +211,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
 
     private void seedMinimalEligibleRealGraph() {
         // ── Payroll objects ──────────────────────────────────────────
-        for (String code : new String[]{"101", "D01", "J01", "P01", "P02", "970", "990"}) {
+        for (String code : new String[]{"101", "D01", "J01", "P01", "P02", "B01", "P_SS", "P_IRPF", "700", "800", "970", "980", "990"}) {
             jdbcTemplate.update(
                     "insert into payroll_engine.payroll_object (rule_system_code, object_type_code, object_code, created_at, updated_at) values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                     "ESP", "CONCEPT", code);
@@ -202,52 +220,89 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                 "insert into payroll_engine.payroll_object (rule_system_code, object_type_code, object_code, created_at, updated_at) values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 "ESP", "TABLE", "P02_DAILY_AMOUNT_TABLE");
 
-        Long id101   = objectId("CONCEPT", "101");
-        Long idD01   = objectId("CONCEPT", "D01");
-        Long idJ01   = objectId("CONCEPT", "J01");
-        Long idP01   = objectId("CONCEPT", "P01");
-        Long idP02   = objectId("CONCEPT", "P02");
-        Long id970   = objectId("CONCEPT", "970");
-        Long id990   = objectId("CONCEPT", "990");
+        Long id101    = objectId("CONCEPT", "101");
+        Long idD01    = objectId("CONCEPT", "D01");
+        Long idJ01    = objectId("CONCEPT", "J01");
+        Long idP01    = objectId("CONCEPT", "P01");
+        Long idP02    = objectId("CONCEPT", "P02");
+        Long idB01    = objectId("CONCEPT", "B01");
+        Long idPSS    = objectId("CONCEPT", "P_SS");
+        Long idPIRPF  = objectId("CONCEPT", "P_IRPF");
+        Long id700    = objectId("CONCEPT", "700");
+        Long id800    = objectId("CONCEPT", "800");
+        Long id970    = objectId("CONCEPT", "970");
+        Long id980    = objectId("CONCEPT", "980");
+        Long id990    = objectId("CONCEPT", "990");
         Long idP02Table = objectId("TABLE", "P02_DAILY_AMOUNT_TABLE");
 
         // ── Concepts ─────────────────────────────────────────────────
         String conceptSql = "insert into payroll_engine.payroll_concept (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode, payslip_order_code, execution_scope, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-        jdbcTemplate.update(conceptSql, id101, "SALARIO_BASE",       "RATE_BY_QUANTITY", "EARNING",       "REPLACE", "101", "PERIOD");
-        jdbcTemplate.update(conceptSql, idD01, "DIAS_DEVENGO",       "JAVA_PROVIDED",    "TECHNICAL",     "REPLACE", null,  "PERIOD");
-        jdbcTemplate.update(conceptSql, idJ01, "COEFICIENTE_JORNADA","JAVA_PROVIDED",    "TECHNICAL",     "REPLACE", null,  "PERIOD");
-        jdbcTemplate.update(conceptSql, idP01, "PRECIO_DIA",         "RATE_BY_QUANTITY", "BASE",          "REPLACE", null,  "PERIOD");
-        jdbcTemplate.update(conceptSql, idP02, "PRECIO_DIA_PLENO",   "DIRECT_AMOUNT",    "BASE",          "REPLACE", null,  "PERIOD");
-        jdbcTemplate.update(conceptSql, id970, "TOTAL_DEVENGOS",     "AGGREGATE",        "TOTAL_EARNING", "REPLACE", "970", "PERIOD");
-        jdbcTemplate.update(conceptSql, id990, "LIQUIDO_A_PAGAR",    "AGGREGATE",        "NET_PAY",       "REPLACE", "990", "PERIOD");
+        jdbcTemplate.update(conceptSql, id101,   "SALARIO_BASE",       "RATE_BY_QUANTITY", "EARNING",         "REPLACE", "101",  "PERIOD");
+        jdbcTemplate.update(conceptSql, idD01,   "DIAS_DEVENGO",       "JAVA_PROVIDED",    "TECHNICAL",       "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idJ01,   "COEFICIENTE_JORNADA","JAVA_PROVIDED",    "TECHNICAL",       "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idP01,   "PRECIO_DIA",         "RATE_BY_QUANTITY", "BASE",            "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idP02,   "PRECIO_DIA_PLENO",   "DIRECT_AMOUNT",    "BASE",            "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idB01,   "BASE_COTIZABLE",     "AGGREGATE",        "BASE",            "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idPSS,   "TIPO_SS",            "JAVA_PROVIDED",    "TECHNICAL",       "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, idPIRPF, "TIPO_IRPF",          "JAVA_PROVIDED",    "TECHNICAL",       "REPLACE", null,   "PERIOD");
+        jdbcTemplate.update(conceptSql, id700,   "CUOTA_SS_OBRERA",    "PERCENTAGE",       "DEDUCTION",       "REPLACE", "700",  "PERIOD");
+        jdbcTemplate.update(conceptSql, id800,   "RETENCION_IRPF",     "PERCENTAGE",       "DEDUCTION",       "REPLACE", "800",  "PERIOD");
+        jdbcTemplate.update(conceptSql, id970,   "TOTAL_DEVENGOS",     "AGGREGATE",        "TOTAL_EARNING",   "REPLACE", "970",  "PERIOD");
+        jdbcTemplate.update(conceptSql, id980,   "TOTAL_DEDUCCIONES",  "AGGREGATE",        "TOTAL_DEDUCTION", "REPLACE", "980",  "PERIOD");
+        jdbcTemplate.update(conceptSql, id990,   "LIQUIDO_A_PAGAR",    "AGGREGATE",        "NET_PAY",         "REPLACE", "990",  "PERIOD");
 
         // ── Operands ─────────────────────────────────────────────────
-        //   101  = D01 (QUANTITY) × P01 (RATE)
-        //   P01  = J01 (QUANTITY) × P02 (RATE)
+        //   101 = D01 (QUANTITY) × P01 (RATE)
+        //   P01 = J01 (QUANTITY) × P02 (RATE)
+        //   700 = B01 (BASE)     × P_SS (PERCENTAGE)
+        //   800 = B01 (BASE)     × P_IRPF (PERCENTAGE)
         String operandSql = "insert into payroll_engine.payroll_concept_operand (target_object_id, operand_role, source_object_id, created_at, updated_at) values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-        jdbcTemplate.update(operandSql, id101, "QUANTITY", idD01);
-        jdbcTemplate.update(operandSql, id101, "RATE",     idP01);
-        jdbcTemplate.update(operandSql, idP01, "QUANTITY", idJ01);
-        jdbcTemplate.update(operandSql, idP01, "RATE",     idP02);
+        jdbcTemplate.update(operandSql, id101, "QUANTITY",   idD01);
+        jdbcTemplate.update(operandSql, id101, "RATE",       idP01);
+        jdbcTemplate.update(operandSql, idP01, "QUANTITY",   idJ01);
+        jdbcTemplate.update(operandSql, idP01, "RATE",       idP02);
+        jdbcTemplate.update(operandSql, id700, "BASE",       idB01);
+        jdbcTemplate.update(operandSql, id700, "PERCENTAGE", idPSS);
+        jdbcTemplate.update(operandSql, id800, "BASE",       idB01);
+        jdbcTemplate.update(operandSql, id800, "PERCENTAGE", idPIRPF);
 
         // ── Feed relations ────────────────────────────────────────────
-        //   P02_DAILY_AMOUNT_TABLE → P02   (table lookup feeds full daily rate)
-        //   101 → 970, 101 → 990           (earnings feed aggregates)
-        String feedSql = "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-        jdbcTemplate.update(feedSql, idP02Table, idP02, "FEED_BY_SOURCE", null);
-        jdbcTemplate.update(feedSql, id101, id970, "FEED_BY_SOURCE", null);
-        jdbcTemplate.update(feedSql, id101, id990, "FEED_BY_SOURCE", null);
+        //   P02_TABLE → P02   table lookup feeds daily rate
+        //   101 → B01         base salary feeds the cotizable base
+        //   101 → 970         base salary feeds total earnings
+        //   700 → 980         SS feeds total deductions
+        //   800 → 980         IRPF feeds total deductions
+        //   970 → 990         total earnings feed net pay
+        //   980 → 990 (inv)   total deductions reduce net pay
+        String feedSql     = "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, false, DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        String feedInvSql  = "insert into payroll_engine.payroll_concept_feed_relation (source_object_id, target_object_id, feed_mode, feed_value, invert_sign, effective_from, effective_to, created_at, updated_at) values (?, ?, ?, ?, true,  DATE '2025-01-01', null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        jdbcTemplate.update(feedSql,    idP02Table, idP02, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedSql,    id101,      idB01, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedSql,    id101,      id970, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedSql,    id700,      id980, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedSql,    id800,      id980, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedSql,    id970,      id990, "FEED_BY_SOURCE", null);
+        jdbcTemplate.update(feedInvSql, id980,      id990, "FEED_BY_SOURCE", null);
 
         // ── Concept assignments (primary concepts only) ───────────────
         String assignSql = "insert into payroll_engine.concept_assignment (rule_system_code, concept_code, company_code, agreement_code, employee_type_code, valid_from, valid_to, priority, created_at, updated_at) values (?, ?, ?, ?, ?, DATE '2025-01-01', null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
         jdbcTemplate.update(assignSql, "ESP", "101", null, "99002405011982", null, 10);
+        jdbcTemplate.update(assignSql, "ESP", "700", null, "99002405011982", null, 700);
+        jdbcTemplate.update(assignSql, "ESP", "800", null, "99002405011982", null, 800);
         jdbcTemplate.update(assignSql, "ESP", "970", null, "99002405011982", null, 970);
+        jdbcTemplate.update(assignSql, "ESP", "980", null, "99002405011982", null, 980);
         jdbcTemplate.update(assignSql, "ESP", "990", null, "99002405011982", null, 990);
 
-        // ── Activation + binding + table data ────────────────────────
+        // ── Activations, bindings and table data ─────────────────────
         jdbcTemplate.update(
                 "insert into payroll.payroll_object_activation (rule_system_code, owner_type_code, owner_code, target_object_type_code, target_object_code, active) values (?, ?, ?, ?, ?, ?)",
                 "ESP", "AGREEMENT", "99002405011982", "PAYROLL_CONCEPT", "101", true);
+        jdbcTemplate.update(
+                "insert into payroll.payroll_object_activation (rule_system_code, owner_type_code, owner_code, target_object_type_code, target_object_code, active) values (?, ?, ?, ?, ?, ?)",
+                "ESP", "AGREEMENT", "99002405011982", "PAYROLL_CONCEPT", "700", true);
+        jdbcTemplate.update(
+                "insert into payroll.payroll_object_activation (rule_system_code, owner_type_code, owner_code, target_object_type_code, target_object_code, active) values (?, ?, ?, ?, ?, ?)",
+                "ESP", "AGREEMENT", "99002405011982", "PAYROLL_CONCEPT", "800", true);
         jdbcTemplate.update(
                 "insert into payroll.payroll_object_binding (rule_system_code, owner_type_code, owner_code, binding_role_code, bound_object_type_code, bound_object_code, active) values (?, ?, ?, ?, ?, ?, ?)",
                 "ESP", "AGREEMENT", "99002405011982", "P02_DAILY_AMOUNT_TABLE", "TABLE", "P02_99002405011982", true);

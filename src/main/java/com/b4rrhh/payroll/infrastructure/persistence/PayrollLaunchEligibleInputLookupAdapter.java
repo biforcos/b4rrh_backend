@@ -7,6 +7,7 @@ import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContex
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextRepository;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.SpringDataWorkingTimeRepository;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimeEntity;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.SpringDataWorkCenterRepository;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
@@ -26,19 +27,22 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     private final EmployeeAgreementContextRepository agreementContextRepository;
     private final EmployeeAgreementCategoryRepository agreementCategoryRepository;
     private final SpringDataWorkingTimeRepository workingTimeRepository;
+    private final SpringDataWorkCenterRepository workCenterRepository;
 
     public PayrollLaunchEligibleInputLookupAdapter(
             EmployeeBusinessKeyLookupSupport employeeLookupSupport,
             SpringDataPresenceRepository presenceRepository,
             EmployeeAgreementContextRepository agreementContextRepository,
             EmployeeAgreementCategoryRepository agreementCategoryRepository,
-            SpringDataWorkingTimeRepository workingTimeRepository
+            SpringDataWorkingTimeRepository workingTimeRepository,
+            SpringDataWorkCenterRepository workCenterRepository
     ) {
         this.employeeLookupSupport = employeeLookupSupport;
         this.presenceRepository = presenceRepository;
         this.agreementContextRepository = agreementContextRepository;
         this.agreementCategoryRepository = agreementCategoryRepository;
         this.workingTimeRepository = workingTimeRepository;
+        this.workCenterRepository = workCenterRepository;
     }
 
     @Override
@@ -90,13 +94,20 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 .map(this::toWorkingTimeWindow)
                 .toList();
 
+        String workCenterCode = workCenterRepository
+                .findActiveByEmployeeIdAndReferenceDate(employeeId, periodEnd, PageRequest.of(0, 1))
+                .stream().findFirst()
+                .map(wc -> wc.getWorkCenterCode())
+                .orElse(null);
+
         return Optional.of(new PayrollLaunchEligibleInputContext(
                 presence.getCompanyCode(),
                 agreementCode,
                 agreementCategoryCode,
                 windows,
                 presence.getStartDate(),
-                presence.getEndDate()
+                presence.getEndDate(),
+                workCenterCode
         ));
     }
 

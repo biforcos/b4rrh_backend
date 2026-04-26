@@ -3,6 +3,8 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.AgreementProfileContext;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileContext;
+import com.b4rrhh.payroll.application.port.WorkCenterProfileContext;
+import com.b4rrhh.payroll.application.port.WorkCenterProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataContext;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
@@ -60,6 +62,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final CompanyProfileLookupPort companyProfileLookupPort;
     private final EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
     private final AgreementProfileLookupPort agreementProfileLookupPort;
+    private final WorkCenterProfileLookupPort workCenterProfileLookupPort;
     private final Map<String, TechnicalConceptCalculator> technicalCalculatorsMap;
 
     public CalculatePayrollUnitService(
@@ -71,6 +74,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             CompanyProfileLookupPort companyProfileLookupPort,
             EmployeePersonalDataLookupPort employeePersonalDataLookupPort,
             AgreementProfileLookupPort agreementProfileLookupPort,
+            WorkCenterProfileLookupPort workCenterProfileLookupPort,
             List<TechnicalConceptCalculator> technicalConceptCalculators
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
@@ -81,6 +85,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.companyProfileLookupPort = companyProfileLookupPort;
         this.employeePersonalDataLookupPort = employeePersonalDataLookupPort;
         this.agreementProfileLookupPort = agreementProfileLookupPort;
+        this.workCenterProfileLookupPort = workCenterProfileLookupPort;
         this.technicalCalculatorsMap = technicalConceptCalculators.stream()
                 .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
     }
@@ -89,9 +94,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     public Payroll calculate(CalculatePayrollUnitCommand command) {
         return switch (payrollLaunchExecutionProperties.getMode()) {
             case ELIGIBLE_REAL -> calculateEligibleReal(command);
-            case MINIMAL_REAL -> throw new UnsupportedOperationException(
-                    "MINIMAL_REAL is no longer supported in CalculatePayrollUnitService. Use ELIGIBLE_REAL."
-            );
             case FAKE -> calculateFake(command);
         };
     }
@@ -174,12 +176,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.periodEnd()
         );
 
-        List<ConceptExecutionPlanEntry> perSegmentPlan = plan.stream()
-                .filter(e -> e.calculationType() != com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
-                .toList();
-        List<ConceptExecutionPlanEntry> aggregatePlan = plan.stream()
-                .filter(e -> e.calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
-                .toList();
+        // Split at the first AGGREGATE entry in topological order.
+        // Everything before it is per-segment (uses segment-specific technical values).
+        // Everything from the first AGGREGATE onwards is post-segment (derives from composed results).
+        // This preserves topological correctness when PERCENTAGE concepts depend on AGGREGATE bases.
+        int firstAggIdx = java.util.stream.IntStream.range(0, plan.size())
+                .filter(i -> plan.get(i).calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
+                .findFirst()
+                .orElse(plan.size());
+        List<ConceptExecutionPlanEntry> perSegmentPlan = plan.subList(0, firstAggIdx);
+        List<ConceptExecutionPlanEntry> aggregatePlan  = plan.subList(firstAggIdx, plan.size());
 
         List<SegmentSpec> segments = buildSegments(input, command.periodStart(), command.periodEnd());
         log.info("[NÓMINA] Segmentos de jornada: {}", segments.size());
@@ -282,29 +288,71 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         for (ConceptExecutionPlanEntry entry : aggregatePlan) {
             aggStep++;
             String conceptCode = entry.identity().getConceptCode();
-            BigDecimal sum = BigDecimal.ZERO;
-            StringBuilder sourceDesc = new StringBuilder();
-            for (AggregateSourceEntry source : entry.aggregateSources()) {
-                BigDecimal sourceAmount = requireStateAmount(composedState, source.identity());
-                sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
-                if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
-                if (source.invertSign()) {
-                    sourceDesc.append("-").append(source.identity().getConceptCode())
-                            .append("(").append(sourceAmount).append(")");
-                } else {
-                    sourceDesc.append(source.identity().getConceptCode())
-                            .append("(").append(sourceAmount).append(")");
+            BigDecimal amount;
+            BigDecimal quantity = null;
+            BigDecimal rate = null;
+
+            switch (entry.calculationType()) {
+                case AGGREGATE -> {
+                    BigDecimal sum = BigDecimal.ZERO;
+                    StringBuilder sourceDesc = new StringBuilder();
+                    for (AggregateSourceEntry source : entry.aggregateSources()) {
+                        BigDecimal sourceAmount = requireStateAmount(composedState, source.identity());
+                        sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
+                        if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
+                        if (source.invertSign()) {
+                            sourceDesc.append("-").append(source.identity().getConceptCode())
+                                    .append("(").append(sourceAmount).append(")");
+                        } else {
+                            sourceDesc.append(source.identity().getConceptCode())
+                                    .append("(").append(sourceAmount).append(")");
+                        }
+                    }
+                    amount = sum.setScale(2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
+                            aggStep, aggTotal, conceptCode, sourceDesc, amount);
                 }
+                case PERCENTAGE -> {
+                    ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
+                    ConceptNodeIdentity pctId  = entry.operands().get(OperandRole.PERCENTAGE);
+                    quantity = requireStateAmount(composedState, baseId);
+                    rate     = requireStateAmount(composedState, pctId);
+                    amount   = quantity.multiply(rate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} PERCENTAGE → {}({}) × {}% = {}",
+                            aggStep, aggTotal, conceptCode,
+                            baseId.getConceptCode(), quantity, rate, amount);
+                }
+                case JAVA_PROVIDED -> {
+                    // JAVA_PROVIDED concepts with no segment dependencies (e.g. fixed rates like P_SS, P_IRPF)
+                    // may appear in the post-segment plan due to topological ordering.
+                    // The segment context fields are irrelevant for these constants.
+                    TechnicalConceptCalculator calc = technicalCalculatorsMap.get(conceptCode);
+                    if (calc == null) {
+                        throw new UnsupportedOperationException(
+                                "No TechnicalConceptCalculator registered for concept: " + conceptCode);
+                    }
+                    SegmentSpec firstSeg = segments.isEmpty() ? null : segments.get(0);
+                    TechnicalConceptSegmentData techData = new TechnicalConceptSegmentData(
+                            command.periodStart(), command.periodEnd(),
+                            firstSeg != null ? firstSeg.segmentStart() : command.periodStart(),
+                            firstSeg != null ? firstSeg.segmentEnd()   : command.periodEnd(),
+                            firstSeg != null ? firstSeg.daysInSegment() : 0L,
+                            firstSeg != null ? firstSeg.workingTimePercentage() : BigDecimal.ZERO
+                    );
+                    amount = calc.resolve(techData);
+                    log.info("[NÓMINA] [{}/{}] {} JAVA_PROVIDED → {}",
+                            aggStep, aggTotal, conceptCode, amount);
+                }
+                default -> throw new UnsupportedOperationException(
+                        "Unsupported calculation type in post-segment plan: " + entry.calculationType());
             }
-            BigDecimal amount = sum.setScale(2, RoundingMode.HALF_UP);
-            log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
-                    aggStep, aggTotal, conceptCode, sourceDesc, amount);
+
             composedState.put(entry.identity(), amount);
             var aggConcept = engineConceptByCode.get(conceptCode);
             if (aggConcept.getPayslipOrderCode() != null) {
                 int displayOrder = Integer.parseInt(aggConcept.getPayslipOrderCode());
                 payslipRows.add(new ConceptRow(conceptCode, aggConcept.getConceptMnemonic(),
-                        amount, null, null, aggConcept.getFunctionalNature().name(), displayOrder));
+                        amount, quantity, rate, aggConcept.getFunctionalNature().name(), displayOrder));
             }
         }
 
@@ -338,8 +386,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             ));
         }
 
+        LocalDate presenceStart = input.presenceStartDate();
+        LocalDate presenceEnd = input.presenceEndDate();
         List<PayrollSegment> payrollSegments = segments.stream()
-                .map(s -> new PayrollSegment(s.segmentStart()))
+                .filter(s -> presenceStart == null || !s.segmentEnd().isBefore(presenceStart))
+                .filter(s -> presenceEnd == null || !s.segmentStart().isAfter(presenceEnd))
+                .map(s -> {
+                    LocalDate start = (presenceStart != null && presenceStart.isAfter(s.segmentStart()))
+                            ? presenceStart : s.segmentStart();
+                    return new PayrollSegment(start);
+                })
                 .toList();
 
         Payroll result = calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
@@ -497,6 +553,13 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     .ifPresent(snapshots::add);
         }
 
+        if (input.workCenterCode() != null) {
+            workCenterProfileLookupPort
+                    .findByRuleSystemAndCode(command.ruleSystemCode(), input.workCenterCode())
+                    .map(wc -> buildWorkCenterSnapshot(command, wc))
+                    .ifPresent(snapshots::add);
+        }
+
         return List.copyOf(snapshots);
     }
 
@@ -560,6 +623,21 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         return new PayrollContextSnapshot("AGREEMENT_DATA", "RULESYSTEM", toJson(sourceKey), toJson(payload));
     }
 
+    private PayrollContextSnapshot buildWorkCenterSnapshot(
+            CalculatePayrollUnitCommand command,
+            WorkCenterProfileContext wc
+    ) {
+        Map<String, Object> sourceKey = new LinkedHashMap<>();
+        sourceKey.put("ruleSystemCode", command.ruleSystemCode());
+        sourceKey.put("workCenterCode", wc.workCenterCode());
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("workCenterCode", wc.workCenterCode());
+        payload.put("workCenterName", wc.workCenterName());
+
+        return new PayrollContextSnapshot("WORK_CENTER_DATA", "RULESYSTEM", toJson(sourceKey), toJson(payload));
+    }
+
     private PayrollContextSnapshot eligibleRealSnapshot(
             CalculatePayrollUnitCommand command,
             PayrollLaunchEligibleInputContext input
@@ -576,6 +654,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         payload.put("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name());
         payload.put("agreementCode", input.agreementCode());
         payload.put("agreementCategoryCode", input.agreementCategoryCode());
+        payload.put("presenceStartDate", input.presenceStartDate() != null ? input.presenceStartDate().toString() : null);
+        payload.put("presenceEndDate", input.presenceEndDate() != null ? input.presenceEndDate().toString() : null);
 
         return new PayrollContextSnapshot(
                 "EMPLOYEE_PAYROLL_CONTEXT",

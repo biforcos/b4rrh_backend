@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
+import com.b4rrhh.payroll.application.port.WorkCenterProfileLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
@@ -58,6 +59,8 @@ class CalculatePayrollUnitServiceTest {
     private EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
     @Mock
     private AgreementProfileLookupPort agreementProfileLookupPort;
+    @Mock
+    private WorkCenterProfileLookupPort workCenterProfileLookupPort;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -72,6 +75,7 @@ class CalculatePayrollUnitServiceTest {
             companyProfileLookupPort,
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
+            workCenterProfileLookupPort,
             List.of()
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
@@ -133,6 +137,7 @@ class CalculatePayrollUnitServiceTest {
             companyProfileLookupPort,
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
+            workCenterProfileLookupPort,
             List.of()
         );
 
@@ -149,6 +154,7 @@ class CalculatePayrollUnitServiceTest {
                 new BigDecimal("100")
             )),
             LocalDate.of(2025, 1, 1),
+            null,
             null
         )));
 
@@ -215,6 +221,7 @@ class CalculatePayrollUnitServiceTest {
             companyProfileLookupPort,
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
+            workCenterProfileLookupPort,
             List.of()
         );
 
@@ -231,6 +238,7 @@ class CalculatePayrollUnitServiceTest {
                 new BigDecimal("100")
             )),
             LocalDate.of(2025, 1, 1),
+            null,
             null
         )));
 
@@ -251,35 +259,6 @@ class CalculatePayrollUnitServiceTest {
 
         assertEquals("AGREEMENT_CATEGORY_MISSING", ex.getReasonCode());
         verifyNoInteractions(payrollConceptGraphCalculator);
-    }
-
-    @Test
-    void minimalRealMode_throwsUnsupportedOperationException() {
-        PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
-        properties.setMode(PayrollExecutionMode.MINIMAL_REAL);
-
-        CalculatePayrollUnitService service = new CalculatePayrollUnitService(
-                calculatePayrollUseCase,
-                payrollLaunchEligibleInputLookupPort,
-                properties,
-                payrollConceptGraphCalculator,
-                buildEligibleExecutionPlanUseCase,
-                companyProfileLookupPort,
-                employeePersonalDataLookupPort,
-                agreementProfileLookupPort,
-                List.of()
-        );
-
-        UnsupportedOperationException ex = assertThrows(
-                UnsupportedOperationException.class,
-                () -> service.calculate(new CalculatePayrollUnitCommand(
-                        "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2,
-                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "ENGINE", "1.0"
-                ))
-        );
-
-        assertTrue(ex.getMessage().contains("MINIMAL_REAL"));
-        verifyNoInteractions(calculatePayrollUseCase, payrollConceptGraphCalculator, payrollLaunchEligibleInputLookupPort);
     }
 
     private Payroll payroll() {

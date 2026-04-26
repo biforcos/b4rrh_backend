@@ -6873,6 +6873,16 @@ components:
           $ref: '#/components/schemas/PayrollEmployeeProfileResponse'
         agreementProfile:
           $ref: '#/components/schemas/PayrollAgreementProfileResponse'
+        presenceStartDate:
+          type: string
+          format: date
+        presenceEndDate:
+          type: string
+          format: date
+        workCenterCode:
+          type: string
+        workCenterName:
+          type: string
     PayrollContextSnapshotResponse:
       type: object
       properties:

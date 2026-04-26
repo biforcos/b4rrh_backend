@@ -23,6 +23,8 @@ public class PayrollResponseAssembler {
     private static final String COMPANY_DATA = "COMPANY_DATA";
     private static final String EMPLOYEE_DATA = "EMPLOYEE_DATA";
     private static final String AGREEMENT_DATA = "AGREEMENT_DATA";
+    private static final String EMPLOYEE_PAYROLL_CONTEXT = "EMPLOYEE_PAYROLL_CONTEXT";
+    private static final String WORK_CENTER_DATA = "WORK_CENTER_DATA";
 
     private final ObjectMapper objectMapper;
 
@@ -75,7 +77,11 @@ public class PayrollResponseAssembler {
                         .toList(),
                 extractCompanyProfile(snapshots),
                 extractEmployeeProfile(snapshots),
-                extractAgreementProfile(snapshots)
+                extractAgreementProfile(snapshots),
+                extractPresenceStartDate(snapshots),
+                extractPresenceEndDate(snapshots),
+                extractWorkCenterCode(snapshots),
+                extractWorkCenterName(snapshots)
         );
     }
 
@@ -156,6 +162,48 @@ public class PayrollResponseAssembler {
                     map.get("annualHours"),
                     map.get("agreementCategoryCode")
             );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extractPresenceStartDate(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "presenceStartDate"))
+                .orElse(null);
+    }
+
+    private String extractPresenceEndDate(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "presenceEndDate"))
+                .orElse(null);
+    }
+
+    private String extractWorkCenterCode(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> WORK_CENTER_DATA.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "workCenterCode"))
+                .orElse(null);
+    }
+
+    private String extractWorkCenterName(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> WORK_CENTER_DATA.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "workCenterName"))
+                .orElse(null);
+    }
+
+    private String extractStringField(String json, String field) {
+        try {
+            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
+            Object value = map.get(field);
+            return value != null ? value.toString() : null;
         } catch (Exception e) {
             return null;
         }
