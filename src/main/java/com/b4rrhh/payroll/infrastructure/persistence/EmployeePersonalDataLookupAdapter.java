@@ -56,7 +56,8 @@ public class EmployeePersonalDataLookupAdapter implements EmployeePersonalDataLo
         Optional<AddressEntity> activeAddress = addressRepository
                 .findByEmployeeIdOrderByStartDateAsc(employee.getId())
                 .stream()
-                .filter(a -> !a.getStartDate().isAfter(referenceDate)
+                .filter(a -> "HOME".equals(a.getAddressTypeCode())
+                        && !a.getStartDate().isAfter(referenceDate)
                         && (a.getEndDate() == null || !a.getEndDate().isBefore(referenceDate)))
                 .reduce((first, second) -> second);
 
