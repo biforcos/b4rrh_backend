@@ -5,6 +5,7 @@ public enum FunctionalNature {
     DEDUCTION,
     BASE,
     INFORMATIONAL,
+    TECHNICAL,
     TOTAL_EARNING,
     TOTAL_DEDUCTION,
     NET_PAY

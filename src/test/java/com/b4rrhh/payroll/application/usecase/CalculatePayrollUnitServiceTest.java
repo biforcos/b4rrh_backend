@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
@@ -55,6 +56,8 @@ class CalculatePayrollUnitServiceTest {
     private CompanyProfileLookupPort companyProfileLookupPort;
     @Mock
     private EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
+    @Mock
+    private AgreementProfileLookupPort agreementProfileLookupPort;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -67,7 +70,9 @@ class CalculatePayrollUnitServiceTest {
             payrollConceptGraphCalculator,
             buildEligibleExecutionPlanUseCase,
             companyProfileLookupPort,
-            employeePersonalDataLookupPort
+            employeePersonalDataLookupPort,
+            agreementProfileLookupPort,
+            List.of()
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -126,7 +131,9 @@ class CalculatePayrollUnitServiceTest {
             payrollConceptGraphCalculator,
             buildEligibleExecutionPlanUseCase,
             companyProfileLookupPort,
-            employeePersonalDataLookupPort
+            employeePersonalDataLookupPort,
+            agreementProfileLookupPort,
+            List.of()
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -140,7 +147,9 @@ class CalculatePayrollUnitServiceTest {
                 LocalDate.of(2025, 1, 1),
                 null,
                 new BigDecimal("100")
-            ))
+            )),
+            LocalDate.of(2025, 1, 1),
+            null
         )));
 
         when(payrollConceptGraphCalculator.calculateConceptResult(org.mockito.ArgumentMatchers.eq("101"), org.mockito.ArgumentMatchers.any()))
@@ -204,7 +213,9 @@ class CalculatePayrollUnitServiceTest {
             payrollConceptGraphCalculator,
             buildEligibleExecutionPlanUseCase,
             companyProfileLookupPort,
-            employeePersonalDataLookupPort
+            employeePersonalDataLookupPort,
+            agreementProfileLookupPort,
+            List.of()
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -218,7 +229,9 @@ class CalculatePayrollUnitServiceTest {
                 LocalDate.of(2025, 1, 1),
                 null,
                 new BigDecimal("100")
-            ))
+            )),
+            LocalDate.of(2025, 1, 1),
+            null
         )));
 
         PayrollLaunchInputMissingException ex = assertThrows(PayrollLaunchInputMissingException.class, () ->
@@ -252,7 +265,9 @@ class CalculatePayrollUnitServiceTest {
                 payrollConceptGraphCalculator,
                 buildEligibleExecutionPlanUseCase,
                 companyProfileLookupPort,
-                employeePersonalDataLookupPort
+                employeePersonalDataLookupPort,
+                agreementProfileLookupPort,
+                List.of()
         );
 
         UnsupportedOperationException ex = assertThrows(

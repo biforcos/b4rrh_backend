@@ -26,6 +26,13 @@ public class PayrollLaunchExecutionProperties {
      */
     private BigDecimal eligibleRealMonthlySalaryAmount;
 
+    /**
+     * When true (default), EARNING/DEDUCTION rows produced by multiple working-time
+     * segments are collapsed into a single row per (conceptCode, rate) pair.
+     * Set to false to see one row per segment in the database — useful for debugging.
+     */
+    private boolean collapseSegmentRows = true;
+
     public PayrollExecutionMode getMode() {
         return mode;
     }
@@ -40,5 +47,13 @@ public class PayrollLaunchExecutionProperties {
 
     public void setEligibleRealMonthlySalaryAmount(BigDecimal eligibleRealMonthlySalaryAmount) {
         this.eligibleRealMonthlySalaryAmount = eligibleRealMonthlySalaryAmount;
+    }
+
+    public boolean isCollapseSegmentRows() {
+        return collapseSegmentRows;
+    }
+
+    public void setCollapseSegmentRows(boolean collapseSegmentRows) {
+        this.collapseSegmentRows = collapseSegmentRows;
     }
 }

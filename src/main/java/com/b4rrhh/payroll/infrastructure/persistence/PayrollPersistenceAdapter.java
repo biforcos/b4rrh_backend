@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
@@ -119,6 +120,9 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                                 snapshot.getSnapshotPayloadJson()
                         ))
                         .toList(),
+                entity.getSegments().stream()
+                        .map(seg -> new PayrollSegment(seg.getSegmentStart()))
+                        .toList(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -131,6 +135,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
         entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
         entity.replaceWarnings(payroll.getWarnings().stream().map(this::toWarningEntity).toList());
+        entity.replaceSegments(payroll.getSegments().stream().map(this::toSegmentEntity).toList());
         return entity;
     }
 
@@ -175,6 +180,12 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.setSourceVerticalCode(snapshot.getSourceVerticalCode());
         entity.setSourceBusinessKeyJson(snapshot.getSourceBusinessKeyJson());
         entity.setSnapshotPayloadJson(snapshot.getSnapshotPayloadJson());
+        return entity;
+    }
+
+    private PayrollSegmentEntity toSegmentEntity(PayrollSegment segment) {
+        PayrollSegmentEntity entity = new PayrollSegmentEntity();
+        entity.setSegmentStart(segment.segmentStart());
         return entity;
     }
 

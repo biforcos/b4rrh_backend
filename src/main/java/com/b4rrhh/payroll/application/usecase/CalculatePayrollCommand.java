@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 
@@ -22,6 +23,7 @@ public record CalculatePayrollCommand(
         String calculationEngineVersion,
         List<PayrollWarning> warnings,
         List<PayrollConcept> concepts,
-        List<PayrollContextSnapshot> contextSnapshots
+        List<PayrollContextSnapshot> contextSnapshots,
+        List<PayrollSegment> segments
 ) {
 }

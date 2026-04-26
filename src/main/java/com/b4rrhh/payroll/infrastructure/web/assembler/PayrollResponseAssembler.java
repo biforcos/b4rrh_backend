@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.infrastructure.web.assembler;
 
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollAgreementProfileResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCompanyProfileResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotResponse;
@@ -21,6 +22,7 @@ public class PayrollResponseAssembler {
 
     private static final String COMPANY_DATA = "COMPANY_DATA";
     private static final String EMPLOYEE_DATA = "EMPLOYEE_DATA";
+    private static final String AGREEMENT_DATA = "AGREEMENT_DATA";
 
     private final ObjectMapper objectMapper;
 
@@ -72,7 +74,8 @@ public class PayrollResponseAssembler {
                         ))
                         .toList(),
                 extractCompanyProfile(snapshots),
-                extractEmployeeProfile(snapshots)
+                extractEmployeeProfile(snapshots),
+                extractAgreementProfile(snapshots)
         );
     }
 
@@ -129,6 +132,29 @@ public class PayrollResponseAssembler {
                     map.get("street"),
                     map.get("city"),
                     map.get("postalCode")
+            );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private PayrollAgreementProfileResponse extractAgreementProfile(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> AGREEMENT_DATA.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> parseAgreementProfile(s.getSnapshotPayloadJson()))
+                .orElse(null);
+    }
+
+    private PayrollAgreementProfileResponse parseAgreementProfile(String json) {
+        try {
+            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
+            return new PayrollAgreementProfileResponse(
+                    map.get("officialAgreementNumber"),
+                    map.get("displayName"),
+                    map.get("shortName"),
+                    map.get("annualHours"),
+                    map.get("agreementCategoryCode")
             );
         } catch (Exception e) {
             return null;

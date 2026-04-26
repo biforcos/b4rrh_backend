@@ -21,6 +21,7 @@ public record PayrollResponse(
         List<PayrollConceptResponse> concepts,
         List<PayrollContextSnapshotResponse> contextSnapshots,
         PayrollCompanyProfileResponse companyProfile,
-        PayrollEmployeeProfileResponse employeeProfile
+        PayrollEmployeeProfileResponse employeeProfile,
+        PayrollAgreementProfileResponse agreementProfile
 ) {
 }

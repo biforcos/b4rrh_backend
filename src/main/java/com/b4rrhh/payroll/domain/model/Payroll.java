@@ -23,6 +23,7 @@ public class Payroll {
     private final List<PayrollWarning> warnings;
     private final List<PayrollConcept> concepts;
     private final List<PayrollContextSnapshot> contextSnapshots;
+    private final List<PayrollSegment> segments;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -42,6 +43,7 @@ public class Payroll {
             List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
+            List<PayrollSegment> segments,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -60,6 +62,7 @@ public class Payroll {
         this.warnings = copyWarnings(warnings);
         this.concepts = copyConcepts(concepts);
         this.contextSnapshots = copySnapshots(contextSnapshots);
+        this.segments = List.copyOf(segments != null ? segments : List.of());
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -80,6 +83,29 @@ public class Payroll {
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots
     ) {
+        return create(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
+                calculationEngineCode, calculationEngineVersion, warnings, concepts,
+                contextSnapshots, List.of());
+    }
+
+    public static Payroll create(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollWarning> warnings,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots,
+            List<PayrollSegment> segments
+    ) {
         return new Payroll(
                 null,
                 ruleSystemCode,
@@ -96,43 +122,32 @@ public class Payroll {
                 warnings,
                 concepts,
                 contextSnapshots,
+                segments,
                 null,
                 null
         );
     }
 
-            public static Payroll create(
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber,
-                String payrollPeriodCode,
-                String payrollTypeCode,
-                Integer presenceNumber,
-                PayrollStatus status,
-                String statusReasonCode,
-                LocalDateTime calculatedAt,
-                String calculationEngineCode,
-                String calculationEngineVersion,
-                List<PayrollConcept> concepts,
-                List<PayrollContextSnapshot> contextSnapshots
-            ) {
-            return create(
-                ruleSystemCode,
-                employeeTypeCode,
-                employeeNumber,
-                payrollPeriodCode,
-                payrollTypeCode,
-                presenceNumber,
-                status,
-                statusReasonCode,
-                calculatedAt,
-                calculationEngineCode,
-                calculationEngineVersion,
-                List.of(),
-                concepts,
-                contextSnapshots
-            );
-            }
+    public static Payroll create(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots
+    ) {
+        return create(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
+                calculationEngineCode, calculationEngineVersion, List.of(), concepts,
+                contextSnapshots, List.of());
+    }
 
     public static Payroll rehydrate(
             Long id,
@@ -153,6 +168,32 @@ public class Payroll {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
+        return rehydrate(id, ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
+                calculationEngineCode, calculationEngineVersion, warnings, concepts,
+                contextSnapshots, List.of(), createdAt, updatedAt);
+    }
+
+    public static Payroll rehydrate(
+            Long id,
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollWarning> warnings,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots,
+            List<PayrollSegment> segments,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         return new Payroll(
                 id,
                 ruleSystemCode,
@@ -169,49 +210,35 @@ public class Payroll {
                 warnings,
                 concepts,
                 contextSnapshots,
+                segments,
                 createdAt,
                 updatedAt
         );
     }
 
-            public static Payroll rehydrate(
-                Long id,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber,
-                String payrollPeriodCode,
-                String payrollTypeCode,
-                Integer presenceNumber,
-                PayrollStatus status,
-                String statusReasonCode,
-                LocalDateTime calculatedAt,
-                String calculationEngineCode,
-                String calculationEngineVersion,
-                List<PayrollConcept> concepts,
-                List<PayrollContextSnapshot> contextSnapshots,
-                LocalDateTime createdAt,
-                LocalDateTime updatedAt
-            ) {
-            return rehydrate(
-                id,
-                ruleSystemCode,
-                employeeTypeCode,
-                employeeNumber,
-                payrollPeriodCode,
-                payrollTypeCode,
-                presenceNumber,
-                status,
-                statusReasonCode,
-                calculatedAt,
-                calculationEngineCode,
-                calculationEngineVersion,
-                List.of(),
-                concepts,
-                contextSnapshots,
-                createdAt,
-                updatedAt
-            );
-            }
+    public static Payroll rehydrate(
+            Long id,
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            Integer presenceNumber,
+            PayrollStatus status,
+            String statusReasonCode,
+            LocalDateTime calculatedAt,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            List<PayrollConcept> concepts,
+            List<PayrollContextSnapshot> contextSnapshots,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        return rehydrate(id, ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
+                calculationEngineCode, calculationEngineVersion, List.of(), concepts,
+                contextSnapshots, List.of(), createdAt, updatedAt);
+    }
 
     public Payroll invalidate(String statusReasonCode) {
         if (status != PayrollStatus.CALCULATED && status != PayrollStatus.EXPLICIT_VALIDATED) {
@@ -251,6 +278,7 @@ public class Payroll {
                 warnings,
                 concepts,
                 contextSnapshots,
+                segments,
                 createdAt,
                 updatedAt == null ? null : LocalDateTime.now()
         );
@@ -383,6 +411,10 @@ public class Payroll {
 
     public List<PayrollContextSnapshot> getContextSnapshots() {
         return contextSnapshots;
+    }
+
+    public List<PayrollSegment> getSegments() {
+        return segments;
     }
 
     public LocalDateTime getCreatedAt() {

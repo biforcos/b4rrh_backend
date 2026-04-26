@@ -4,5 +4,6 @@ public enum CalculationType {
     DIRECT_AMOUNT,
     RATE_BY_QUANTITY,
     PERCENTAGE,
-    AGGREGATE
+    AGGREGATE,
+    JAVA_PROVIDED
 }

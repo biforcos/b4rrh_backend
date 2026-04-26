@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.AgreementProfileContext;
+import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileContext;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataContext;
@@ -12,23 +14,30 @@ import com.b4rrhh.payroll.application.service.PayrollConceptGraphCalculator;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
+import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
+import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculator;
 import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentData;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +59,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final BuildEligibleExecutionPlanUseCase buildEligibleExecutionPlanUseCase;
     private final CompanyProfileLookupPort companyProfileLookupPort;
     private final EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
+    private final AgreementProfileLookupPort agreementProfileLookupPort;
+    private final Map<String, TechnicalConceptCalculator> technicalCalculatorsMap;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -58,7 +69,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             PayrollConceptGraphCalculator payrollConceptGraphCalculator,
             BuildEligibleExecutionPlanUseCase buildEligibleExecutionPlanUseCase,
             CompanyProfileLookupPort companyProfileLookupPort,
-            EmployeePersonalDataLookupPort employeePersonalDataLookupPort
+            EmployeePersonalDataLookupPort employeePersonalDataLookupPort,
+            AgreementProfileLookupPort agreementProfileLookupPort,
+            List<TechnicalConceptCalculator> technicalConceptCalculators
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -67,6 +80,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.buildEligibleExecutionPlanUseCase = buildEligibleExecutionPlanUseCase;
         this.companyProfileLookupPort = companyProfileLookupPort;
         this.employeePersonalDataLookupPort = employeePersonalDataLookupPort;
+        this.agreementProfileLookupPort = agreementProfileLookupPort;
+        this.technicalCalculatorsMap = technicalConceptCalculators.stream()
+                .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
     }
 
     @Override
@@ -158,111 +174,157 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.periodEnd()
         );
 
-        Map<ConceptNodeIdentity, BigDecimal> executionState = new HashMap<>();
-        Map<String, BigDecimal> amountByCode = new LinkedHashMap<>();
-        Map<String, BigDecimal> quantityByCode = new LinkedHashMap<>();
-        Map<String, BigDecimal> rateByCode = new LinkedHashMap<>();
+        List<ConceptExecutionPlanEntry> perSegmentPlan = plan.stream()
+                .filter(e -> e.calculationType() != com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
+                .toList();
+        List<ConceptExecutionPlanEntry> aggregatePlan = plan.stream()
+                .filter(e -> e.calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
+                .toList();
 
-        int step = 0;
-        int total = plan.size();
-        for (ConceptExecutionPlanEntry entry : plan) {
-            step++;
-            String conceptCode = entry.identity().getConceptCode();
-            BigDecimal amount;
-            BigDecimal quantity = null;
-            BigDecimal rate = null;
+        List<SegmentSpec> segments = buildSegments(input, command.periodStart(), command.periodEnd());
+        log.info("[NÓMINA] Segmentos de jornada: {}", segments.size());
 
-            switch (entry.calculationType()) {
-                case DIRECT_AMOUNT -> {
-                    log.info("[NÓMINA] [{}/{}] {} DIRECT_AMOUNT → calculador externo",
-                            step, total, conceptCode);
-                    PayrollConceptExecutionResult result =
-                            payrollConceptGraphCalculator.calculateConceptResult(conceptCode, calcContext);
-                    amount = result.amount();
-                    quantity = result.quantity();
-                    rate = result.rate();
-                    log.info("[NÓMINA] [{}/{}] {} = {} (cant={} tasa={})",
-                            step, total, conceptCode, amount, quantity, rate);
-                }
-                case RATE_BY_QUANTITY -> {
-                    ConceptNodeIdentity quantityId = entry.operands().get(OperandRole.QUANTITY);
-                    ConceptNodeIdentity rateId = entry.operands().get(OperandRole.RATE);
-                    quantity = requireStateAmount(executionState, quantityId);
-                    rate = requireStateAmount(executionState, rateId);
-                    amount = quantity.multiply(rate).setScale(2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} RATE_BY_QUANTITY → {}({}) × {}({}) = {}",
-                            step, total, conceptCode,
-                            quantityId.getConceptCode(), quantity,
-                            rateId.getConceptCode(), rate,
-                            amount);
-                }
-                case PERCENTAGE -> {
-                    ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
-                    ConceptNodeIdentity pctId = entry.operands().get(OperandRole.PERCENTAGE);
-                    BigDecimal base = requireStateAmount(executionState, baseId);
-                    BigDecimal pct = requireStateAmount(executionState, pctId);
-                    amount = base.multiply(pct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} PERCENTAGE → {}({}) × {}% = {}",
-                            step, total, conceptCode,
-                            baseId.getConceptCode(), base, pct, amount);
-                }
-                case AGGREGATE -> {
-                    BigDecimal sum = BigDecimal.ZERO;
-                    StringBuilder sourceDesc = new StringBuilder();
-                    for (AggregateSourceEntry source : entry.aggregateSources()) {
-                        BigDecimal sourceAmount = requireStateAmount(executionState, source.identity());
-                        sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
-                        if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
-                        if (source.invertSign()) {
-                            sourceDesc.append("-").append(source.identity().getConceptCode())
-                                    .append("(").append(sourceAmount).append(")");
-                        } else {
-                            sourceDesc.append(source.identity().getConceptCode())
-                                    .append("(").append(sourceAmount).append(")");
-                        }
+        Map<ConceptNodeIdentity, BigDecimal> composedState = new HashMap<>();
+        List<ConceptRow> payslipRows = new ArrayList<>();
+
+        for (SegmentSpec seg : segments) {
+            log.info("[NÓMINA] ▶ Segmento {} → {} ({} días, jornada={}%)",
+                    seg.segmentStart(), seg.segmentEnd(), seg.daysInSegment(), seg.workingTimePercentage());
+
+            Map<ConceptNodeIdentity, BigDecimal> segmentState = new HashMap<>();
+            int step = 0;
+            int total = perSegmentPlan.size();
+
+            for (ConceptExecutionPlanEntry entry : perSegmentPlan) {
+                step++;
+                String conceptCode = entry.identity().getConceptCode();
+                BigDecimal amount;
+                BigDecimal quantity = null;
+                BigDecimal rate = null;
+
+                switch (entry.calculationType()) {
+                    case DIRECT_AMOUNT -> {
+                        log.info("[NÓMINA] [{}/{}] {} DIRECT_AMOUNT → calculador externo",
+                                step, total, conceptCode);
+                        PayrollConceptExecutionResult result =
+                                payrollConceptGraphCalculator.calculateConceptResult(conceptCode, calcContext);
+                        amount = result.amount();
+                        quantity = result.quantity();
+                        rate = result.rate();
+                        log.info("[NÓMINA] [{}/{}] {} = {} (cant={} tasa={})",
+                                step, total, conceptCode, amount, quantity, rate);
                     }
-                    amount = sum.setScale(2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
-                            step, total, conceptCode, sourceDesc, amount);
+                    case RATE_BY_QUANTITY -> {
+                        ConceptNodeIdentity quantityId = entry.operands().get(OperandRole.QUANTITY);
+                        ConceptNodeIdentity rateId = entry.operands().get(OperandRole.RATE);
+                        quantity = requireStateAmount(segmentState, quantityId);
+                        rate = requireStateAmount(segmentState, rateId);
+                        amount = quantity.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                        log.info("[NÓMINA] [{}/{}] {} RATE_BY_QUANTITY → {}({}) × {}({}) = {}",
+                                step, total, conceptCode,
+                                quantityId.getConceptCode(), quantity,
+                                rateId.getConceptCode(), rate,
+                                amount);
+                    }
+                    case PERCENTAGE -> {
+                        ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
+                        ConceptNodeIdentity pctId = entry.operands().get(OperandRole.PERCENTAGE);
+                        BigDecimal base = requireStateAmount(segmentState, baseId);
+                        BigDecimal pct = requireStateAmount(segmentState, pctId);
+                        amount = base.multiply(pct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                        log.info("[NÓMINA] [{}/{}] {} PERCENTAGE → {}({}) × {}% = {}",
+                                step, total, conceptCode,
+                                baseId.getConceptCode(), base, pct, amount);
+                    }
+                    case JAVA_PROVIDED -> {
+                        TechnicalConceptSegmentData techData = new TechnicalConceptSegmentData(
+                                command.periodStart(), command.periodEnd(),
+                                seg.segmentStart(), seg.segmentEnd(),
+                                seg.daysInSegment(),
+                                seg.workingTimePercentage()
+                        );
+                        TechnicalConceptCalculator calculator = technicalCalculatorsMap.get(conceptCode);
+                        if (calculator == null) {
+                            throw new UnsupportedOperationException(
+                                    "No TechnicalConceptCalculator registered for concept: " + conceptCode);
+                        }
+                        amount = calculator.resolve(techData);
+                        log.info("[NÓMINA] [{}/{}] {} JAVA_PROVIDED → {}",
+                                step, total, conceptCode, amount);
+                    }
+                    default -> throw new UnsupportedOperationException(
+                            "Unsupported calculation type: " + entry.calculationType()
+                    );
                 }
-                default -> throw new UnsupportedOperationException(
-                        "Unsupported calculation type: " + entry.calculationType()
-                );
-            }
 
-            executionState.put(entry.identity(), amount);
-            amountByCode.put(conceptCode, amount);
-            quantityByCode.put(conceptCode, quantity);
-            rateByCode.put(conceptCode, rate);
+                segmentState.put(entry.identity(), amount);
+
+                var engineConcept = engineConceptByCode.get(conceptCode);
+                FunctionalNature nature = engineConcept.getFunctionalNature();
+                if (isAccumulable(nature)) {
+                    composedState.merge(entry.identity(), amount, BigDecimal::add);
+                } else {
+                    composedState.put(entry.identity(), amount);
+                }
+                if (engineConcept.getPayslipOrderCode() != null) {
+                    int displayOrder = Integer.parseInt(engineConcept.getPayslipOrderCode());
+                    if (!isAccumulable(nature)) {
+                        payslipRows.removeIf(r -> r.conceptCode().equals(conceptCode));
+                    }
+                    payslipRows.add(new ConceptRow(conceptCode, engineConcept.getConceptMnemonic(),
+                            amount, quantity, rate, nature.name(), displayOrder));
+                }
+            }
         }
 
-        List<ConceptRow> rows = new ArrayList<>();
-        for (String conceptCode : amountByCode.keySet()) {
-            com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept =
-                    engineConceptByCode.get(conceptCode);
-            if (engineConcept.getPayslipOrderCode() == null) {
-                continue;
+        int aggStep = 0;
+        int aggTotal = aggregatePlan.size();
+        for (ConceptExecutionPlanEntry entry : aggregatePlan) {
+            aggStep++;
+            String conceptCode = entry.identity().getConceptCode();
+            BigDecimal sum = BigDecimal.ZERO;
+            StringBuilder sourceDesc = new StringBuilder();
+            for (AggregateSourceEntry source : entry.aggregateSources()) {
+                BigDecimal sourceAmount = requireStateAmount(composedState, source.identity());
+                sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
+                if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
+                if (source.invertSign()) {
+                    sourceDesc.append("-").append(source.identity().getConceptCode())
+                            .append("(").append(sourceAmount).append(")");
+                } else {
+                    sourceDesc.append(source.identity().getConceptCode())
+                            .append("(").append(sourceAmount).append(")");
+                }
             }
-            int displayOrder = Integer.parseInt(engineConcept.getPayslipOrderCode());
-            rows.add(new ConceptRow(
-                    conceptCode,
-                    engineConcept.getConceptMnemonic(),
-                    amountByCode.get(conceptCode),
-                    quantityByCode.get(conceptCode),
-                    rateByCode.get(conceptCode),
-                    engineConcept.getFunctionalNature().name(),
-                    displayOrder
-            ));
+            BigDecimal amount = sum.setScale(2, RoundingMode.HALF_UP);
+            log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
+                    aggStep, aggTotal, conceptCode, sourceDesc, amount);
+            composedState.put(entry.identity(), amount);
+            var aggConcept = engineConceptByCode.get(conceptCode);
+            if (aggConcept.getPayslipOrderCode() != null) {
+                int displayOrder = Integer.parseInt(aggConcept.getPayslipOrderCode());
+                payslipRows.add(new ConceptRow(conceptCode, aggConcept.getConceptMnemonic(),
+                        amount, null, null, aggConcept.getFunctionalNature().name(), displayOrder));
+            }
         }
-        rows.sort(Comparator.comparingInt(ConceptRow::displayOrder));
 
-        log.info("[NÓMINA] Filtro recibo | {} de {} conceptos con payslipOrderCode → [{}]",
-                rows.size(), amountByCode.size(),
-                rows.stream().map(ConceptRow::conceptCode).collect(Collectors.joining(", ")));
+        if (payrollLaunchExecutionProperties.isCollapseSegmentRows()) {
+            int before = payslipRows.size();
+            payslipRows = collapsePayslipRows(payslipRows);
+            log.info("[NÓMINA] Colapso de segmentos: {} → {} lineas", before, payslipRows.size());
+        } else {
+            log.info("[NÓMINA] Colapso desactivado (collapse-segment-rows=false): {} lineas sin colapsar", payslipRows.size());
+        }
+
+        payslipRows.sort(Comparator.comparingInt(ConceptRow::displayOrder));
+
+        log.info("[NÓMINA] Filtro recibo | {} lineas en recibo → [{}]",
+                payslipRows.size(),
+                payslipRows.stream().map(ConceptRow::conceptCode).collect(Collectors.joining(", ")));
 
         List<PayrollConcept> payrollConcepts = new ArrayList<>();
-        for (int i = 0; i < rows.size(); i++) {
-            ConceptRow r = rows.get(i);
+        for (int i = 0; i < payslipRows.size(); i++) {
+            ConceptRow r = payslipRows.get(i);
             payrollConcepts.add(new PayrollConcept(
                     i + 1,
                     r.conceptCode(),
@@ -275,6 +337,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     r.displayOrder()
             ));
         }
+
+        List<PayrollSegment> payrollSegments = segments.stream()
+                .map(s -> new PayrollSegment(s.segmentStart()))
+                .toList();
 
         Payroll result = calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
                 command.ruleSystemCode(),
@@ -290,7 +356,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.calculationEngineVersion(),
                 List.of(eligibleRealWarning(command, input)),
                 payrollConcepts,
-                buildSnapshots(command, input)
+                buildSnapshots(command, input),
+                payrollSegments
         ));
         log.info("[NÓMINA] ✓ Cálculo completado | empleado={} periodo={} → {} líneas en recibo",
                 command.employeeNumber(), command.payrollPeriodCode(), payrollConcepts.size());
@@ -306,6 +373,70 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             String nature,
             int displayOrder
     ) {}
+
+    private record SegmentSpec(
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            long daysInSegment,
+            BigDecimal workingTimePercentage
+    ) {}
+
+    private List<SegmentSpec> buildSegments(
+            PayrollLaunchEligibleInputContext input,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
+        LocalDate presenceStart = input.presenceStartDate() != null && input.presenceStartDate().isAfter(periodStart)
+                ? input.presenceStartDate() : periodStart;
+        LocalDate presenceEnd = input.presenceEndDate() != null && input.presenceEndDate().isBefore(periodEnd)
+                ? input.presenceEndDate() : periodEnd;
+
+        if (input.workingTimeWindows() == null || input.workingTimeWindows().isEmpty()) {
+            long days = ChronoUnit.DAYS.between(presenceStart, presenceEnd) + 1;
+            return List.of(new SegmentSpec(presenceStart, presenceEnd, days, BigDecimal.valueOf(100)));
+        }
+
+        List<SegmentSpec> segments = new ArrayList<>();
+        for (var window : input.workingTimeWindows()) {
+            LocalDate windowStart = window.startDate() != null && window.startDate().isAfter(presenceStart)
+                    ? window.startDate() : presenceStart;
+            LocalDate windowEnd = window.endDate() != null && window.endDate().isBefore(presenceEnd)
+                    ? window.endDate() : presenceEnd;
+            if (!windowStart.isAfter(windowEnd)) {
+                long days = ChronoUnit.DAYS.between(windowStart, windowEnd) + 1;
+                segments.add(new SegmentSpec(windowStart, windowEnd, days, window.workingTimePercentage()));
+            }
+        }
+        return segments.isEmpty()
+                ? List.of(new SegmentSpec(presenceStart, presenceEnd,
+                        ChronoUnit.DAYS.between(presenceStart, presenceEnd) + 1,
+                        BigDecimal.valueOf(100)))
+                : segments;
+    }
+
+    private boolean isAccumulable(FunctionalNature nature) {
+        return nature == FunctionalNature.EARNING || nature == FunctionalNature.DEDUCTION;
+    }
+
+    private List<ConceptRow> collapsePayslipRows(List<ConceptRow> rows) {
+        LinkedHashMap<String, ConceptRow> collapsed = new LinkedHashMap<>();
+        for (ConceptRow row : rows) {
+            String key = row.conceptCode() + "|" + (row.rate() != null
+                    ? row.rate().stripTrailingZeros().toPlainString() : "null");
+            collapsed.merge(key, row, (existing, incoming) -> new ConceptRow(
+                    existing.conceptCode(),
+                    existing.mnemonic(),
+                    existing.amount().add(incoming.amount()),
+                    existing.quantity() != null && incoming.quantity() != null
+                            ? existing.quantity().add(incoming.quantity())
+                            : existing.quantity(),
+                    existing.rate(),
+                    existing.nature(),
+                    existing.displayOrder()
+            ));
+        }
+        return new ArrayList<>(collapsed.values());
+    }
 
     private BigDecimal requireStateAmount(Map<ConceptNodeIdentity, BigDecimal> state, ConceptNodeIdentity id) {
         BigDecimal value = state.get(id);
@@ -358,6 +489,14 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 .map(ep -> buildEmployeeSnapshot(command, ep))
                 .ifPresent(snapshots::add);
 
+        if (input.agreementCode() != null) {
+            agreementProfileLookupPort
+                    .findByRuleSystemAndCode(command.ruleSystemCode(), input.agreementCode())
+                    .map(ap -> buildAgreementSnapshot(command, input.agreementCode(),
+                            input.agreementCategoryCode(), ap))
+                    .ifPresent(snapshots::add);
+        }
+
         return List.copyOf(snapshots);
     }
 
@@ -400,6 +539,27 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         return new PayrollContextSnapshot("EMPLOYEE_DATA", "EMPLOYEE", toJson(sourceKey), toJson(payload));
     }
 
+    private PayrollContextSnapshot buildAgreementSnapshot(
+            CalculatePayrollUnitCommand command,
+            String agreementCode,
+            String agreementCategoryCode,
+            AgreementProfileContext ap
+    ) {
+        Map<String, Object> sourceKey = new LinkedHashMap<>();
+        sourceKey.put("ruleSystemCode", command.ruleSystemCode());
+        sourceKey.put("entityTypeCode", "AGREEMENT");
+        sourceKey.put("entityCode", agreementCode);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("officialAgreementNumber", ap.officialAgreementNumber());
+        payload.put("displayName", ap.displayName());
+        payload.put("shortName", ap.shortName());
+        payload.put("annualHours", ap.annualHours() != null ? ap.annualHours().toPlainString() : null);
+        payload.put("agreementCategoryCode", agreementCategoryCode);
+
+        return new PayrollContextSnapshot("AGREEMENT_DATA", "RULESYSTEM", toJson(sourceKey), toJson(payload));
+    }
+
     private PayrollContextSnapshot eligibleRealSnapshot(
             CalculatePayrollUnitCommand command,
             PayrollLaunchEligibleInputContext input
@@ -440,7 +600,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.calculationEngineVersion(),
                 fakeWarnings(command),
                 fakeConcepts(command),
-                List.of(fakeSnapshot(command))
+                List.of(fakeSnapshot(command)),
+                List.of()
         ));
     }
 

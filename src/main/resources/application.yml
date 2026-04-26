@@ -45,3 +45,4 @@ payroll:
   launch:
     execution:
       mode: ELIGIBLE_REAL
+      collapse-segment-rows: true

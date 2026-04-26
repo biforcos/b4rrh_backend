@@ -141,7 +141,8 @@ class DefaultEligiblePayrollExecutorTest {
                 new DefaultSegmentExecutionEngine(
                         new SegmentTechnicalValueResolver(),
                         new RateByQuantityOperandResolver(),
-                        new PercentageConceptResolver()));
+                        new PercentageConceptResolver(),
+                        List.of()));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

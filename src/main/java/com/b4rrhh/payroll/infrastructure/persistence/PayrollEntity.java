@@ -77,6 +77,9 @@ public class PayrollEntity {
     @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PayrollWarningEntity> warnings = new ArrayList<>();
 
+    @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PayrollSegmentEntity> segments = new LinkedHashSet<>();
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
@@ -117,6 +120,14 @@ public class PayrollEntity {
         items.forEach(this::addWarning);
     }
 
+    public void replaceSegments(java.util.Collection<PayrollSegmentEntity> items) {
+        segments.clear();
+        if (items == null) {
+            return;
+        }
+        items.forEach(this::addSegment);
+    }
+
     private void addConcept(PayrollConceptEntity concept) {
         concept.setPayroll(this);
         concepts.add(concept);
@@ -130,6 +141,11 @@ public class PayrollEntity {
     private void addWarning(PayrollWarningEntity warning) {
         warning.setPayroll(this);
         warnings.add(warning);
+    }
+
+    private void addSegment(PayrollSegmentEntity segment) {
+        segment.setPayroll(this);
+        segments.add(segment);
     }
 
     public Long getId() { return id; }
@@ -163,4 +179,5 @@ public class PayrollEntity {
     public Set<PayrollConceptEntity> getConcepts() { return concepts; }
     public Set<PayrollContextSnapshotEntity> getContextSnapshots() { return contextSnapshots; }
     public List<PayrollWarningEntity> getWarnings() { return warnings; }
+    public Set<PayrollSegmentEntity> getSegments() { return segments; }
 }

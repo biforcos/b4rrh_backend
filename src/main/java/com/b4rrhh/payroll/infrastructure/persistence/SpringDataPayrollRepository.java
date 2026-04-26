@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity, Long> {
 
-    @EntityGraph(attributePaths = {"concepts", "contextSnapshots", "warnings"})
+    @EntityGraph(attributePaths = {"concepts", "contextSnapshots", "warnings", "segments"})
     Optional<PayrollEntity> findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumberAndPayrollPeriodCodeAndPayrollTypeCodeAndPresenceNumber(
             String ruleSystemCode,
             String employeeTypeCode,

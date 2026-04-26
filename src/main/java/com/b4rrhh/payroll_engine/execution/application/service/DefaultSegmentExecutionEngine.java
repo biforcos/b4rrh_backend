@@ -1,16 +1,19 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
 import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedCalculationTypeException;
+import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
+import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
+import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentData;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.springframework.stereotype.Component;
-
-import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link SegmentExecutionEngine}.
@@ -53,15 +56,19 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
     private final SegmentTechnicalValueResolver technicalValueResolver;
     private final RateByQuantityOperandResolver rateByQuantityResolver;
     private final PercentageConceptResolver percentageConceptResolver;
+    private final Map<String, TechnicalConceptCalculator> technicalCalculators;
 
     public DefaultSegmentExecutionEngine(
             SegmentTechnicalValueResolver technicalValueResolver,
             RateByQuantityOperandResolver rateByQuantityResolver,
-            PercentageConceptResolver percentageConceptResolver
+            PercentageConceptResolver percentageConceptResolver,
+            List<TechnicalConceptCalculator> technicalCalculators
     ) {
         this.technicalValueResolver = technicalValueResolver;
         this.rateByQuantityResolver = rateByQuantityResolver;
         this.percentageConceptResolver = percentageConceptResolver;
+        this.technicalCalculators = technicalCalculators.stream()
+                .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
     }
 
     @Override
@@ -89,6 +96,22 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                         sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
                     }
                     yield sum.setScale(2, RoundingMode.HALF_UP);
+                }
+
+                case JAVA_PROVIDED -> {
+                    String conceptCode = entry.identity().getConceptCode();
+                    TechnicalConceptCalculator calculator = technicalCalculators.get(conceptCode);
+                    if (calculator == null) {
+                        throw new UnsupportedTechnicalConceptException(conceptCode);
+                    }
+                    yield calculator.resolve(new TechnicalConceptSegmentData(
+                            context.getPeriodStart(),
+                            context.getPeriodEnd(),
+                            context.getSegmentStart(),
+                            context.getSegmentEnd(),
+                            context.getDaysInSegment(),
+                            context.getWorkingTimePercentage()
+                    ));
                 }
 
                 default ->

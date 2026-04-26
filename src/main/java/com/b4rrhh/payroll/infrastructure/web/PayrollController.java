@@ -136,7 +136,8 @@ public class PayrollController {
                                 snapshot.sourceBusinessKeyJson(),
                                 snapshot.snapshotPayloadJson()
                         ))
-                        .toList()
+                        .toList(),
+                java.util.List.of()
         ));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(payrollResponseAssembler.toResponse(payroll));

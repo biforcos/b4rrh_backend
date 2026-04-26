@@ -94,7 +94,9 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 presence.getCompanyCode(),
                 agreementCode,
                 agreementCategoryCode,
-                windows
+                windows,
+                presence.getStartDate(),
+                presence.getEndDate()
         ));
     }
 
