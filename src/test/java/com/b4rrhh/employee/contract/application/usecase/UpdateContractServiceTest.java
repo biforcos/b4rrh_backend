@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -232,7 +233,52 @@ class UpdateContractServiceTest {
 
         service.update(command);
 
-        verify(contractRepository, times(1)).update(any(Contract.class));
+        ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
+        verify(contractRepository).update(captor.capture());
+        assertThat(captor.getValue().getStartDate()).isEqualTo(LocalDate.of(2025, 2, 1));
+    }
+
+    @Test
+    void whenNewStartDateIsEarlier_predecessorEndDateIsCascadedBackward() {
+        // predecessor ends just before current starts (2025-01-01)
+        Contract predecessor = Contract.rehydrate(
+                10L, "CTR", "ORD",
+                LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)
+        );
+        Contract current = Contract.rehydrate(
+                10L, "CTR", "ORD",
+                LocalDate.of(2025, 1, 1), null
+        );
+        // Move current's startDate EARLIER to 2024-12-15
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2025, 1, 1)))
+                .thenReturn(Optional.of(current));
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(predecessor, current));
+        when(contractRepository.existsOverlappingPeriod(any(), any(), any(), any()))
+                .thenReturn(false);
+
+        UpdateContractCommand command = new UpdateContractCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER,
+                LocalDate.of(2025, 1, 1),    // path key
+                LocalDate.of(2024, 12, 15),  // newStartDate — earlier
+                "CTR", "ORD"
+        );
+
+        service.update(command);
+
+        // Predecessor's endDate should be cascaded to newStartDate - 1 = 2024-12-14
+        ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
+        verify(contractRepository, times(2)).update(captor.capture());
+        List<Contract> saved = captor.getAllValues();
+        Contract savedPredecessor = saved.stream()
+                .filter(c -> c.getStartDate().equals(LocalDate.of(2024, 1, 1)))
+                .findFirst().orElseThrow();
+        Contract savedCurrent = saved.stream()
+                .filter(c -> c.getStartDate().equals(LocalDate.of(2024, 12, 15)))
+                .findFirst().orElseThrow();
+        assertThat(savedPredecessor.getEndDate()).isEqualTo(LocalDate.of(2024, 12, 14));
+        assertThat(savedCurrent.getStartDate()).isEqualTo(LocalDate.of(2024, 12, 15));
     }
 
     private void whenEmployeeExists() {
