@@ -1364,6 +1364,37 @@ paths:
                 $ref: "#/components/schemas/WorkingTimeResponse"
         "404":
           description: Employee or working time not found
+    put:
+      summary: Correct a working time period (startDate and/or percentage)
+      operationId: updateWorkingTimeByBusinessKey
+      tags:
+        - Working Time
+      parameters:
+        - $ref: '#/components/parameters/ruleSystemCode'
+        - $ref: '#/components/parameters/employeeTypeCode'
+        - $ref: '#/components/parameters/employeeNumber'
+        - name: workingTimeNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkingTimeRequest'
+      responses:
+        '200':
+          description: Working time corrected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingTimeResponse'
+        '404':
+          description: Employee or working time not found
+        '409':
+          description: New start date overlaps with another working time period
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/working-times/{workingTimeNumber}/close:
     post:
@@ -5659,6 +5690,26 @@ components:
           type: string
           format: date
           description: Date on which the working time period ends (yyyy-MM-dd).
+    UpdateWorkingTimeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - startDate
+        - workingTimePercentage
+      properties:
+        startDate:
+          type: string
+          format: date
+          description: >-
+            Corrected start date (yyyy-MM-dd). When different from the current
+            startDate, the predecessor period's endDate is automatically adjusted
+            to newStartDate - 1 day.
+        workingTimePercentage:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 100
     WorkingTimeResponse:
       type: object
       required:
@@ -5754,6 +5805,14 @@ components:
         - contractCode
         - contractSubtypeCode
       properties:
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Corrected start date (yyyy-MM-dd). When provided and different from the
+            path startDate, the predecessor period's endDate is automatically adjusted
+            to newStartDate - 1 day. Must not overlap with other periods.
         contractCode:
           type: string
           minLength: 3
@@ -5858,6 +5917,14 @@ components:
         - agreementCode
         - agreementCategoryCode
       properties:
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Corrected start date (yyyy-MM-dd). When provided and different from the
+            path startDate, the predecessor period's endDate is automatically adjusted
+            to newStartDate - 1 day. Must not overlap with other periods.
         agreementCode:
           type: string
           maxLength: 30
