@@ -99,7 +99,7 @@ class UpdateContractServiceTest {
         assertEquals("PT1", updated.getContractSubtypeCode());
 
         ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository).update(captor.capture());
+        verify(contractRepository).update(captor.capture(), any(LocalDate.class));
         assertEquals("TMP", captor.getValue().getContractCode());
         assertEquals("PT1", captor.getValue().getContractSubtypeCode());
     }
@@ -129,7 +129,7 @@ class UpdateContractServiceTest {
                 .thenReturn(Optional.of(closed));
 
         assertThrows(ContractAlreadyClosedException.class, () -> service.update(command));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -161,7 +161,7 @@ class UpdateContractServiceTest {
                 ContractSubtypeRelationInvalidException.class,
                 () -> service.update(command)
         );
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -195,7 +195,7 @@ class UpdateContractServiceTest {
         service.update(command);
 
         ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository, times(2)).update(captor.capture());
+        verify(contractRepository, times(2)).update(captor.capture(), any(LocalDate.class));
 
         List<Contract> saved = captor.getAllValues();
         Contract savedPredecessor = saved.get(0);
@@ -234,7 +234,7 @@ class UpdateContractServiceTest {
         service.update(command);
 
         ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository).update(captor.capture());
+        verify(contractRepository).update(captor.capture(), any(LocalDate.class));
         assertThat(captor.getValue().getStartDate()).isEqualTo(LocalDate.of(2025, 2, 1));
     }
 
@@ -269,7 +269,7 @@ class UpdateContractServiceTest {
 
         // Predecessor's endDate should be cascaded to newStartDate - 1 = 2024-12-14
         ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository, times(2)).update(captor.capture());
+        verify(contractRepository, times(2)).update(captor.capture(), any(LocalDate.class));
         List<Contract> saved = captor.getAllValues();
         Contract savedPredecessor = saved.stream()
                 .filter(c -> c.getStartDate().equals(LocalDate.of(2024, 1, 1)))

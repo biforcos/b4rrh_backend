@@ -91,7 +91,7 @@ class ReplaceContractFromDateServiceTest {
 
         ArgumentCaptor<Contract> updatedCaptor = ArgumentCaptor.forClass(Contract.class);
         ArgumentCaptor<Contract> savedCaptor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository).update(updatedCaptor.capture());
+        verify(contractRepository).update(updatedCaptor.capture(), any(LocalDate.class));
         verify(contractRepository).save(savedCaptor.capture());
 
         assertEquals("IND", updatedCaptor.getValue().getContractCode());
@@ -131,7 +131,7 @@ class ReplaceContractFromDateServiceTest {
 
         ArgumentCaptor<Contract> updatedCaptor = ArgumentCaptor.forClass(Contract.class);
         ArgumentCaptor<Contract> savedCaptor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository).update(updatedCaptor.capture());
+        verify(contractRepository).update(updatedCaptor.capture(), any(LocalDate.class));
         verify(contractRepository).save(savedCaptor.capture());
 
         assertEquals(LocalDate.of(2026, 2, 28), updatedCaptor.getValue().getEndDate());
@@ -160,7 +160,7 @@ class ReplaceContractFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
         assertEquals("TMP", replaced.getContractCode());
 
-        verify(contractRepository).update(any(Contract.class));
+        verify(contractRepository).update(any(Contract.class), any(LocalDate.class));
         verify(contractRepository, never()).save(any(Contract.class));
     }
 
@@ -174,7 +174,7 @@ class ReplaceContractFromDateServiceTest {
                 () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "TMP", "PT1"))
         );
         verify(contractRepository, never()).save(any(Contract.class));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -191,7 +191,7 @@ class ReplaceContractFromDateServiceTest {
         );
 
         verify(contractRepository, never()).save(any(Contract.class));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -214,7 +214,7 @@ class ReplaceContractFromDateServiceTest {
         );
 
         verify(contractRepository, never()).save(any(Contract.class));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -237,7 +237,7 @@ class ReplaceContractFromDateServiceTest {
         );
 
         verify(contractRepository, never()).save(any(Contract.class));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -259,7 +259,7 @@ class ReplaceContractFromDateServiceTest {
         );
 
         verify(contractRepository, never()).save(any(Contract.class));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -276,7 +276,7 @@ class ReplaceContractFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
         assertEquals(null, replaced.getEndDate());
 
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
         verify(contractRepository).save(any(Contract.class));
     }
 

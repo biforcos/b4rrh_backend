@@ -21,5 +21,5 @@ public interface LaborClassificationRepository {
 
     void save(LaborClassification laborClassification);
 
-    void update(LaborClassification laborClassification);
+    void update(LaborClassification laborClassification, LocalDate originalStartDate);
 }

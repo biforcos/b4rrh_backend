@@ -79,7 +79,7 @@ class CloseContractServiceTest {
         assertEquals(LocalDate.of(2026, 1, 31), closed.getEndDate());
 
         ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
-        verify(contractRepository).update(captor.capture());
+        verify(contractRepository).update(captor.capture(), any(LocalDate.class));
         assertEquals(LocalDate.of(2026, 1, 31), captor.getValue().getEndDate());
     }
 
@@ -106,7 +106,7 @@ class CloseContractServiceTest {
                 .thenReturn(Optional.of(closed));
 
         assertThrows(ContractAlreadyClosedException.class, () -> service.close(command));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
@@ -134,7 +134,7 @@ class CloseContractServiceTest {
         when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
         assertThrows(ContractCoverageIncompleteException.class, () -> service.close(command));
-        verify(contractRepository, never()).update(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     private void whenEmployeeExists() {

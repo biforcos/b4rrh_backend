@@ -29,6 +29,14 @@ public class LaborClassification {
         this.endDate = endDate;
     }
 
+    public LaborClassification correctStartDate(LocalDate newStartDate) {
+        return new LaborClassification(employeeId, agreementCode, agreementCategoryCode, newStartDate, endDate);
+    }
+
+    public LaborClassification adjustEndDate(LocalDate newEndDate) {
+        return new LaborClassification(employeeId, agreementCode, agreementCategoryCode, startDate, newEndDate);
+    }
+
     public LaborClassification updateClassification(String newAgreementCode, String newAgreementCategoryCode) {
         if (!isActive()) {
             throw new LaborClassificationAlreadyClosedException(startDate);

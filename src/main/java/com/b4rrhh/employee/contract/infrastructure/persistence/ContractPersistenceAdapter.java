@@ -60,15 +60,16 @@ public class ContractPersistenceAdapter implements ContractRepository {
     }
 
     @Override
-    public void update(Contract contract) {
+    public void update(Contract contract, LocalDate originalStartDate) {
         ContractEntity entity = springDataContractRepository
-                .findByEmployeeIdAndStartDate(contract.getEmployeeId(), contract.getStartDate())
+                .findByEmployeeIdAndStartDate(contract.getEmployeeId(), originalStartDate)
                 .orElseThrow(() -> new IllegalStateException(
                 "Contract not found for update by functional identity"
                 ));
 
         entity.setContractCode(contract.getContractCode());
         entity.setContractSubtypeCode(contract.getContractSubtypeCode());
+        entity.setStartDate(contract.getStartDate());
         entity.setEndDate(contract.getEndDate());
         springDataContractRepository.save(entity);
     }

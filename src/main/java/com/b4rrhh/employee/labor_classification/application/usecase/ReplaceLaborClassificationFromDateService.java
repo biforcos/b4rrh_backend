@@ -121,7 +121,7 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
         );
 
         if (replacementPlan.periodToUpdate() != null) {
-            laborClassificationRepository.update(replacementPlan.periodToUpdate());
+            laborClassificationRepository.update(replacementPlan.periodToUpdate(), replacementPlan.periodToUpdate().getStartDate());
         }
         if (replacementPlan.periodToSave() != null) {
             laborClassificationRepository.save(replacementPlan.periodToSave());

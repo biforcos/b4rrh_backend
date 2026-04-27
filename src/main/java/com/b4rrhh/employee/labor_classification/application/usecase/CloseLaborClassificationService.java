@@ -90,7 +90,7 @@ public class CloseLaborClassificationService implements CloseLaborClassification
                 normalizedEmployeeNumber
         );
 
-        laborClassificationRepository.update(closed);
+        laborClassificationRepository.update(closed, closed.getStartDate());
         return closed;
     }
 

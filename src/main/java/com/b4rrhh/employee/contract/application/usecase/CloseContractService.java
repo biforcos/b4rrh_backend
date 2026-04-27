@@ -90,7 +90,7 @@ public class CloseContractService implements CloseContractUseCase {
                 normalizedEmployeeNumber
         );
 
-        contractRepository.update(closed);
+        contractRepository.update(closed, closed.getStartDate());
         return closed;
     }
 

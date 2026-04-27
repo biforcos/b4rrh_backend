@@ -97,16 +97,35 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
                 existing.getStartDate()
         );
 
-        LaborClassification updated = existing.updateClassification(
-                normalizedAgreementCode,
-                normalizedAgreementCategoryCode
-        );
+        LocalDate effectiveStartDate = (command.newStartDate() != null)
+                ? command.newStartDate()
+                : normalizedStartDate;
+
+        LaborClassification updated = existing
+                .correctStartDate(effectiveStartDate)
+                .updateClassification(normalizedAgreementCode, normalizedAgreementCategoryCode);
+
+        List<LaborClassification> fullHistory = laborClassificationRepository
+                .findByEmployeeIdOrderByStartDate(employee.employeeId());
+
+        LaborClassification cascadedPredecessor = null;
+        if (!effectiveStartDate.equals(normalizedStartDate)) {
+            LocalDate expectedPredecessorEnd = normalizedStartDate.minusDays(1);
+            LaborClassification predecessor = fullHistory.stream()
+                    .filter(c -> expectedPredecessorEnd.equals(c.getEndDate()))
+                    .findFirst()
+                    .orElse(null);
+            if (predecessor != null) {
+                cascadedPredecessor = predecessor.adjustEndDate(effectiveStartDate.minusDays(1));
+                laborClassificationRepository.update(cascadedPredecessor, cascadedPredecessor.getStartDate());
+            }
+        }
 
         if (laborClassificationRepository.existsOverlappingPeriod(
                 employee.employeeId(),
                 updated.getStartDate(),
                 updated.getEndDate(),
-                existing.getStartDate()
+                normalizedStartDate
         )) {
             throw new LaborClassificationOverlapException(
                     normalizedRuleSystemCode,
@@ -126,9 +145,11 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
                 normalizedEmployeeNumber
         );
 
-        List<LaborClassification> projectedHistory = replaceByStartDate(
-                laborClassificationRepository.findByEmployeeIdOrderByStartDate(employee.employeeId()),
-                updated
+        List<LaborClassification> projectedHistory = buildProjectedHistory(
+                fullHistory,
+                cascadedPredecessor,
+                updated,
+                normalizedStartDate
         );
 
         laborClassificationPresenceCoverageValidator.validateFullCoverage(
@@ -139,23 +160,27 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
                 normalizedEmployeeNumber
         );
 
-        laborClassificationRepository.update(updated);
+        laborClassificationRepository.update(updated, normalizedStartDate);
         return updated;
     }
 
-    private List<LaborClassification> replaceByStartDate(
+    private List<LaborClassification> buildProjectedHistory(
             List<LaborClassification> history,
-            LaborClassification updated
+            LaborClassification cascadedPredecessor,
+            LaborClassification updated,
+            LocalDate oldStartDate
     ) {
         List<LaborClassification> projected = new ArrayList<>(history.size());
-        for (LaborClassification laborClassification : history) {
-            if (laborClassification.getStartDate().equals(updated.getStartDate())) {
+        for (LaborClassification lc : history) {
+            if (lc.getStartDate().equals(oldStartDate)) {
                 projected.add(updated);
+            } else if (cascadedPredecessor != null
+                    && lc.getStartDate().equals(cascadedPredecessor.getStartDate())) {
+                projected.add(cascadedPredecessor);
             } else {
-                projected.add(laborClassification);
+                projected.add(lc);
             }
         }
-
         return projected;
     }
 

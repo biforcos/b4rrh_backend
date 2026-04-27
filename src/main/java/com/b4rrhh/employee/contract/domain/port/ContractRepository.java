@@ -21,5 +21,5 @@ public interface ContractRepository {
 
     void save(Contract contract);
 
-    void update(Contract contract);
+    void update(Contract contract, LocalDate originalStartDate);
 }

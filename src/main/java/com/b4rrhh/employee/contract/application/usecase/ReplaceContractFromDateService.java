@@ -121,7 +121,7 @@ public class ReplaceContractFromDateService implements ReplaceContractFromDateUs
         );
 
         if (replacementPlan.periodToUpdate() != null) {
-            contractRepository.update(replacementPlan.periodToUpdate());
+            contractRepository.update(replacementPlan.periodToUpdate(), replacementPlan.periodToUpdate().getStartDate());
         }
         if (replacementPlan.periodToSave() != null) {
             contractRepository.save(replacementPlan.periodToSave());

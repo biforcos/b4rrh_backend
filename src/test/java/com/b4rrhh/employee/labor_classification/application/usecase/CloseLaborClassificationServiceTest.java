@@ -79,7 +79,7 @@ class CloseLaborClassificationServiceTest {
         assertEquals(LocalDate.of(2026, 1, 31), closed.getEndDate());
 
         ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository).update(captor.capture());
+        verify(laborClassificationRepository).update(captor.capture(), any(LocalDate.class));
         assertEquals(LocalDate.of(2026, 1, 31), captor.getValue().getEndDate());
     }
 
@@ -106,7 +106,7 @@ class CloseLaborClassificationServiceTest {
                 .thenReturn(Optional.of(closed));
 
         assertThrows(LaborClassificationAlreadyClosedException.class, () -> service.close(command));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -134,7 +134,7 @@ class CloseLaborClassificationServiceTest {
         when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
         assertThrows(LaborClassificationCoverageIncompleteException.class, () -> service.close(command));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     private void whenEmployeeExists() {

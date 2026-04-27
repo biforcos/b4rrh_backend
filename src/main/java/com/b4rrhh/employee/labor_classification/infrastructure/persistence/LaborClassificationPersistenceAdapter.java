@@ -60,15 +60,16 @@ public class LaborClassificationPersistenceAdapter implements LaborClassificatio
     }
 
     @Override
-    public void update(LaborClassification laborClassification) {
+    public void update(LaborClassification laborClassification, LocalDate originalStartDate) {
         LaborClassificationEntity entity = springDataLaborClassificationRepository
-                .findByEmployeeIdAndStartDate(laborClassification.getEmployeeId(), laborClassification.getStartDate())
+                .findByEmployeeIdAndStartDate(laborClassification.getEmployeeId(), originalStartDate)
                 .orElseThrow(() -> new IllegalStateException(
                         "Labor classification not found for update by functional identity"
                 ));
 
         entity.setAgreementCode(laborClassification.getAgreementCode());
         entity.setAgreementCategoryCode(laborClassification.getAgreementCategoryCode());
+        entity.setStartDate(laborClassification.getStartDate());
         entity.setEndDate(laborClassification.getEndDate());
         springDataLaborClassificationRepository.save(entity);
     }

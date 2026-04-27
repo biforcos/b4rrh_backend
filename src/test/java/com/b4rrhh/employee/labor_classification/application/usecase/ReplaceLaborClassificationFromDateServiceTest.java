@@ -91,7 +91,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
         ArgumentCaptor<LaborClassification> updatedCaptor = ArgumentCaptor.forClass(LaborClassification.class);
         ArgumentCaptor<LaborClassification> savedCaptor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository).update(updatedCaptor.capture());
+        verify(laborClassificationRepository).update(updatedCaptor.capture(), any(LocalDate.class));
         verify(laborClassificationRepository).save(savedCaptor.capture());
 
         assertEquals("AGR_OFFICE", updatedCaptor.getValue().getAgreementCode());
@@ -131,7 +131,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
         ArgumentCaptor<LaborClassification> updatedCaptor = ArgumentCaptor.forClass(LaborClassification.class);
         ArgumentCaptor<LaborClassification> savedCaptor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository).update(updatedCaptor.capture());
+        verify(laborClassificationRepository).update(updatedCaptor.capture(), any(LocalDate.class));
         verify(laborClassificationRepository).save(savedCaptor.capture());
 
         assertEquals(LocalDate.of(2026, 2, 28), updatedCaptor.getValue().getEndDate());
@@ -160,7 +160,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
         assertEquals("AGR_TECH", replaced.getAgreementCode());
 
-        verify(laborClassificationRepository).update(any(LaborClassification.class));
+        verify(laborClassificationRepository).update(any(LaborClassification.class), any(LocalDate.class));
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
     }
 
@@ -174,7 +174,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "AGR_TECH", "CAT_TECH_1"))
         );
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -191,7 +191,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         );
 
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -214,7 +214,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         );
 
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -237,7 +237,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         );
 
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -259,7 +259,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         );
 
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
@@ -276,7 +276,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
         assertEquals(null, replaced.getEndDate());
 
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
         verify(laborClassificationRepository).save(any(LaborClassification.class));
     }
 

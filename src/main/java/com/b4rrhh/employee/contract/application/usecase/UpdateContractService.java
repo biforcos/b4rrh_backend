@@ -117,7 +117,7 @@ public class UpdateContractService implements UpdateContractUseCase {
                     .orElse(null);
             if (predecessor != null) {
                 cascadedPredecessor = predecessor.adjustEndDate(effectiveStartDate.minusDays(1));
-                contractRepository.update(cascadedPredecessor);
+                contractRepository.update(cascadedPredecessor, cascadedPredecessor.getStartDate());
             }
         }
 
@@ -160,7 +160,7 @@ public class UpdateContractService implements UpdateContractUseCase {
                 normalizedEmployeeNumber
         );
 
-        contractRepository.update(updated);
+        contractRepository.update(updated, normalizedStartDate);
         return updated;
     }
 

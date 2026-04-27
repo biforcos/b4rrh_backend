@@ -137,6 +137,7 @@ public class LaborClassificationController {
                         employeeTypeCode,
                         employeeNumber,
                         startDate,
+                        request.startDate(),
                         request.agreementCode(),
                         request.agreementCategoryCode()
                 )
