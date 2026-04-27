@@ -14,6 +14,8 @@ public interface WorkingTimeRepository {
 
     boolean existsOverlappingPeriod(Long employeeId, LocalDate startDate, LocalDate endDate);
 
+    boolean existsOverlappingPeriodExcluding(Long employeeId, LocalDate startDate, LocalDate endDate, Integer excludeWorkingTimeNumber);
+
     Optional<Integer> findMaxWorkingTimeNumberByEmployeeId(Long employeeId);
 
     WorkingTime save(WorkingTime workingTime);

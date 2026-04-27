@@ -8,6 +8,7 @@ import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusi
 import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusinessKeyUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
@@ -49,8 +50,10 @@ class WorkingTimeControllerHttpTest {
     private GetWorkingTimeByBusinessKeyUseCase getWorkingTimeByBusinessKeyUseCase;
     @Mock
     private CloseWorkingTimeUseCase closeWorkingTimeUseCase;
+    @Mock
+    private UpdateWorkingTimeUseCase updateWorkingTimeUseCase;
 
-        private final StandardWorkingTimeDerivationPolicy derivationPolicy = new StandardWorkingTimeDerivationPolicy();
+    private final StandardWorkingTimeDerivationPolicy derivationPolicy = new StandardWorkingTimeDerivationPolicy();
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -60,6 +63,7 @@ class WorkingTimeControllerHttpTest {
                 listEmployeeWorkingTimesUseCase,
                 getWorkingTimeByBusinessKeyUseCase,
                 closeWorkingTimeUseCase,
+                updateWorkingTimeUseCase,
                 new WorkingTimeResponseAssembler()
         );
 

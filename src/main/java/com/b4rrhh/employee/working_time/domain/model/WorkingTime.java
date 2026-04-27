@@ -195,6 +195,20 @@ public class WorkingTime {
         return endDate == null;
     }
 
+    public WorkingTime adjustEndDate(LocalDate newEndDate) {
+        return WorkingTime.rehydrate(
+                id,
+                employeeId,
+                workingTimeNumber,
+                startDate,
+                newEndDate,
+                workingTimePercentage,
+                new WorkingTimeDerivedHours(weeklyHours, dailyHours, monthlyHours),
+                createdAt,
+                null
+        );
+    }
+
     private static void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null) {
             throw new InvalidWorkingTimeDateRangeException("startDate is required");

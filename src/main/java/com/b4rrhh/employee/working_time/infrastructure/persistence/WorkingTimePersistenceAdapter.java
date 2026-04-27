@@ -47,6 +47,18 @@ public class WorkingTimePersistenceAdapter implements WorkingTimeRepository {
     }
 
     @Override
+    public boolean existsOverlappingPeriodExcluding(Long employeeId, LocalDate startDate, LocalDate endDate, Integer excludeWorkingTimeNumber) {
+        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
+        return springDataWorkingTimeRepository.existsOverlappingPeriodExcluding(
+                employeeId,
+                startDate,
+                effectiveEndDate,
+                MAX_DATE,
+                excludeWorkingTimeNumber
+        );
+    }
+
+    @Override
     public Optional<Integer> findMaxWorkingTimeNumberByEmployeeId(Long employeeId) {
         return Optional.ofNullable(springDataWorkingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(employeeId));
     }
