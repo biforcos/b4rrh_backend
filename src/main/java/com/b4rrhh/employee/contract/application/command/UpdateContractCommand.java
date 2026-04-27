@@ -7,6 +7,7 @@ public record UpdateContractCommand(
         String employeeTypeCode,
         String employeeNumber,
         LocalDate startDate,
+        LocalDate newStartDate,
         String contractCode,
         String contractSubtypeCode
 ) {

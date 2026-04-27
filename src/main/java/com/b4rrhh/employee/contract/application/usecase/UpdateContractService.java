@@ -97,16 +97,35 @@ public class UpdateContractService implements UpdateContractUseCase {
                 existing.getStartDate()
         );
 
-        Contract updated = existing.updateContract(
-                normalizedContractCode,
-                normalizedContractSubtypeCode
-        );
+        LocalDate effectiveStartDate = (command.newStartDate() != null)
+                ? command.newStartDate()
+                : normalizedStartDate;
+
+        Contract updated = existing
+                .correctStartDate(effectiveStartDate)
+                .updateContract(normalizedContractCode, normalizedContractSubtypeCode);
+
+        List<Contract> fullHistory = contractRepository
+                .findByEmployeeIdOrderByStartDate(employee.employeeId());
+
+        Contract cascadedPredecessor = null;
+        if (!effectiveStartDate.equals(normalizedStartDate)) {
+            LocalDate expectedPredecessorEnd = normalizedStartDate.minusDays(1);
+            Contract predecessor = fullHistory.stream()
+                    .filter(c -> expectedPredecessorEnd.equals(c.getEndDate()))
+                    .findFirst()
+                    .orElse(null);
+            if (predecessor != null) {
+                cascadedPredecessor = predecessor.adjustEndDate(effectiveStartDate.minusDays(1));
+                contractRepository.update(cascadedPredecessor);
+            }
+        }
 
         if (contractRepository.existsOverlappingPeriod(
                 employee.employeeId(),
                 updated.getStartDate(),
                 updated.getEndDate(),
-                existing.getStartDate()
+                normalizedStartDate
         )) {
             throw new ContractOverlapException(
                     normalizedRuleSystemCode,
@@ -126,9 +145,11 @@ public class UpdateContractService implements UpdateContractUseCase {
                 normalizedEmployeeNumber
         );
 
-        List<Contract> projectedHistory = replaceByStartDate(
-                contractRepository.findByEmployeeIdOrderByStartDate(employee.employeeId()),
-                updated
+        List<Contract> projectedHistory = buildProjectedHistory(
+                fullHistory,
+                cascadedPredecessor,
+                updated,
+                normalizedStartDate
         );
 
         contractPresenceCoverageValidator.validateFullCoverage(
@@ -143,19 +164,23 @@ public class UpdateContractService implements UpdateContractUseCase {
         return updated;
     }
 
-    private List<Contract> replaceByStartDate(
+    private List<Contract> buildProjectedHistory(
             List<Contract> history,
-            Contract updated
+            Contract cascadedPredecessor,
+            Contract updated,
+            LocalDate oldStartDate
     ) {
         List<Contract> projected = new ArrayList<>(history.size());
         for (Contract contract : history) {
-            if (contract.getStartDate().equals(updated.getStartDate())) {
+            if (contract.getStartDate().equals(oldStartDate)) {
                 projected.add(updated);
+            } else if (cascadedPredecessor != null
+                    && contract.getStartDate().equals(cascadedPredecessor.getStartDate())) {
+                projected.add(cascadedPredecessor);
             } else {
                 projected.add(contract);
             }
         }
-
         return projected;
     }
 

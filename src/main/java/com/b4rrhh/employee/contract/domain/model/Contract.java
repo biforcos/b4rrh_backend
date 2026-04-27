@@ -33,6 +33,24 @@ public class Contract {
         this.endDate = endDate;
     }
 
+    public static Contract rehydrate(
+            Long employeeId,
+            String contractCode,
+            String contractSubtypeCode,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        return new Contract(employeeId, contractCode, contractSubtypeCode, startDate, endDate);
+    }
+
+    public Contract correctStartDate(LocalDate newStartDate) {
+        return new Contract(employeeId, contractCode, contractSubtypeCode, newStartDate, endDate);
+    }
+
+    public Contract adjustEndDate(LocalDate newEndDate) {
+        return new Contract(employeeId, contractCode, contractSubtypeCode, startDate, newEndDate);
+    }
+
     public Contract updateContract(String newContractCode, String newContractSubtypeCode) {
         if (!isActive()) {
             throw new ContractAlreadyClosedException(startDate);

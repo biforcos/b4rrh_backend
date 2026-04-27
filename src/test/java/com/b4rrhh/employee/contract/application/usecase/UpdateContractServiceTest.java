@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +68,7 @@ class UpdateContractServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 LocalDate.of(2026, 1, 1),
+                null,
                 "TMP",
                 "PT1"
         );
@@ -108,6 +110,7 @@ class UpdateContractServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 LocalDate.of(2026, 1, 1),
+                null,
                 "TMP",
                 "PT1"
         );
@@ -135,6 +138,7 @@ class UpdateContractServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 LocalDate.of(2026, 1, 1),
+                null,
                 "TMP",
                 "PT1"
         );
@@ -157,6 +161,78 @@ class UpdateContractServiceTest {
                 () -> service.update(command)
         );
         verify(contractRepository, never()).update(any(Contract.class));
+    }
+
+    @Test
+    void whenNewStartDateDiffers_predecessorEndDateIsCascaded() {
+        LocalDate predecessorStart = LocalDate.of(2024, 1, 1);
+        LocalDate predecessorEnd   = LocalDate.of(2024, 12, 31);
+        LocalDate currentStart     = LocalDate.of(2025, 1, 1);
+        LocalDate newStart         = LocalDate.of(2025, 2, 1);
+
+        Contract predecessor = Contract.rehydrate(10L, "IND", "FT1", predecessorStart, predecessorEnd);
+        Contract current     = Contract.rehydrate(10L, "IND", "FT1", currentStart, null);
+
+        UpdateContractCommand command = new UpdateContractCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                currentStart,
+                newStart,
+                "IND",
+                "FT1"
+        );
+
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, currentStart))
+                .thenReturn(Optional.of(current));
+        when(contractRepository.existsOverlappingPeriod(any(), any(), any(), any()))
+                .thenReturn(false);
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(predecessor, current));
+
+        service.update(command);
+
+        ArgumentCaptor<Contract> captor = ArgumentCaptor.forClass(Contract.class);
+        verify(contractRepository, times(2)).update(captor.capture());
+
+        List<Contract> saved = captor.getAllValues();
+        Contract savedPredecessor = saved.get(0);
+        Contract savedCurrent     = saved.get(1);
+
+        assertEquals(predecessorStart,               savedPredecessor.getStartDate());
+        assertEquals(newStart.minusDays(1),          savedPredecessor.getEndDate());
+        assertEquals(newStart,                       savedCurrent.getStartDate());
+    }
+
+    @Test
+    void whenNewStartDateDiffers_andNoPredecessor_onlyCurrentIsUpdated() {
+        LocalDate currentStart = LocalDate.of(2025, 1, 1);
+        LocalDate newStart     = LocalDate.of(2025, 2, 1);
+
+        Contract current = Contract.rehydrate(10L, "IND", "FT1", currentStart, null);
+
+        UpdateContractCommand command = new UpdateContractCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                currentStart,
+                newStart,
+                "IND",
+                "FT1"
+        );
+
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, currentStart))
+                .thenReturn(Optional.of(current));
+        when(contractRepository.existsOverlappingPeriod(any(), any(), any(), any()))
+                .thenReturn(false);
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(current));
+
+        service.update(command);
+
+        verify(contractRepository, times(1)).update(any(Contract.class));
     }
 
     private void whenEmployeeExists() {

@@ -137,6 +137,7 @@ public class ContractController {
                         employeeTypeCode,
                         employeeNumber,
                         startDate,
+                        request.startDate(),
                         request.contractCode(),
                         request.contractSubtypeCode()
                 )
