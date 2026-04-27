@@ -113,7 +113,7 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
                     .filter(wt -> expectedPredecessorEnd.equals(wt.getEndDate()))
                     .findFirst()
                     .orElse(null);
-            if (predecessor != null) {
+            if (predecessor != null && normalizedStartDate.isAfter(predecessor.getStartDate())) {
                 WorkingTime cascadedPredecessor = predecessor.adjustEndDate(normalizedStartDate.minusDays(1));
                 workingTimeRepository.save(cascadedPredecessor);
             }
