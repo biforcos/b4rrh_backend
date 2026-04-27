@@ -133,6 +133,38 @@ class UpdateLaborClassificationServiceTest {
     }
 
     @Test
+    void rejectsUpdateWhenAgreementCategoryRelationIsInvalid() {
+        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                LocalDate.of(2026, 1, 1),
+                null,
+                "AGR_TECH",
+                "CAT_TECH_1"
+        );
+
+        LaborClassification existing = new LaborClassification(
+                10L,
+                "AGR_OFFICE",
+                "CAT_ADMIN",
+                LocalDate.of(2026, 1, 1),
+                null
+        );
+
+        agreementCategoryRelationValidator.setInvalidRelation(true);
+        whenEmployeeExists();
+        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.of(existing));
+
+        assertThrows(
+                LaborClassificationAgreementCategoryRelationInvalidException.class,
+                () -> service.update(command)
+        );
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
+    }
+
+    @Test
     void whenNewStartDateDiffers_predecessorEndDateIsCascaded() {
         LocalDate predecessorStart = LocalDate.of(2024, 1, 1);
         LocalDate predecessorEnd   = LocalDate.of(2024, 12, 31);
