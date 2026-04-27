@@ -1365,35 +1365,53 @@ paths:
         "404":
           description: Employee or working time not found
     put:
-      summary: Correct a working time period (startDate and/or percentage)
       operationId: updateWorkingTimeByBusinessKey
+      summary: Correct a working time period (startDate and/or percentage)
       tags:
-        - Working Time
+        - Employee Working Time
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
-        - name: workingTimeNumber
-          in: path
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: workingTimeNumber
           required: true
           schema:
             type: integer
+            format: int32
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateWorkingTimeRequest'
+              $ref: "#/components/schemas/UpdateWorkingTimeRequest"
       responses:
-        '200':
+        "200":
           description: Working time corrected successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkingTimeResponse'
-        '404':
+                $ref: "#/components/schemas/WorkingTimeResponse"
+        "400":
+          description: Invalid request
+        "404":
           description: Employee or working time not found
-        '409':
+        "409":
           description: New start date overlaps with another working time period
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/working-times/{workingTimeNumber}/close:
@@ -5707,8 +5725,8 @@ components:
         workingTimePercentage:
           type: number
           format: double
-          minimum: 0
-          exclusiveMinimum: true
+          description: "Percentage from > 0 to <= 100. Source of truth for derived persisted hours."
+          minimum: 0.01
           maximum: 100
     WorkingTimeResponse:
       type: object
