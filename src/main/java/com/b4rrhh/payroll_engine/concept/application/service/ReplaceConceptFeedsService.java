@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.exception.PayrollConceptNotFound
 import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.object.domain.exception.PayrollObjectNotFoundException;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
@@ -45,16 +44,13 @@ public class ReplaceConceptFeedsService implements ReplaceConceptFeedsUseCase {
             PayrollObjectTypeCode.CONSTANT
     );
 
-    private final PayrollConceptRepository conceptRepository;
     private final PayrollConceptFeedRelationRepository feedRelationRepository;
     private final PayrollObjectRepository objectRepository;
 
     public ReplaceConceptFeedsService(
-            PayrollConceptRepository conceptRepository,
             PayrollConceptFeedRelationRepository feedRelationRepository,
             PayrollObjectRepository objectRepository
     ) {
-        this.conceptRepository = conceptRepository;
         this.feedRelationRepository = feedRelationRepository;
         this.objectRepository = objectRepository;
     }
@@ -65,14 +61,9 @@ public class ReplaceConceptFeedsService implements ReplaceConceptFeedsUseCase {
         String ruleSystemCode = command.ruleSystemCode();
         String conceptCode = command.conceptCode();
 
-        if (!conceptRepository.existsByBusinessKey(ruleSystemCode, conceptCode)) {
-            throw new PayrollConceptNotFoundException(ruleSystemCode, conceptCode);
-        }
-
         PayrollObject targetObject = objectRepository
                 .findByBusinessKey(ruleSystemCode, PayrollObjectTypeCode.CONCEPT, conceptCode)
-                .orElseThrow(() -> new PayrollObjectNotFoundException(
-                        ruleSystemCode, PayrollObjectTypeCode.CONCEPT.name(), conceptCode));
+                .orElseThrow(() -> new PayrollConceptNotFoundException(ruleSystemCode, conceptCode));
 
         feedRelationRepository.deleteAllByRuleSystemCodeAndTargetConceptCode(ruleSystemCode, conceptCode);
 

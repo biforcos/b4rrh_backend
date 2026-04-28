@@ -135,6 +135,42 @@ class ConceptWiringControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    void putOperands_emptyListClearsAllOperands() throws Exception {
+        // First PUT a non-empty operand list
+        Map<String, Object> quantity = new LinkedHashMap<>();
+        quantity.put("operandRole", "QUANTITY");
+        quantity.put("sourceObjectCode", SOURCE_QUANTITY_CODE);
+
+        Map<String, Object> nonEmptyBody = new LinkedHashMap<>();
+        nonEmptyBody.put("operands", List.of(quantity));
+
+        mockMvc.perform(put("/payroll-engine/{rs}/concepts/{c}/operands",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nonEmptyBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        // Then PUT an empty operands list
+        Map<String, Object> emptyBody = new LinkedHashMap<>();
+        emptyBody.put("operands", List.of());
+
+        mockMvc.perform(put("/payroll-engine/{rs}/concepts/{c}/operands",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(emptyBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        // GET operands and assert the list is empty
+        mockMvc.perform(get("/payroll-engine/{rs}/concepts/{c}/operands",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     void putOperands_returns422WhenSourceDoesNotExist() throws Exception {
         Map<String, Object> bogus = new LinkedHashMap<>();
         bogus.put("operandRole", "QUANTITY");

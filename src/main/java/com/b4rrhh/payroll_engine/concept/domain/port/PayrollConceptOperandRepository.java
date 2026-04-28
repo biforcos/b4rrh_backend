@@ -10,7 +10,10 @@ public interface PayrollConceptOperandRepository {
 
     /**
      * Returns all operand definitions where the target concept matches the given business key.
+     *
+     * @deprecated Deprecated — use {@link #findByRuleSystemCodeAndConceptCode} instead.
      */
+    @Deprecated
     List<PayrollConceptOperand> findByTarget(String ruleSystemCode, String conceptCode);
 
     /**

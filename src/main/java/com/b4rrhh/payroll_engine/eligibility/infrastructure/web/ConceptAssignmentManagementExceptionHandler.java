@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.eligibility.infrastructure.web;
 
+import com.b4rrhh.payroll_engine.concept.domain.exception.PayrollConceptNotFoundException;
 import com.b4rrhh.payroll_engine.eligibility.domain.exception.ConceptAssignmentNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -21,6 +22,14 @@ public class ConceptAssignmentManagementExceptionHandler {
     @ExceptionHandler(ConceptAssignmentNotFoundException.class)
     public ResponseEntity<ConceptAssignmentErrorResponse> handleNotFound(
             ConceptAssignmentNotFoundException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ConceptAssignmentErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PayrollConceptNotFoundException.class)
+    public ResponseEntity<ConceptAssignmentErrorResponse> handleConceptNotFound(
+            PayrollConceptNotFoundException ex
     ) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ConceptAssignmentErrorResponse(ex.getMessage()));

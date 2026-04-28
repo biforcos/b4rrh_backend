@@ -128,4 +128,34 @@ class ConceptAssignmentManagementControllerTest {
                         RULE_SYSTEM_CODE, "not-a-uuid"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deleteAssignment_returns204AndRemovesRow() throws Exception {
+        // POST to create an assignment
+        Map<String, Object> createBody = new LinkedHashMap<>();
+        createBody.put("conceptCode", CONCEPT_CODE);
+        createBody.put("validFrom", "2026-01-01");
+        createBody.put("priority", 5);
+
+        var result = mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createBody)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        // Extract the assignmentCode from the response
+        var responseBody = objectMapper.readTree(result.getResponse().getContentAsString());
+        String assignmentCode = responseBody.get("assignmentCode").asText();
+
+        // DELETE it
+        mockMvc.perform(delete("/payroll-engine/{rs}/assignments/{code}",
+                        RULE_SYSTEM_CODE, assignmentCode))
+                .andExpect(status().isNoContent());
+
+        // Verify it's gone
+        mockMvc.perform(get("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.assignmentCode == '" + assignmentCode + "')]").doesNotExist());
+    }
 }
