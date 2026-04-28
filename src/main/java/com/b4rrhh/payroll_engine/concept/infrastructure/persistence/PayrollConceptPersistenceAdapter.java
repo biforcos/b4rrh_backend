@@ -74,6 +74,7 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<PayrollConcept> findAllByRuleSystemCode(String ruleSystemCode) {
         return conceptRepository.findAllByRuleSystemCode(ruleSystemCode)
                 .stream()
@@ -82,7 +83,6 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
     }
 
     @Override
-    @Transactional
     public void deleteByBusinessKey(String ruleSystemCode, String conceptCode) {
         conceptRepository.deleteByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode);
     }

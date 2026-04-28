@@ -4,6 +4,7 @@ import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +37,7 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
         return springDataRepo.findAllByRuleSystemCode(ruleSystemCode)
                 .stream()
@@ -44,6 +46,7 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
         return springDataRepo.findAllByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode)
                 .stream()
@@ -56,9 +59,7 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
         if (id == null) {
             return;
         }
-        if (springDataRepo.existsById(id)) {
-            springDataRepo.deleteById(id);
-        }
+        springDataRepo.deleteById(id);
     }
 
     private ConceptAssignmentEntity toEntity(ConceptAssignment domain) {

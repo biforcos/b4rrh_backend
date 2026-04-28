@@ -78,7 +78,7 @@ class PayrollConceptRepositoryFindAllTest {
         assertThat(concepts).isNotEmpty();
         assertThat(concepts).allMatch(c -> c.getRuleSystemCode().equals("ESP"));
         assertThat(concepts).extracting(PayrollConcept::getConceptCode)
-                .containsExactlyInAnyOrder("101", "D01");
+                .containsExactly("101", "D01");
     }
 
     @Test
