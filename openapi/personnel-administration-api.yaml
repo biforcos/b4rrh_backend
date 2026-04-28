@@ -4601,7 +4601,7 @@ paths:
           required: true
           schema:
             type: integer
-            description: "Format yyyyMM, e.g. 202604"
+          description: "Format yyyyMM, e.g. 202604"
       responses:
         "200":
           description: Payroll inputs list
