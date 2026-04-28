@@ -5,5 +5,6 @@ public enum CalculationType {
     RATE_BY_QUANTITY,
     PERCENTAGE,
     AGGREGATE,
-    JAVA_PROVIDED
+    JAVA_PROVIDED,
+    EMPLOYEE_INPUT
 }

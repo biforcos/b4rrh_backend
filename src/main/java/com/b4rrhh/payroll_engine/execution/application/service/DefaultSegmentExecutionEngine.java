@@ -114,6 +114,10 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                     ));
                 }
 
+                case EMPLOYEE_INPUT ->
+                        context.getEmployeeInputs()
+                                .getOrDefault(entry.identity().getConceptCode(), BigDecimal.ZERO);
+
                 default ->
                         throw new UnsupportedCalculationTypeException(entry.calculationType());
             };

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,7 +23,8 @@ class SegmentCalculationContextTest {
                 true, false,
                 30L, 14L,
                 new BigDecimal("100"),
-                new BigDecimal("2000.00")
+                new BigDecimal("2000.00"),
+                Map.of()
         );
     }
 
@@ -37,7 +39,7 @@ class SegmentCalculationContextTest {
                 null, "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -46,7 +48,7 @@ class SegmentCalculationContextTest {
                 "  ", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -55,7 +57,7 @@ class SegmentCalculationContextTest {
                 "ESP", null, "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -64,7 +66,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", null,
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -73,7 +75,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 null, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -82,7 +84,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, null, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -91,7 +93,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, null, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -100,7 +102,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, null,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -109,7 +111,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_30, APR_01, APR_01, APR_01,
                 true, true, 1L, 1L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -118,7 +120,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_14, APR_01,
                 true, false, 30L, 1L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -128,7 +130,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, mar31, APR_14,
                 true, false, 30L, 15L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -138,7 +140,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, may01,
                 true, true, 30L, 31L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -147,7 +149,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 0L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -156,7 +158,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, -1L, 14L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -165,7 +167,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 0L,
-                new BigDecimal("100"), new BigDecimal("2000.00")));
+                new BigDecimal("100"), new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -174,7 +176,7 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                null, new BigDecimal("2000.00")));
+                null, new BigDecimal("2000.00"), Map.of()));
     }
 
     @Test
@@ -183,6 +185,15 @@ class SegmentCalculationContextTest {
                 "ESP", "EMP", "EMP0001",
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
-                new BigDecimal("100"), null));
+                new BigDecimal("100"), null, Map.of()));
+    }
+
+    @Test
+    void nullEmployeeInputsIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> new SegmentCalculationContext(
+                "ESP", "EMP", "EMP0001",
+                APR_01, APR_30, APR_01, APR_14,
+                true, false, 30L, 14L,
+                new BigDecimal("100"), new BigDecimal("2000.00"), null));
     }
 }

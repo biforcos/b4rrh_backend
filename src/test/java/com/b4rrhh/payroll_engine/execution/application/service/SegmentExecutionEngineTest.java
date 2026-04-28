@@ -93,7 +93,8 @@ class SegmentExecutionEngineTest {
                 true, true,
                 daysInPeriod, daysInSegment,
                 new BigDecimal("100"),
-                salary
+                salary,
+                Map.of()
         );
     }
 
@@ -138,7 +139,8 @@ class SegmentExecutionEngineTest {
                 LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30),
                 s, e, false, true, 30, 16,
                 new BigDecimal("50"),
-                new BigDecimal("2000.00")
+                new BigDecimal("2000.00"),
+                Map.of()
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT)
@@ -178,7 +180,8 @@ class SegmentExecutionEngineTest {
                 LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30),
                 s, e, false, true, 30, 16,
                 new BigDecimal("50"),
-                new BigDecimal("2000.00")
+                new BigDecimal("2000.00"),
+                Map.of()
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),

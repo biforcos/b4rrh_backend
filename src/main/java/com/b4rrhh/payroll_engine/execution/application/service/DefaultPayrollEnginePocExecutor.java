@@ -21,6 +21,7 @@ import java.math.RoundingMode;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Default implementation of {@link PayrollEnginePocExecutor}.
@@ -172,7 +173,8 @@ public class DefaultPayrollEnginePocExecutor implements PayrollEnginePocExecutor
                     daysInPeriod,
                     segment.lengthInDaysInclusive(),
                     workingTimePercentage,
-                    request.getMonthlySalaryAmount()
+                    request.getMonthlySalaryAmount(),
+                    Map.of()
             );
 
             SegmentExecutionState state = segmentExecutionEngine.execute(plan, context);
