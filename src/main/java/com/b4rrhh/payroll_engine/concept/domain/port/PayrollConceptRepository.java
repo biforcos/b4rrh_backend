@@ -20,4 +20,17 @@ public interface PayrollConceptRepository {
      * callers are responsible for detecting missing concepts.
      */
     List<PayrollConcept> findAllByCodes(String ruleSystemCode, Collection<String> conceptCodes);
+
+    /**
+     * Returns every payroll concept registered under the given rule system, ordered by concept code.
+     * Returns an empty list when no concept is found for the rule system.
+     */
+    List<PayrollConcept> findAllByRuleSystemCode(String ruleSystemCode);
+
+    /**
+     * Removes the concept identified by the given business key (rule system + concept code) from the
+     * repository, if present. The operation is a no-op when the concept does not exist; it never raises.
+     * Implementations are not required to cascade deletes to related operands or feed relations.
+     */
+    void deleteByBusinessKey(String ruleSystemCode, String conceptCode);
 }

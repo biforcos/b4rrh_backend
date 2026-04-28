@@ -295,6 +295,20 @@ class DefaultEligibleExecutionPlanBuilderTest {
                     EmployeeAssignmentContext ctx, LocalDate date) {
                 return assignments;
             }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
+                return assignments;
+            }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
+                return assignments.stream()
+                        .filter(a -> conceptCode.equals(a.getConceptCode()))
+                        .toList();
+            }
+            @Override
+            public void deleteById(Long id) {
+                // no-op for test fake
+            }
         };
         return new DefaultConceptEligibilityResolver(repo);
     }
@@ -365,6 +379,16 @@ class DefaultEligibleExecutionPlanBuilderTest {
                     .map(byCode::get)
                     .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
+        }
+
+        @Override
+        public List<PayrollConcept> findAllByRuleSystemCode(String ruleSystemCode) {
+            return new java.util.ArrayList<>(byCode.values());
+        }
+
+        @Override
+        public void deleteByBusinessKey(String ruleSystemCode, String conceptCode) {
+            byCode.remove(conceptCode);
         }
 
         @Override

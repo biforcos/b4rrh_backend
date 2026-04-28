@@ -342,6 +342,20 @@ class DefaultEligiblePayrollExecutorTest {
             public List<ConceptAssignment> findApplicableAssignments(EmployeeAssignmentContext ctx, LocalDate date) {
                 return assignments;
             }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
+                return assignments;
+            }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
+                return assignments.stream()
+                        .filter(a -> conceptCode.equals(a.getConceptCode()))
+                        .toList();
+            }
+            @Override
+            public void deleteById(Long id) {
+                // no-op for test fake
+            }
         };
     }
 
@@ -367,6 +381,16 @@ class DefaultEligiblePayrollExecutorTest {
                     .map(byCode::get)
                     .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
+        }
+
+        @Override
+        public List<PayrollConcept> findAllByRuleSystemCode(String rs) {
+            return new java.util.ArrayList<>(byCode.values());
+        }
+
+        @Override
+        public void deleteByBusinessKey(String rs, String conceptCode) {
+            byCode.remove(conceptCode);
         }
 
         @Override

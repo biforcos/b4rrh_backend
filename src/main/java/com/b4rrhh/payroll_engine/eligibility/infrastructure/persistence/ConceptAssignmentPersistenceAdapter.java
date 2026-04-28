@@ -35,6 +35,32 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
         ).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
+        return springDataRepo.findAllByRuleSystemCode(ruleSystemCode)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
+        return springDataRepo.findAllByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        if (id == null) {
+            return;
+        }
+        if (springDataRepo.existsById(id)) {
+            springDataRepo.deleteById(id);
+        }
+    }
+
     private ConceptAssignmentEntity toEntity(ConceptAssignment domain) {
         ConceptAssignmentEntity e = new ConceptAssignmentEntity();
         if (domain.getId() != null) {

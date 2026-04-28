@@ -11,6 +11,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.PayrollObjectEntity;
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.SpringDataPayrollObjectRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -70,6 +71,20 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
                 .stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PayrollConcept> findAllByRuleSystemCode(String ruleSystemCode) {
+        return conceptRepository.findAllByRuleSystemCode(ruleSystemCode)
+                .stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void deleteByBusinessKey(String ruleSystemCode, String conceptCode) {
+        conceptRepository.deleteByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode);
     }
 
     private PayrollConceptEntity toEntity(PayrollConcept domain, PayrollObjectEntity objectEntity) {

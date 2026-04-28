@@ -275,6 +275,15 @@ class PayrollEnginePocExecutorTest {
                 return codes.stream().map(index::get).filter(java.util.Objects::nonNull)
                         .collect(java.util.stream.Collectors.toList());
             }
+            @Override
+            public java.util.List<PayrollConcept> findAllByRuleSystemCode(String rs) {
+                if (!ruleSystemCode.equals(rs)) return java.util.List.of();
+                return new java.util.ArrayList<>(index.values());
+            }
+            @Override
+            public void deleteByBusinessKey(String rs, String code) {
+                if (ruleSystemCode.equals(rs)) index.remove(code);
+            }
         };
     }
 
@@ -371,6 +380,14 @@ class PayrollEnginePocExecutorTest {
             @Override
             public java.util.List<PayrollConcept> findAllByCodes(String rs, java.util.Collection<String> codes) {
                 return java.util.List.of();
+            }
+            @Override
+            public java.util.List<PayrollConcept> findAllByRuleSystemCode(String rs) {
+                return java.util.List.of();
+            }
+            @Override
+            public void deleteByBusinessKey(String rs, String code) {
+                // no-op for test fake
             }
         };
     }

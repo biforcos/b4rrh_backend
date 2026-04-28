@@ -168,6 +168,20 @@ class DefaultConceptEligibilityResolverTest {
             public List<ConceptAssignment> findApplicableAssignments(EmployeeAssignmentContext ctx, LocalDate ref) {
                 return candidates;
             }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
+                return candidates;
+            }
+            @Override
+            public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
+                return candidates.stream()
+                        .filter(a -> conceptCode.equals(a.getConceptCode()))
+                        .toList();
+            }
+            @Override
+            public void deleteById(Long id) {
+                // no-op for test fake
+            }
         };
         return new DefaultConceptEligibilityResolver(fakeRepo);
     }

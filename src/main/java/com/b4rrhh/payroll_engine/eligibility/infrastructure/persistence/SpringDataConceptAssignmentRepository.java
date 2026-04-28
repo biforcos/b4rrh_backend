@@ -42,4 +42,24 @@ public interface SpringDataConceptAssignmentRepository extends JpaRepository<Con
             @Param("agreementCode") String agreementCode,
             @Param("employeeTypeCode") String employeeTypeCode
     );
+
+    @Query("""
+            SELECT a FROM PayrollEngineConceptAssignmentEntity a
+            WHERE a.ruleSystemCode = :ruleSystemCode
+            ORDER BY a.conceptCode ASC, a.priority DESC
+            """)
+    List<ConceptAssignmentEntity> findAllByRuleSystemCode(
+            @Param("ruleSystemCode") String ruleSystemCode
+    );
+
+    @Query("""
+            SELECT a FROM PayrollEngineConceptAssignmentEntity a
+            WHERE a.ruleSystemCode = :ruleSystemCode
+              AND a.conceptCode = :conceptCode
+            ORDER BY a.priority DESC
+            """)
+    List<ConceptAssignmentEntity> findAllByRuleSystemCodeAndConceptCode(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("conceptCode") String conceptCode
+    );
 }

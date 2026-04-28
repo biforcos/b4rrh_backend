@@ -42,4 +42,28 @@ public interface ConceptAssignmentRepository {
      * using wildcard semantics for optional dimensions.
      */
     List<ConceptAssignment> findApplicableAssignments(EmployeeAssignmentContext context, LocalDate referenceDate);
+
+    /**
+     * Returns every concept assignment registered under the given rule system, ordered by
+     * concept code and priority. Returns an empty list when no assignment is found.
+     */
+    List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode);
+
+    /**
+     * Returns every concept assignment registered under the given rule system whose
+     * {@code conceptCode} matches the supplied value, ordered by priority.
+     * Returns an empty list when no assignment is found.
+     */
+    List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode);
+
+    /**
+     * Removes the assignment identified by its surrogate id, if present. The operation is a
+     * no-op when the id is null or does not match an existing row.
+     *
+     * <p>NOTE: the OpenAPI contract for the payroll designer feature exposes assignments via
+     * an opaque {@code assignmentCode} (UUID business key). Once the {@link ConceptAssignment}
+     * domain model gains an {@code assignmentCode} field, a {@code deleteByAssignmentCode}
+     * variant should be added; the controller cannot use the surrogate id directly.
+     */
+    void deleteById(Long id);
 }
