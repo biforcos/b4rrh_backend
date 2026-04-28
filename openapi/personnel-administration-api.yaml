@@ -4240,6 +4240,264 @@ paths:
               schema:
                 $ref: "#/components/schemas/PayrollErrorResponse"
 
+  /payroll-engine/{ruleSystemCode}/concepts:
+    get:
+      tags: [payroll-engine]
+      summary: List all concepts for a rule system
+      operationId: listPayrollConcepts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PayrollConceptDesignerResponse'
+    post:
+      tags: [payroll-engine]
+      summary: Create a payroll concept
+      operationId: createPayrollConcept
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePayrollConceptRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollConceptDesignerResponse'
+        '409':
+          description: Concept already exists
+
+  /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}:
+    delete:
+      tags: [payroll-engine]
+      summary: Delete a payroll concept
+      operationId: deletePayrollConcept
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+
+  /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}/operands:
+    get:
+      tags: [payroll-engine]
+      operationId: listConceptOperands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConceptOperandResponse'
+    put:
+      tags: [payroll-engine]
+      operationId: replaceConceptOperands
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConceptOperandsRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConceptOperandResponse'
+
+  /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}/feeds:
+    get:
+      tags: [payroll-engine]
+      operationId: listConceptFeeds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConceptFeedResponse'
+    put:
+      tags: [payroll-engine]
+      operationId: replaceConceptFeeds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConceptFeedsRequest'
+      responses:
+        '200':
+          description: OK
+
+  /payroll-engine/{ruleSystemCode}/assignments:
+    get:
+      tags: [payroll-engine]
+      operationId: listConceptAssignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConceptAssignmentResponse'
+    post:
+      tags: [payroll-engine]
+      operationId: createConceptAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConceptAssignmentRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptAssignmentResponse'
+
+  /payroll-engine/{ruleSystemCode}/assignments/{assignmentId}:
+    delete:
+      tags: [payroll-engine]
+      operationId: deleteConceptAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+
 components:
   schemas:
     HireEmployeeRequest:
@@ -7089,3 +7347,165 @@ components:
       properties:
         message:
           type: string
+
+    CreatePayrollConceptRequest:
+      type: object
+      required: [conceptCode, conceptMnemonic, calculationType, functionalNature, resultCompositionMode, executionScope]
+      properties:
+        conceptCode:
+          type: string
+          example: "201"
+        conceptMnemonic:
+          type: string
+          example: "PLUS_TRANSPORTE"
+        calculationType:
+          type: string
+          enum: [DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE, AGGREGATE, JAVA_PROVIDED]
+        functionalNature:
+          type: string
+          enum: [EARNING, DEDUCTION, BASE, INFORMATIONAL, TECHNICAL, TOTAL_EARNING, TOTAL_DEDUCTION, NET_PAY]
+        resultCompositionMode:
+          type: string
+          enum: [REPLACE, ACCUMULATE]
+        executionScope:
+          type: string
+          enum: [SEGMENT, PERIOD]
+        payslipOrderCode:
+          type: string
+          nullable: true
+
+    PayrollConceptDesignerResponse:
+      type: object
+      properties:
+        ruleSystemCode:
+          type: string
+        conceptCode:
+          type: string
+        conceptMnemonic:
+          type: string
+        calculationType:
+          type: string
+        functionalNature:
+          type: string
+        resultCompositionMode:
+          type: string
+        executionScope:
+          type: string
+        payslipOrderCode:
+          type: string
+          nullable: true
+
+    UpdateConceptOperandsRequest:
+      type: object
+      required: [operands]
+      properties:
+        operands:
+          type: array
+          items:
+            type: object
+            required: [operandRole, sourceObjectCode]
+            properties:
+              operandRole:
+                type: string
+                enum: [QUANTITY, RATE, BASE, PERCENTAGE]
+              sourceObjectCode:
+                type: string
+
+    UpdateConceptFeedsRequest:
+      type: object
+      required: [feeds]
+      properties:
+        feeds:
+          type: array
+          items:
+            type: object
+            required: [sourceObjectCode, invertSign, effectiveFrom]
+            properties:
+              sourceObjectCode:
+                type: string
+              invertSign:
+                type: boolean
+              effectiveFrom:
+                type: string
+                format: date
+              effectiveTo:
+                type: string
+                format: date
+                nullable: true
+
+    ConceptOperandResponse:
+      type: object
+      properties:
+        operandRole:
+          type: string
+        sourceObjectCode:
+          type: string
+
+    ConceptFeedResponse:
+      type: object
+      properties:
+        sourceObjectCode:
+          type: string
+        invertSign:
+          type: boolean
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: string
+          format: date
+          nullable: true
+
+    CreateConceptAssignmentRequest:
+      type: object
+      required: [conceptCode, validFrom, priority]
+      properties:
+        conceptCode:
+          type: string
+        companyCode:
+          type: string
+          nullable: true
+        agreementCode:
+          type: string
+          nullable: true
+        employeeTypeCode:
+          type: string
+          nullable: true
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: integer
+
+    ConceptAssignmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        ruleSystemCode:
+          type: string
+        conceptCode:
+          type: string
+        companyCode:
+          type: string
+          nullable: true
+        agreementCode:
+          type: string
+          nullable: true
+        employeeTypeCode:
+          type: string
+          nullable: true
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: integer
