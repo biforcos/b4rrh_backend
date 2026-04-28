@@ -48,6 +48,8 @@ tags:
     description: Rule entity administration endpoints.
   - name: Payroll Engine
     description: Payroll concept designer, operand/feed configuration, and assignment rule management.
+  - name: Employee Payroll Input
+    description: Per-employee payroll quantity inputs (overtime hours, transport units, etc.)
 
 paths:
   /employees:
@@ -4562,8 +4564,14 @@ paths:
                 $ref: "#/components/schemas/EmployeePayrollInputResponse"
         "400":
           description: Invalid request
+        "404":
+          description: Employee not found
         "409":
           description: Payroll input already exists for this concept and period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
     get:
       operationId: listEmployeePayrollInputsByBusinessKey
       summary: List payroll inputs for an employee and period
@@ -4601,6 +4609,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EmployeePayrollInputsResponse"
+        "404":
+          description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/payroll-inputs/{conceptCode}:
     put:
@@ -4614,26 +4624,31 @@ paths:
           required: true
           schema:
             type: string
+            maxLength: 10
         - in: path
           name: employeeTypeCode
           required: true
           schema:
             type: string
+            maxLength: 10
         - in: path
           name: employeeNumber
           required: true
           schema:
             type: string
+            maxLength: 20
         - in: path
           name: conceptCode
           required: true
           schema:
             type: string
+            maxLength: 20
         - in: query
           name: period
           required: true
           schema:
             type: integer
+          description: "Format yyyyMM, e.g. 202604"
       requestBody:
         required: true
         content:
@@ -4651,6 +4666,10 @@ paths:
           description: Invalid request
         "404":
           description: Payroll input not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
     delete:
       operationId: deleteEmployeePayrollInputByBusinessKey
       summary: Delete a payroll input for an employee, concept, and period
@@ -4662,31 +4681,40 @@ paths:
           required: true
           schema:
             type: string
+            maxLength: 10
         - in: path
           name: employeeTypeCode
           required: true
           schema:
             type: string
+            maxLength: 10
         - in: path
           name: employeeNumber
           required: true
           schema:
             type: string
+            maxLength: 20
         - in: path
           name: conceptCode
           required: true
           schema:
             type: string
+            maxLength: 20
         - in: query
           name: period
           required: true
           schema:
             type: integer
+          description: "Format yyyyMM, e.g. 202604"
       responses:
         "204":
           description: Payroll input deleted
         "404":
           description: Payroll input not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
 
 components:
   schemas:
@@ -7727,6 +7755,7 @@ components:
 
     EmployeePayrollInputResponse:
       type: object
+      required: [conceptCode, period, quantity]
       properties:
         conceptCode:
           type: string
@@ -7734,9 +7763,11 @@ components:
           type: integer
         quantity:
           type: number
+          format: double
 
     EmployeePayrollInputsResponse:
       type: object
+      required: [period, inputs]
       properties:
         period:
           type: integer
