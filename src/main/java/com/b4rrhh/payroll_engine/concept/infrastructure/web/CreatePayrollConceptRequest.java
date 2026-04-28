@@ -1,12 +1,14 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record CreatePayrollConceptRequest(
-        String conceptCode,
-        String conceptMnemonic,
-        String calculationType,
-        String functionalNature,
-        String resultCompositionMode,
-        String executionScope,
+        @NotBlank String conceptCode,
+        @NotBlank String conceptMnemonic,
+        @NotBlank String calculationType,
+        @NotBlank String functionalNature,
+        @NotBlank String resultCompositionMode,
+        @NotBlank String executionScope,
         String payslipOrderCode
 ) {
 }

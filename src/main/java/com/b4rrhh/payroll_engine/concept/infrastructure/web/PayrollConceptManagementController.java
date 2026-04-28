@@ -2,7 +2,8 @@ package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 
 import com.b4rrhh.payroll_engine.concept.application.usecase.CreatePayrollConceptUseCase;
 import com.b4rrhh.payroll_engine.concept.application.usecase.DeletePayrollConceptUseCase;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.concept.application.usecase.ListPayrollConceptsUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,24 +22,24 @@ public class PayrollConceptManagementController {
 
     private final CreatePayrollConceptUseCase createPayrollConceptUseCase;
     private final DeletePayrollConceptUseCase deletePayrollConceptUseCase;
-    private final PayrollConceptRepository payrollConceptRepository;
+    private final ListPayrollConceptsUseCase listPayrollConceptsUseCase;
     private final PayrollConceptManagementAssembler assembler;
 
     public PayrollConceptManagementController(
             CreatePayrollConceptUseCase createPayrollConceptUseCase,
             DeletePayrollConceptUseCase deletePayrollConceptUseCase,
-            PayrollConceptRepository payrollConceptRepository,
+            ListPayrollConceptsUseCase listPayrollConceptsUseCase,
             PayrollConceptManagementAssembler assembler
     ) {
         this.createPayrollConceptUseCase = createPayrollConceptUseCase;
         this.deletePayrollConceptUseCase = deletePayrollConceptUseCase;
-        this.payrollConceptRepository = payrollConceptRepository;
+        this.listPayrollConceptsUseCase = listPayrollConceptsUseCase;
         this.assembler = assembler;
     }
 
     @GetMapping
     public List<PayrollConceptDesignerResponse> list(@PathVariable String ruleSystemCode) {
-        return payrollConceptRepository.findAllByRuleSystemCode(ruleSystemCode)
+        return listPayrollConceptsUseCase.listByRuleSystemCode(ruleSystemCode)
                 .stream()
                 .map(assembler::toResponse)
                 .toList();
@@ -48,7 +49,7 @@ public class PayrollConceptManagementController {
     @ResponseStatus(HttpStatus.CREATED)
     public PayrollConceptDesignerResponse create(
             @PathVariable String ruleSystemCode,
-            @RequestBody CreatePayrollConceptRequest request
+            @Valid @RequestBody CreatePayrollConceptRequest request
     ) {
         return assembler.toResponse(
                 createPayrollConceptUseCase.create(assembler.toCommand(ruleSystemCode, request))

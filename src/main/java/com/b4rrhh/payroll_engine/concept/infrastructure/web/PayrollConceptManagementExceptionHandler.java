@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = PayrollConceptManagementController.class)
+@RestControllerAdvice(basePackages = "com.b4rrhh.payroll_engine")
 public class PayrollConceptManagementExceptionHandler {
 
     @ExceptionHandler(PayrollConceptAlreadyExistsException.class)
