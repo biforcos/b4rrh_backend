@@ -60,6 +60,21 @@ public class PayrollConceptFeedRelationPersistenceAdapter implements PayrollConc
                 .toList();
     }
 
+    @Override
+    public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(
+            String ruleSystemCode, String conceptCode) {
+        return feedRelationRepository
+                .findByRuleSystemCodeAndTargetConceptCode(ruleSystemCode, conceptCode)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void deleteAllByRuleSystemCodeAndTargetConceptCode(String ruleSystemCode, String conceptCode) {
+        feedRelationRepository.deleteAllByRuleSystemCodeAndTargetConceptCode(ruleSystemCode, conceptCode);
+    }
+
     private PayrollConceptFeedRelation toDomain(PayrollConceptFeedRelationEntity entity) {
         PayrollObject source = toPayrollObjectDomain(entity.getSourceObject());
         PayrollObject target = toPayrollObjectDomain(entity.getTargetObject());

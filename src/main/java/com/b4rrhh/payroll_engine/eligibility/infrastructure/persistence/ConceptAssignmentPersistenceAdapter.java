@@ -62,6 +62,15 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
         springDataRepo.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+        if (id == null) {
+            return false;
+        }
+        return springDataRepo.existsByIdAndRuleSystemCode(id, ruleSystemCode);
+    }
+
     private ConceptAssignmentEntity toEntity(ConceptAssignment domain) {
         ConceptAssignmentEntity e = new ConceptAssignmentEntity();
         if (domain.getId() != null) {

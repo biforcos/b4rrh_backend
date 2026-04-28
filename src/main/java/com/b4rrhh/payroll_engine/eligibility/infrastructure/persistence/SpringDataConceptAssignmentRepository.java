@@ -62,4 +62,6 @@ public interface SpringDataConceptAssignmentRepository extends JpaRepository<Con
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("conceptCode") String conceptCode
     );
+
+    boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode);
 }

@@ -309,6 +309,10 @@ class DefaultEligibleExecutionPlanBuilderTest {
             public void deleteById(Long id) {
                 // no-op for test fake
             }
+            @Override
+            public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+                return false;
+            }
         };
         return new DefaultConceptEligibilityResolver(repo);
     }
@@ -408,6 +412,14 @@ class DefaultEligibleExecutionPlanBuilderTest {
             public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) { return List.of(); }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -429,6 +441,20 @@ class DefaultEligibleExecutionPlanBuilderTest {
                 Long targetObjectId, LocalDate referenceDate
         ) {
             return byTargetId.getOrDefault(targetObjectId, List.of());
+        }
+
+        @Override
+        public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(
+                String ruleSystemCode, String conceptCode
+        ) {
+            throw new UnsupportedOperationException("not needed in this test");
+        }
+
+        @Override
+        public void deleteAllByRuleSystemCodeAndTargetConceptCode(
+                String ruleSystemCode, String conceptCode
+        ) {
+            throw new UnsupportedOperationException("not needed in this test");
         }
     }
 }

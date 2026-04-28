@@ -66,4 +66,11 @@ public interface ConceptAssignmentRepository {
      * variant should be added; the controller cannot use the surrogate id directly.
      */
     void deleteById(Long id);
+
+    /**
+     * Returns true when an assignment with the given id exists under the supplied rule system.
+     * Used by the management layer to decide between 204 and 404 responses without fetching
+     * the full aggregate.
+     */
+    boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode);
 }

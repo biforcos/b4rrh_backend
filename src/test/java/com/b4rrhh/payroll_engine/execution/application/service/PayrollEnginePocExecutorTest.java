@@ -338,6 +338,14 @@ class PayrollEnginePocExecutorTest {
             public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
                 return relsByTarget.getOrDefault(id, Collections.emptyList());
             }
+            @Override
+            public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -347,6 +355,14 @@ class PayrollEnginePocExecutorTest {
             public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -359,6 +375,14 @@ class PayrollEnginePocExecutorTest {
             @Override
             public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
                 return Collections.emptyList();
+            }
+            @Override
+            public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -474,6 +498,14 @@ class PayrollEnginePocExecutorTest {
                     case "RETENCION_IRPF_TRAMO" -> retencionIrpfOperands;
                     default                     -> Collections.emptyList();
                 };
+            }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
             }
         };
     }

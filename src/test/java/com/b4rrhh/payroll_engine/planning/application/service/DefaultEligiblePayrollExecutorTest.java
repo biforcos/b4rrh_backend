@@ -322,6 +322,14 @@ class DefaultEligiblePayrollExecutorTest {
                     default                     -> Collections.emptyList();
                 };
             }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -355,6 +363,10 @@ class DefaultEligiblePayrollExecutorTest {
             @Override
             public void deleteById(Long id) {
                 // no-op for test fake
+            }
+            @Override
+            public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+                return false;
             }
         };
     }
@@ -418,6 +430,20 @@ class DefaultEligiblePayrollExecutorTest {
         @Override
         public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
             return byTargetId.getOrDefault(id, List.of());
+        }
+
+        @Override
+        public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(
+                String ruleSystemCode, String conceptCode
+        ) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteAllByRuleSystemCodeAndTargetConceptCode(
+                String ruleSystemCode, String conceptCode
+        ) {
+            throw new UnsupportedOperationException();
         }
     }
 }

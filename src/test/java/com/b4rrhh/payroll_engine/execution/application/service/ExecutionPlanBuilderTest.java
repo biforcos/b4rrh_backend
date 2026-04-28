@@ -96,6 +96,14 @@ class ExecutionPlanBuilderTest {
                     default                    -> Collections.emptyList();
                 };
             }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -350,6 +358,14 @@ class ExecutionPlanBuilderTest {
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "SALARIO_BASE".equals(code) ? rateOnly : Collections.emptyList();
                     }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 new OperandConfigurationValidator(),
                 emptyFeedRelationRepo());
@@ -388,6 +404,14 @@ class ExecutionPlanBuilderTest {
                     @Override
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "SALARIO_BASE".equals(code) ? duplicateQuantity : Collections.emptyList();
+                    }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
                     }
                 },
                 new OperandConfigurationValidator(),
@@ -434,6 +458,14 @@ class ExecutionPlanBuilderTest {
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "SALARIO_BASE".equals(code) ? mismatchedOperands : Collections.emptyList();
                     }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 new OperandConfigurationValidator(),
                 emptyFeedRelationRepo());
@@ -469,6 +501,15 @@ class ExecutionPlanBuilderTest {
             public List<com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation> findActiveByTargetObjectId(
                     Long id, LocalDate date) {
                 return Collections.emptyList();
+            }
+            @Override
+            public List<com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation>
+                    findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -641,6 +682,14 @@ class ExecutionPlanBuilderTest {
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? pctOnly : Collections.emptyList();
                     }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 new OperandConfigurationValidator(),
                 emptyFeedRelationRepo());
@@ -673,6 +722,14 @@ class ExecutionPlanBuilderTest {
                     @Override
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? baseOnly : Collections.emptyList();
+                    }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
                     }
                 },
                 new OperandConfigurationValidator(),
@@ -710,6 +767,14 @@ class ExecutionPlanBuilderTest {
                     @Override
                     public List<PayrollConceptOperand> findByTarget(String rs, String code) {
                         return "RETENCION_IRPF_TRAMO".equals(code) ? operandsPointingToUndeclaredDep : Collections.emptyList();
+                    }
+                    @Override
+                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
+                    }
+                    @Override
+                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
+                        throw new UnsupportedOperationException();
                     }
                 },
                 new OperandConfigurationValidator(),

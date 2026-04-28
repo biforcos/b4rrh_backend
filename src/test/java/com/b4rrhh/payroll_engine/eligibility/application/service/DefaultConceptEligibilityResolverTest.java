@@ -182,6 +182,10 @@ class DefaultConceptEligibilityResolverTest {
             public void deleteById(Long id) {
                 // no-op for test fake
             }
+            @Override
+            public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+                return false;
+            }
         };
         return new DefaultConceptEligibilityResolver(fakeRepo);
     }

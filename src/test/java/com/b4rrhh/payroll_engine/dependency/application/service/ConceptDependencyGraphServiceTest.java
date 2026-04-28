@@ -219,6 +219,14 @@ class ConceptDependencyGraphServiceTest {
             public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
                 return relsByTarget.getOrDefault(id, Collections.emptyList());
             }
+            @Override
+            public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                return Collections.emptyList();
+            }
+            @Override
+            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
+                /* no-op */
+            }
         };
     }
 
@@ -232,6 +240,10 @@ class ConceptDependencyGraphServiceTest {
             public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
             @Override
             public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
+            @Override
+            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) { return Collections.emptyList(); }
+            @Override
+            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) { /* no-op */ }
         };
     }
 }

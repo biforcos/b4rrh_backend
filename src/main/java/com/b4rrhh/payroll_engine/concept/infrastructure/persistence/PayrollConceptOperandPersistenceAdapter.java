@@ -48,6 +48,21 @@ public class PayrollConceptOperandPersistenceAdapter implements PayrollConceptOp
                 .toList();
     }
 
+    @Override
+    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(
+            String ruleSystemCode, String conceptCode) {
+        return operandRepository
+                .findByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void deleteAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
+        operandRepository.deleteAllByRuleSystemCodeAndConceptCode(ruleSystemCode, conceptCode);
+    }
+
     private PayrollObjectEntity requireObject(String ruleSystemCode, String objectCode) {
         return objectRepository
                 .findByRuleSystemCodeAndObjectTypeCodeAndObjectCode(
