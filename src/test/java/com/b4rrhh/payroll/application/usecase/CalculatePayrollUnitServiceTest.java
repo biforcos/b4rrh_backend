@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
+import com.b4rrhh.payroll.application.port.EmployeePayrollInputLookupPort;
 import com.b4rrhh.payroll.application.port.WorkCenterProfileLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
@@ -61,6 +62,8 @@ class CalculatePayrollUnitServiceTest {
     private AgreementProfileLookupPort agreementProfileLookupPort;
     @Mock
     private WorkCenterProfileLookupPort workCenterProfileLookupPort;
+    @Mock
+    private EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -76,7 +79,8 @@ class CalculatePayrollUnitServiceTest {
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
-            List.of()
+            List.of(),
+            employeePayrollInputLookupPort
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -138,7 +142,8 @@ class CalculatePayrollUnitServiceTest {
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
-            List.of()
+            List.of(),
+            employeePayrollInputLookupPort
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -222,7 +227,8 @@ class CalculatePayrollUnitServiceTest {
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
-            List.of()
+            List.of(),
+            employeePayrollInputLookupPort
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
