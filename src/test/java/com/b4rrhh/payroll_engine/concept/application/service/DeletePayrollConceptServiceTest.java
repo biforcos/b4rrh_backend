@@ -28,6 +28,7 @@ class DeletePayrollConceptServiceTest {
 
         service.delete("ES", "201");
 
+        verify(conceptRepository).existsByBusinessKey("ES", "201");
         verify(conceptRepository).deleteByBusinessKey("ES", "201");
     }
 

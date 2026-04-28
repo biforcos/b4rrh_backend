@@ -1,5 +1,5 @@
 alter table payroll_engine.payroll_concept
-    drop constraint fk_payroll_concept_object;
+    drop constraint if exists fk_payroll_concept_object;
 
 alter table payroll_engine.payroll_concept
     add constraint fk_payroll_concept_object
