@@ -92,6 +92,7 @@ class PayrollConceptGraphCalculatorServiceTest {
                 ResultCompositionMode.REPLACE,
                 conceptCode,
                 ExecutionScope.PERIOD,
+                true,
                 null,
                 null
         );

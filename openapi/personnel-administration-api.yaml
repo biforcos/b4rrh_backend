@@ -7842,10 +7842,13 @@ components:
         payslipOrderCode:
           type: string
           nullable: true
+        persistToConcepts:
+          type: boolean
+          default: true
 
     PayrollConceptDesignerResponse:
       type: object
-      required: [ruleSystemCode, conceptCode, conceptMnemonic, calculationType, functionalNature, resultCompositionMode, executionScope]
+      required: [ruleSystemCode, conceptCode, conceptMnemonic, calculationType, functionalNature, resultCompositionMode, executionScope, persistToConcepts]
       properties:
         ruleSystemCode:
           type: string
@@ -7864,6 +7867,8 @@ components:
         payslipOrderCode:
           type: string
           nullable: true
+        persistToConcepts:
+          type: boolean
 
     UpdateConceptOperandsRequest:
       type: object

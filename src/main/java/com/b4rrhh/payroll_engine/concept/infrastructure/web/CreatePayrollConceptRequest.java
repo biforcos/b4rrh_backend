@@ -9,6 +9,7 @@ public record CreatePayrollConceptRequest(
         @NotBlank String functionalNature,
         @NotBlank String resultCompositionMode,
         @NotBlank String executionScope,
-        String payslipOrderCode
+        String payslipOrderCode,
+        Boolean persistToConcepts
 ) {
 }

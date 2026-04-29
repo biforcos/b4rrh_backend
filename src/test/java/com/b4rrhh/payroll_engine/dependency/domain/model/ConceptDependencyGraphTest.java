@@ -36,6 +36,7 @@ class ConceptDependencyGraphTest {
                 ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
+                true,
                 null, null
         );
     }

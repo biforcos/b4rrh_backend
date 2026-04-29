@@ -28,6 +28,7 @@ class PayrollConceptInvariantTest {
                         ResultCompositionMode.REPLACE,
                         null,
                         ExecutionScope.SEGMENT,
+                        true,
                         null, null
                 ));
 
@@ -45,6 +46,7 @@ class PayrollConceptInvariantTest {
                 ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
+                true,
                 null, null
         );
     }

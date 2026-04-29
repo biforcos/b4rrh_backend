@@ -79,8 +79,8 @@ class ConceptWiringControllerTest {
         jdbc.update("insert into payroll_engine.payroll_concept "
                         + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
                         + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "created_at, updated_at) "
-                        + "values (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        + "persist_to_concepts, created_at, updated_at) "
+                        + "values (?, ?, ?, ?, ?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 objectId, mnemonic, calculationType, functionalNature,
                 resultCompositionMode, objectCode, executionScope);
     }

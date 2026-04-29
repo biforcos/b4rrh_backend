@@ -171,7 +171,7 @@ class ConceptDependencyGraphServiceTest {
         PayrollObject object = new PayrollObject(id, ruleSystemCode, PayrollObjectTypeCode.CONCEPT,
                 conceptCode, null, null);
         return new PayrollConcept(object, conceptCode, calculationType, nature,
-                ResultCompositionMode.REPLACE, null, ExecutionScope.SEGMENT, null, null);
+                ResultCompositionMode.REPLACE, null, ExecutionScope.SEGMENT, true, null, null);
     }
 
     private static PayrollConceptFeedRelation feedRelation(PayrollConcept source, PayrollConcept target) {

@@ -13,6 +13,7 @@ public record CreatePayrollConceptCommand(
         FunctionalNature functionalNature,
         ResultCompositionMode resultCompositionMode,
         ExecutionScope executionScope,
-        String payslipOrderCode
+        String payslipOrderCode,
+        boolean persistToConcepts
 ) {
 }

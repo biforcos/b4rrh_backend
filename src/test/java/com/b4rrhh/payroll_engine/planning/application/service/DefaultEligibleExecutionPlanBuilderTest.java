@@ -383,7 +383,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
         PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, NOW);
         return new PayrollConcept(obj, code, type,
                 FunctionalNature.INFORMATIONAL, ResultCompositionMode.REPLACE,
-                null, ExecutionScope.SEGMENT, NOW, NOW);
+                null, ExecutionScope.SEGMENT, true, NOW, NOW);
     }
 
     private PayrollConceptFeedRelation feedRel(PayrollConcept source, PayrollConcept target) {

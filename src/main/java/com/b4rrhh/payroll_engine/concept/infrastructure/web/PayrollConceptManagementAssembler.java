@@ -20,7 +20,8 @@ public class PayrollConceptManagementAssembler {
                 concept.getFunctionalNature().name(),
                 concept.getResultCompositionMode().name(),
                 concept.getExecutionScope().name(),
-                concept.getPayslipOrderCode()
+                concept.getPayslipOrderCode(),
+                concept.isPersistToConcepts()
         );
     }
 
@@ -33,7 +34,8 @@ public class PayrollConceptManagementAssembler {
                 parseEnum(FunctionalNature.class, request.functionalNature(), "functionalNature"),
                 parseEnum(ResultCompositionMode.class, request.resultCompositionMode(), "resultCompositionMode"),
                 parseEnum(ExecutionScope.class, request.executionScope(), "executionScope"),
-                request.payslipOrderCode()
+                request.payslipOrderCode(),
+                request.persistToConcepts() != null ? request.persistToConcepts() : true
         );
     }
 

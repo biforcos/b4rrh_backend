@@ -256,7 +256,7 @@ class DefaultEligiblePayrollExecutorTest {
                                           FunctionalNature nature) {
         PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, NOW);
         return new PayrollConcept(obj, code, calcType, nature, ResultCompositionMode.REPLACE,
-                null, ExecutionScope.SEGMENT, NOW, NOW);
+                null, ExecutionScope.SEGMENT, true, NOW, NOW);
     }
 
     private static PayrollConceptFeedRelation feedRel(PayrollConcept source, PayrollConcept target) {

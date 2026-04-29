@@ -177,7 +177,7 @@ class CalculatePayrollUnitServiceTest {
         com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept101 =
                 new com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept(
                         obj101, "SALARIO_BASE", CalculationType.DIRECT_AMOUNT, FunctionalNature.EARNING,
-                        ResultCompositionMode.REPLACE, "101", ExecutionScope.PERIOD, null, null);
+                        ResultCompositionMode.REPLACE, "101", ExecutionScope.PERIOD, true, null, null);
         ConceptExecutionPlanEntry entry101 = new ConceptExecutionPlanEntry(
                 new ConceptNodeIdentity("ESP", "101"), CalculationType.DIRECT_AMOUNT);
         EligibleExecutionPlanResult planResult = new EligibleExecutionPlanResult(

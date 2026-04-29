@@ -43,6 +43,9 @@ public class PayrollConceptEntity {
     @Column(name = "execution_scope", nullable = false, length = 30)
     private String executionScope;
 
+    @Column(name = "persist_to_concepts", nullable = false)
+    private boolean persistToConcepts = true;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -88,6 +91,9 @@ public class PayrollConceptEntity {
 
     public String getExecutionScope() { return executionScope; }
     public void setExecutionScope(String executionScope) { this.executionScope = executionScope; }
+
+    public boolean isPersistToConcepts() { return persistToConcepts; }
+    public void setPersistToConcepts(boolean persistToConcepts) { this.persistToConcepts = persistToConcepts; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

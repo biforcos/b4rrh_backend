@@ -433,6 +433,7 @@ class PayrollEnginePocExecutorTest {
                 ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
+                true,
                 null, null
         );
     }

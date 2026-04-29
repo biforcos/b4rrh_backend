@@ -57,6 +57,7 @@ public class CreatePayrollConceptService implements CreatePayrollConceptUseCase 
                 command.resultCompositionMode(),
                 command.payslipOrderCode(),
                 command.executionScope(),
+                command.persistToConcepts(),
                 now,
                 now
         );

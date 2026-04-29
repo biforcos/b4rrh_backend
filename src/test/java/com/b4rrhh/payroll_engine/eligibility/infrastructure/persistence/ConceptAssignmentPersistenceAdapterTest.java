@@ -50,6 +50,7 @@ class ConceptAssignmentPersistenceAdapterTest {
         Path migrationDir = Files.createDirectories(tempDir.resolve("flyway-concept-assignment"));
         copyMigration(migrationDir, "V56__create_payroll_engine_schema.sql");
         copyMigration(migrationDir, "V58__add_concept_assignment.sql");
+        copyMigration(migrationDir, "V80__add_persist_to_concepts_to_payroll_concept.sql");
         registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDir.toAbsolutePath());
     }
 
