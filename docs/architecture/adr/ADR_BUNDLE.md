@@ -1,7 +1,7 @@
 ﻿# ADR Bundle
 
 > Fichero generado automÃ¡ticamente. No editar a mano.
-> Fecha de generaciÃ³n: 2026-04-25 23:42:37
+> Fecha de generaciÃ³n: 2026-04-26 12:07:18
 
 ---
 
@@ -50,6 +50,7 @@
 - [ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md](#file-adr-043-agreement-profile-y-activaci-n-de-payroll-basada-en-contexto-md)
 - [ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md](#file-adr-044-primer-c-lculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-m-nimo-md)
 - [ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md](#file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md)
+- [ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md](#file-adr-046-conceptos-t-cnicos-base-de-per-odo-y-presencia-en-n-mina-md)
 - [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
 
 ---
@@ -12412,6 +12413,246 @@ El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientr
 
 
 <!-- END FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
+
+
+---
+
+# FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md
+<a name="file-adr-046-conceptos-t-cnicos-base-de-per-odo-y-presencia-en-n-mina-md"></a>
+
+<!-- BEGIN FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
+
+# ADR-045 â€” Conceptos tÃ©cnicos base de perÃ­odo y presencia en nÃ³mina
+
+## Estado
+
+Propuesto.
+
+## Contexto
+
+El motor de nÃ³mina de B4RRHH ya permite calcular conceptos econÃ³micos y agregados como:
+
+- SALARIO_BASE
+- TOTAL_DEVENGOS
+- TOTAL_DEDUCCIONES
+- NETO
+
+Sin embargo, algunos valores necesarios para calcular correctamente una nÃ³mina mensual todavÃ­a estÃ¡n implÃ­citos o calculados en duro.
+
+Ejemplos:
+
+- dÃ­as reales del mes
+- dÃ­as teÃ³ricos de nÃ³mina
+- dÃ­as de presencia del empleado en el perÃ­odo
+- dÃ­as de presencia por subperÃ­odo o segmento
+
+Estos valores no son conceptos econÃ³micos visibles en el recibo, pero sÃ­ son datos fundamentales para explicar y trazar el cÃ¡lculo.
+
+## Problema
+
+Si estos valores permanecen ocultos dentro del cÃ¡lculo:
+
+- el salario base no es completamente trazable;
+- se dificulta depurar altas, bajas y meses incompletos;
+- se complica evolucionar hacia cÃ¡lculo por tramos;
+- no queda claro quÃ© cantidad de dÃ­as ha alimentado cada concepto econÃ³mico.
+
+AdemÃ¡s, no todos los conceptos del motor pueden depender de otros conceptos configurados.
+
+En algÃºn punto existen conceptos fundamentales que nacen directamente del contexto de ejecuciÃ³n.
+
+## DecisiÃ³n
+
+Se introducen conceptos tÃ©cnicos base de nÃ³mina.
+
+Estos conceptos:
+
+- se calculan durante la ejecuciÃ³n;
+- se persisten en los resultados de cÃ¡lculo;
+- pueden alimentar otros conceptos;
+- no se muestran en el recibo de nÃ³mina;
+- no representan devengos ni deducciones;
+- pueden ser calculados mediante clases Java especÃ­ficas.
+
+## Conceptos tÃ©cnicos iniciales
+
+### DIAS_MES_REALES
+
+Representa los dÃ­as naturales reales del mes de cÃ¡lculo.
+
+Ejemplos:
+
+- enero: 31
+- febrero: 28 o 29
+- abril: 30
+
+### DIAS_MES_NOMINA
+
+Representa los dÃ­as teÃ³ricos de nÃ³mina mensual.
+
+Regla V1:
+
+- siempre 30
+
+Incluye febrero, que a efectos de nÃ³mina mensual se considera 30.
+
+### DIAS_PRESENCIA
+
+Representa los dÃ­as naturales de presencia del empleado dentro del perÃ­odo o segmento calculado.
+
+Ejemplos:
+
+- empleado activo todo marzo: 31
+- alta el 10 de marzo: 22
+- baja el 20 de febrero: 20
+
+### DIAS_DEVENGO_MENSUAL
+
+Representa los dÃ­as que se usan para calcular conceptos mensuales topados a 30.
+
+Ejemplos:
+
+- empleado activo todo marzo: 30
+- empleado activo todo febrero: 30
+- alta el 10 de marzo: 22
+- baja el 20 de febrero: 20
+
+## Regla de visibilidad
+
+Los conceptos tÃ©cnicos base tendrÃ¡n:
+
+```text
+receiptVisible = false
+
+o nombre equivalente.
+
+Deben persistirse para trazabilidad, pero no imprimirse en el recibo.
+
+RelaciÃ³n con SALARIO_BASE
+
+Para salario base mensual V1:
+
+SALARIO_BASE = salarioMensual / DIAS_MES_NOMINA * DIAS_DEVENGO_MENSUAL
+
+Ejemplo:
+
+salarioMensual = 1850.10
+DIAS_MES_NOMINA = 30
+DIAS_DEVENGO_MENSUAL = 22
+
+SALARIO_BASE = 1850.10 / 30 * 22
+ImplementaciÃ³n
+
+Se permite implementar estos conceptos mediante clases Java especÃ­ficas.
+
+Motivo:
+
+no dependen de fÃ³rmulas configurables;
+nacen del contexto de ejecuciÃ³n;
+representan geometrÃ­a temporal y reglas base del perÃ­odo;
+son conceptos fuente del grafo de cÃ¡lculo.
+
+Nombre sugerido:
+
+PeriodTechnicalConceptCalculator
+PresenceDaysTechnicalConceptCalculator
+MonthlyAccrualDaysCalculator
+
+O, si se prefiere una Ãºnica clase inicial:
+
+TechnicalPayrollPeriodConceptCalculator
+Regla arquitectÃ³nica
+
+Estas clases no deben convertirse en un motor paralelo.
+
+Solo pueden calcular conceptos tÃ©cnicos fundamentales derivados de:
+
+perÃ­odo de nÃ³mina;
+calendario mensual;
+presencia del empleado;
+segmentos temporales efectivos.
+
+No deben calcular conceptos econÃ³micos como:
+
+salario base;
+antigÃ¼edad;
+nocturnidad;
+IRPF;
+totales;
+neto.
+Persistencia
+
+Los resultados tÃ©cnicos se guardarÃ¡n igual que otros resultados de concepto, pero marcados como no visibles.
+
+Ejemplo:
+
+conceptCode              quantity   amount   receiptVisible
+DIAS_MES_REALES          31         null     false
+DIAS_MES_NOMINA          30         null     false
+DIAS_PRESENCIA           22         null     false
+DIAS_DEVENGO_MENSUAL     22         null     false
+SALARIO_BASE             22         1356.74  true
+SegmentaciÃ³n futura
+
+Cuando exista cÃ¡lculo por subperÃ­odos, estos conceptos deberÃ¡n poder calcularse por segmento.
+
+Ejemplo:
+
+Segmento 1: 2026-03-01 â†’ 2026-03-14
+Segmento 2: 2026-03-15 â†’ 2026-03-31
+
+Cada segmento podrÃ¡ tener sus propios:
+
+DIAS_PRESENCIA
+DIAS_DEVENGO_MENSUAL
+
+Mientras que DIAS_MES_REALES y DIAS_MES_NOMINA podrÃ¡n ser comunes al perÃ­odo completo.
+
+Consecuencias positivas
+mejora la trazabilidad del cÃ¡lculo;
+elimina lÃ³gica oculta en duro;
+prepara el motor para altas, bajas y cambios de situaciÃ³n;
+permite explicar el salario base;
+mantiene limpio el recibo;
+encaja con el grafo de conceptos sin forzar que todo sea configurable.
+Riesgos
+1. Abusar de conceptos tÃ©cnicos
+
+No todo helper interno debe convertirse en concepto persistido.
+
+Solo deben persistirse valores relevantes para explicar cÃ¡lculo.
+
+2. Crear un segundo motor en Java
+
+Las clases tÃ©cnicas no deben calcular conceptos econÃ³micos.
+
+Solo deben producir inputs fundamentales.
+
+3. Naming ambiguo
+
+Se evita DIAS_MES a secas.
+
+Nombre adoptado:
+
+DIAS_MES_NOMINA
+
+para distinguirlo de:
+
+DIAS_MES_REALES
+DecisiÃ³n final
+
+B4RRHH distinguirÃ¡ entre:
+
+conceptos econÃ³micos visibles;
+agregados;
+conceptos tÃ©cnicos no visibles;
+helpers internos no persistidos.
+
+Los conceptos tÃ©cnicos base podrÃ¡n ser calculados por clases Java, persistidos como resultados de cÃ¡lculo y utilizados como operandos por conceptos econÃ³micos.
+
+No aparecerÃ¡n en el recibo de nÃ³mina.
+
+<!-- END FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
 
 
 ---
