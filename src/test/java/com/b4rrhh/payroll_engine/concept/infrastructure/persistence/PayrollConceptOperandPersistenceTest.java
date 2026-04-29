@@ -40,6 +40,7 @@ class PayrollConceptOperandPersistenceTest {
         copyMigration(dir, "V56__create_payroll_engine_schema.sql");
         copyMigration(dir, "V57__add_payroll_concept_operand.sql");
         copyMigration(dir, "V80__add_persist_to_concepts_to_payroll_concept.sql");
+        copyMigration(dir, "V81__add_summary_to_payroll_concept.sql");
         registry.add("spring.flyway.locations", () -> "filesystem:" + dir.toAbsolutePath());
     }
 

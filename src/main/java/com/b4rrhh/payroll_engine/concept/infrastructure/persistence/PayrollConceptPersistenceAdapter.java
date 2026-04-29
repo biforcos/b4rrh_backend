@@ -97,6 +97,7 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
         entity.setPayslipOrderCode(domain.getPayslipOrderCode());
         entity.setExecutionScope(domain.getExecutionScope().name());
         entity.setPersistToConcepts(domain.isPersistToConcepts());
+        entity.setSummary(domain.getSummary());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         return entity;
@@ -121,6 +122,7 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
                 entity.getPayslipOrderCode(),
                 ExecutionScope.valueOf(entity.getExecutionScope()),
                 entity.isPersistToConcepts(),
+                entity.getSummary(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

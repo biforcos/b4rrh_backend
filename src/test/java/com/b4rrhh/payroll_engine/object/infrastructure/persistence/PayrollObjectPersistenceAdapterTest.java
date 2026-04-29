@@ -35,6 +35,7 @@ class PayrollObjectPersistenceAdapterTest {
         Path migrationDirectory = Files.createDirectories(tempDir.resolve("flyway-payroll-engine"));
         copyMigration(migrationDirectory, "V56__create_payroll_engine_schema.sql");
         copyMigration(migrationDirectory, "V80__add_persist_to_concepts_to_payroll_concept.sql");
+        copyMigration(migrationDirectory, "V81__add_summary_to_payroll_concept.sql");
         registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDirectory.toAbsolutePath());
     }
 

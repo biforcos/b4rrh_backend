@@ -19,6 +19,7 @@ public class PayrollConcept {
     private final String payslipOrderCode;
     private final ExecutionScope executionScope;
     private final boolean persistToConcepts;
+    private final String summary;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -31,6 +32,23 @@ public class PayrollConcept {
             String payslipOrderCode,
             ExecutionScope executionScope,
             boolean persistToConcepts,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this(object, conceptMnemonic, calculationType, functionalNature, resultCompositionMode,
+                payslipOrderCode, executionScope, persistToConcepts, null, createdAt, updatedAt);
+    }
+
+    public PayrollConcept(
+            PayrollObject object,
+            String conceptMnemonic,
+            CalculationType calculationType,
+            FunctionalNature functionalNature,
+            ResultCompositionMode resultCompositionMode,
+            String payslipOrderCode,
+            ExecutionScope executionScope,
+            boolean persistToConcepts,
+            String summary,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -66,6 +84,7 @@ public class PayrollConcept {
         this.payslipOrderCode = payslipOrderCode;
         this.executionScope = executionScope;
         this.persistToConcepts = persistToConcepts;
+        this.summary = summary;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -108,6 +127,10 @@ public class PayrollConcept {
 
     public boolean isPersistToConcepts() {
         return persistToConcepts;
+    }
+
+    public String getSummary() {
+        return summary;
     }
 
     public LocalDateTime getCreatedAt() {

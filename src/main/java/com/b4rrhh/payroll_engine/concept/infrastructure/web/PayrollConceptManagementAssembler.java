@@ -21,7 +21,8 @@ public class PayrollConceptManagementAssembler {
                 concept.getResultCompositionMode().name(),
                 concept.getExecutionScope().name(),
                 concept.getPayslipOrderCode(),
-                concept.isPersistToConcepts()
+                concept.isPersistToConcepts(),
+                concept.getSummary()
         );
     }
 

@@ -4371,6 +4371,41 @@ paths:
         '409':
           description: Concept already exists
 
+  /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}/summary:
+    patch:
+      tags:
+        - Payroll Engine
+      summary: Update the summary description of a payroll concept
+      operationId: updatePayrollConceptSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConceptSummaryRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollConceptDesignerResponse'
+        '404':
+          description: Not found
+
   /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}:
     delete:
       tags:
@@ -7902,6 +7937,16 @@ components:
           nullable: true
         persistToConcepts:
           type: boolean
+        summary:
+          type: string
+          nullable: true
+
+    UpdateConceptSummaryRequest:
+      type: object
+      properties:
+        summary:
+          type: string
+          nullable: true
 
     UpdateConceptOperandsRequest:
       type: object

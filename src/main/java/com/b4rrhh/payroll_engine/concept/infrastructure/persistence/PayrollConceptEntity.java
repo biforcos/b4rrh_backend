@@ -46,6 +46,9 @@ public class PayrollConceptEntity {
     @Column(name = "persist_to_concepts", nullable = false)
     private boolean persistToConcepts = true;
 
+    @Column(name = "summary", columnDefinition = "TEXT")
+    private String summary;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -94,6 +97,9 @@ public class PayrollConceptEntity {
 
     public boolean isPersistToConcepts() { return persistToConcepts; }
     public void setPersistToConcepts(boolean persistToConcepts) { this.persistToConcepts = persistToConcepts; }
+
+    public String getSummary() { return summary; }
+    public void setSummary(String summary) { this.summary = summary; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

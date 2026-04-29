@@ -3,10 +3,13 @@ package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 import com.b4rrhh.payroll_engine.concept.application.usecase.CreatePayrollConceptUseCase;
 import com.b4rrhh.payroll_engine.concept.application.usecase.DeletePayrollConceptUseCase;
 import com.b4rrhh.payroll_engine.concept.application.usecase.ListPayrollConceptsUseCase;
+import com.b4rrhh.payroll_engine.concept.application.usecase.UpdateConceptSummaryCommand;
+import com.b4rrhh.payroll_engine.concept.application.usecase.UpdateConceptSummaryUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,17 +26,20 @@ public class PayrollConceptManagementController {
     private final CreatePayrollConceptUseCase createPayrollConceptUseCase;
     private final DeletePayrollConceptUseCase deletePayrollConceptUseCase;
     private final ListPayrollConceptsUseCase listPayrollConceptsUseCase;
+    private final UpdateConceptSummaryUseCase updateConceptSummaryUseCase;
     private final PayrollConceptManagementAssembler assembler;
 
     public PayrollConceptManagementController(
             CreatePayrollConceptUseCase createPayrollConceptUseCase,
             DeletePayrollConceptUseCase deletePayrollConceptUseCase,
             ListPayrollConceptsUseCase listPayrollConceptsUseCase,
+            UpdateConceptSummaryUseCase updateConceptSummaryUseCase,
             PayrollConceptManagementAssembler assembler
     ) {
         this.createPayrollConceptUseCase = createPayrollConceptUseCase;
         this.deletePayrollConceptUseCase = deletePayrollConceptUseCase;
         this.listPayrollConceptsUseCase = listPayrollConceptsUseCase;
+        this.updateConceptSummaryUseCase = updateConceptSummaryUseCase;
         this.assembler = assembler;
     }
 
@@ -54,6 +60,17 @@ public class PayrollConceptManagementController {
         return assembler.toResponse(
                 createPayrollConceptUseCase.create(assembler.toCommand(ruleSystemCode, request))
         );
+    }
+
+    @PatchMapping("/{conceptCode}/summary")
+    public PayrollConceptDesignerResponse updateSummary(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String conceptCode,
+            @RequestBody UpdateConceptSummaryRequest request
+    ) {
+        return assembler.toResponse(
+                updateConceptSummaryUseCase.update(
+                        new UpdateConceptSummaryCommand(ruleSystemCode, conceptCode, request.summary())));
     }
 
     @DeleteMapping("/{conceptCode}")
