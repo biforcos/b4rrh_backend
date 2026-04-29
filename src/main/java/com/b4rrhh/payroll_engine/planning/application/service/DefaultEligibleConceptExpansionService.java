@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.planning.application.service;
 
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
@@ -97,6 +98,14 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                 } else {
                     log.debug("[ENGINE]     operando {} → {} (ya cargado)", operand.getOperandRole(), sourceCode);
                 }
+            }
+
+            // AGGREGATE sources are optional contributors, not structural dependencies.
+            // Pulling them in here would include non-eligible concepts whenever they have
+            // a feed relation to an eligible aggregate — defeating the eligibility gate.
+            if (current.getCalculationType() == CalculationType.AGGREGATE) {
+                log.debug("[ENGINE]     {} AGGREGATE, omitiendo expansión de fuentes", currentCode);
+                continue;
             }
 
             Long objectId = current.getObject().getId();

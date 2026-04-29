@@ -199,6 +199,57 @@ class DefaultEligibleExecutionPlanBuilderTest {
         assertTrue(result.executionPlan().isEmpty());
     }
 
+    // ── test: non-eligible concept that feeds an AGGREGATE must not be pulled in ─
+
+    /**
+     * Regression test: a concept that has a feed relation into an AGGREGATE target
+     * but has NO eligibility assignment must NOT appear in the execution plan.
+     *
+     * <p>Before the fix, the BFS expansion followed feed sources of AGGREGATE concepts,
+     * which caused non-eligible concepts (e.g. overtime hours) to be pulled into the
+     * plan whenever they were wired to an eligible aggregate (e.g. BRUTO).
+     */
+    @Test
+    void nonEligibleConceptFeedingAggregate_isNotPulledIntoExpansion() {
+        long ID_HORAS_EXTRA = 10L;
+        long ID_BRUTO       = 11L;
+
+        PayrollConcept salario    = concept(ID_SALARIO_BASE, "SALARIO_BASE");
+        PayrollConcept horasExtra = concept(ID_HORAS_EXTRA,  "HORAS_EXTRA_201");
+        PayrollConcept bruto      = concept(ID_BRUTO,        "BRUTO", CalculationType.AGGREGATE);
+
+        FakeConceptRepository repo = new FakeConceptRepository(List.of(salario, horasExtra, bruto));
+
+        // Both SALARIO_BASE and HORAS_EXTRA_201 feed into BRUTO (the aggregate).
+        // HORAS_EXTRA_201 has no eligibility assignment — it must not appear in the plan.
+        FakeFeedRelationRepository feeds = new FakeFeedRelationRepository(Map.of(
+                ID_BRUTO, List.of(feedRel(salario, bruto), feedRel(horasExtra, bruto))
+        ));
+
+        DefaultConceptDependencyGraphService gs = new DefaultConceptDependencyGraphService(feeds, emptyOperandRepo());
+        DefaultEligibleConceptExpansionService es = new DefaultEligibleConceptExpansionService(repo, feeds, emptyOperandRepo());
+
+        DefaultConceptEligibilityResolver eligibility = eligibilityResolverWith(repo, "SALARIO_BASE", "BRUTO");
+
+        DefaultEligibleExecutionPlanBuilder builder = new DefaultEligibleExecutionPlanBuilder(
+                eligibility, repo, es, gs, simplePlanBuilder());
+
+        EligibleExecutionPlanResult result = builder.build(CONTEXT, REF);
+
+        Set<String> expandedCodes = conceptCodes(result.expandedConcepts());
+        assertFalse(expandedCodes.contains("HORAS_EXTRA_201"),
+                "Non-eligible concept must not be pulled in via AGGREGATE feed relation");
+        assertTrue(expandedCodes.contains("SALARIO_BASE"));
+        assertTrue(expandedCodes.contains("BRUTO"));
+
+        Set<String> planCodes = result.executionPlan().stream()
+                .map(e -> e.identity().getConceptCode())
+                .collect(Collectors.toSet());
+        assertFalse(planCodes.contains("HORAS_EXTRA_201"),
+                "Non-eligible concept must not appear in the execution plan");
+        assertEquals(2, result.executionPlan().size());
+    }
+
     // ── test: missing eligible concept definition → fail fast ────────────────
 
     @Test
@@ -276,6 +327,13 @@ class DefaultEligibleExecutionPlanBuilderTest {
         };
     }
 
+    private DefaultConceptEligibilityResolver eligibilityResolverWith(
+            FakeConceptRepository repo, String... conceptCodes
+    ) {
+        // identical logic, just ignored (repo is unused — assignments drive eligibility)
+        return eligibilityResolverWith(conceptCodes);
+    }
+
     private DefaultConceptEligibilityResolver eligibilityResolverWith(String... conceptCodes) {
         List<ConceptAssignment> assignments = new ArrayList<>();
         for (String code : conceptCodes) {
@@ -318,8 +376,12 @@ class DefaultEligibleExecutionPlanBuilderTest {
     }
 
     private PayrollConcept concept(long id, String code) {
+        return concept(id, code, CalculationType.DIRECT_AMOUNT);
+    }
+
+    private PayrollConcept concept(long id, String code, CalculationType type) {
         PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, NOW);
-        return new PayrollConcept(obj, code, CalculationType.DIRECT_AMOUNT,
+        return new PayrollConcept(obj, code, type,
                 FunctionalNature.INFORMATIONAL, ResultCompositionMode.REPLACE,
                 null, ExecutionScope.SEGMENT, NOW, NOW);
     }
