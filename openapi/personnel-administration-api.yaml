@@ -50,6 +50,10 @@ tags:
     description: Payroll concept designer, operand/feed configuration, and assignment rule management.
   - name: Employee Payroll Input
     description: Per-employee payroll quantity inputs (overtime hours, transport units, etc.)
+  - name: Payroll
+    description: Payroll lifecycle operations — search, invalidate, validate, recalculate.
+  - name: Payroll Calculation Run
+    description: Launch and track bulk payroll calculation runs.
 
 paths:
   /employees:
@@ -4263,6 +4267,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BulkInvalidatePayrollResponse"
+        "400":
+          description: Invalid request parameters
+        "404":
+          description: Rule system or payroll type not found
 
   /payroll/calculation-runs/launch:
     post:
@@ -4305,7 +4313,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/PayrollCalculationRunResponse"
         "404":
-          description: Run not found
+          description: Calculation run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
 
   /payroll-engine/{ruleSystemCode}/concepts:
     get:
@@ -4841,6 +4853,23 @@ components:
 
     PayrollCalculationRunResponse:
       type: object
+      required:
+        - runId
+        - status
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - calculationEngineCode
+        - calculationEngineVersion
+        - totalCandidates
+        - totalEligible
+        - totalClaimed
+        - totalSkippedNotEligible
+        - totalSkippedAlreadyClaimed
+        - totalCalculated
+        - totalNotValid
+        - totalErrors
+        - requestedAt
       properties:
         runId:
           type: integer
@@ -4907,6 +4936,17 @@ components:
 
     BulkInvalidatePayrollResponse:
       type: object
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - totalCandidates
+        - totalFound
+        - totalInvalidated
+        - totalSkippedAlreadyNotValid
+        - totalSkippedProtected
+        - totalSkippedNotFound
+        - statusReasonCode
       properties:
         ruleSystemCode:
           type: string
