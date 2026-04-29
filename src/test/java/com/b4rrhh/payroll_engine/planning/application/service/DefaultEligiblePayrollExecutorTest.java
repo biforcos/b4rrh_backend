@@ -368,6 +368,10 @@ class DefaultEligiblePayrollExecutorTest {
             public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
                 return false;
             }
+            @Override
+            public Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+                return Optional.empty();
+            }
         };
     }
 

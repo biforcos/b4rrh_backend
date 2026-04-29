@@ -5,6 +5,7 @@ import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentCont
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Output port for persisting and querying {@link ConceptAssignment} records.
@@ -65,6 +66,8 @@ public interface ConceptAssignmentRepository {
      * domain model gains an {@code assignmentCode} field, a {@code deleteByAssignmentCode}
      * variant should be added; the controller cannot use the surrogate id directly.
      */
+    Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode);
+
     void deleteById(Long id);
 
     /**

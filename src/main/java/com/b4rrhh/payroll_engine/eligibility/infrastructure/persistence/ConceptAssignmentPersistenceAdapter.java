@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRepository {
@@ -55,6 +56,14 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+        if (id == null) return Optional.empty();
+        return springDataRepo.findByIdAndRuleSystemCode(id, ruleSystemCode)
+                .map(this::toDomain);
+    }
+
+    @Override
     public void deleteById(Long id) {
         if (id == null) {
             return;
@@ -84,6 +93,7 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
         e.setValidFrom(domain.getValidFrom());
         e.setValidTo(domain.getValidTo());
         e.setPriority(domain.getPriority());
+        if (domain.getCreatedAt() != null) e.setCreatedAt(domain.getCreatedAt());
         return e;
     }
 

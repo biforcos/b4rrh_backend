@@ -4575,6 +4575,39 @@ paths:
                 $ref: '#/components/schemas/ConceptAssignmentResponse'
 
   /payroll-engine/{ruleSystemCode}/assignments/{assignmentCode}:
+    put:
+      tags:
+        - Payroll Engine
+      summary: Update a concept assignment rule
+      operationId: updateConceptAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: assignmentCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConceptAssignmentRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptAssignmentResponse'
+        '404':
+          description: Not found
     delete:
       tags:
         - Payroll Engine
@@ -7932,6 +7965,29 @@ components:
           type: string
           format: date
           nullable: true
+
+    UpdateConceptAssignmentRequest:
+      type: object
+      required: [validFrom, priority]
+      properties:
+        companyCode:
+          type: string
+          nullable: true
+        agreementCode:
+          type: string
+          nullable: true
+        employeeTypeCode:
+          type: string
+          nullable: true
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: integer
 
     CreateConceptAssignmentRequest:
       type: object

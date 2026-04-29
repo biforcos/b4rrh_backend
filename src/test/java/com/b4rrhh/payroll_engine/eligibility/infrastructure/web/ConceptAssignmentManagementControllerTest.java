@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -108,6 +109,67 @@ class ConceptAssignmentManagementControllerTest {
         body.put("priority", 0);
 
         mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateAssignment_returns200WithUpdatedFields() throws Exception {
+        Map<String, Object> createBody = new LinkedHashMap<>();
+        createBody.put("conceptCode", CONCEPT_CODE);
+        createBody.put("validFrom", "2025-01-01");
+        createBody.put("priority", 10);
+
+        var created = mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createBody)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String assignmentCode = objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("assignmentCode").asText();
+
+        Map<String, Object> updateBody = new LinkedHashMap<>();
+        updateBody.put("validFrom", "2025-06-01");
+        updateBody.put("validTo", "2026-12-31");
+        updateBody.put("priority", 99);
+        updateBody.put("companyCode", "EMP1");
+
+        mockMvc.perform(put("/payroll-engine/{rs}/assignments/{code}", RULE_SYSTEM_CODE, assignmentCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignmentCode").value(assignmentCode))
+                .andExpect(jsonPath("$.conceptCode").value(CONCEPT_CODE))
+                .andExpect(jsonPath("$.validFrom").value("2025-06-01"))
+                .andExpect(jsonPath("$.validTo").value("2026-12-31"))
+                .andExpect(jsonPath("$.priority").value(99))
+                .andExpect(jsonPath("$.companyCode").value("EMP1"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateAssignment_returns404WhenAssignmentCodeIsUnknown() throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("validFrom", "2025-01-01");
+        body.put("priority", 5);
+
+        mockMvc.perform(put("/payroll-engine/{rs}/assignments/{code}", RULE_SYSTEM_CODE, "999999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateAssignment_returns404WhenAssignmentCodeIsNotNumeric() throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("validFrom", "2025-01-01");
+        body.put("priority", 5);
+
+        mockMvc.perform(put("/payroll-engine/{rs}/assignments/{code}", RULE_SYSTEM_CODE, "not-a-uuid")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isNotFound());

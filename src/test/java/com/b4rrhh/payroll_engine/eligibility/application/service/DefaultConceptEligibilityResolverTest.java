@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -185,6 +186,10 @@ class DefaultConceptEligibilityResolverTest {
             @Override
             public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
                 return false;
+            }
+            @Override
+            public Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
+                return Optional.empty();
             }
         };
         return new DefaultConceptEligibilityResolver(fakeRepo);

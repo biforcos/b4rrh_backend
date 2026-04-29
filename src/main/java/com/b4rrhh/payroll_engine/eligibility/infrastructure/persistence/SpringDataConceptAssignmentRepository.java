@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface SpringDataConceptAssignmentRepository extends JpaRepository<ConceptAssignmentEntity, Long> {
 
@@ -64,4 +65,6 @@ public interface SpringDataConceptAssignmentRepository extends JpaRepository<Con
     );
 
     boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode);
+
+    Optional<ConceptAssignmentEntity> findByIdAndRuleSystemCode(Long id, String ruleSystemCode);
 }

@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.eligibility.infrastructure.web;
 
 import com.b4rrhh.payroll_engine.eligibility.application.usecase.CreateConceptAssignmentCommand;
+import com.b4rrhh.payroll_engine.eligibility.application.usecase.UpdateConceptAssignmentCommand;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,23 @@ public class ConceptAssignmentManagementAssembler {
         return new CreateConceptAssignmentCommand(
                 ruleSystemCode,
                 request.conceptCode(),
+                request.companyCode(),
+                request.agreementCode(),
+                request.employeeTypeCode(),
+                request.validFrom(),
+                request.validTo(),
+                request.priority()
+        );
+    }
+
+    public UpdateConceptAssignmentCommand toUpdateCommand(
+            String ruleSystemCode,
+            String assignmentCode,
+            UpdateConceptAssignmentRequest request
+    ) {
+        return new UpdateConceptAssignmentCommand(
+                ruleSystemCode,
+                assignmentCode,
                 request.companyCode(),
                 request.agreementCode(),
                 request.employeeTypeCode(),
