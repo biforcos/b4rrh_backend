@@ -2,6 +2,7 @@ package com.b4rrhh.payroll_engine.segment.domain.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 /**
  * Captures all data needed to calculate a single CalculationSegment for one employee.
@@ -44,6 +45,7 @@ public final class SegmentCalculationContext {
 
     private final BigDecimal workingTimePercentage;
     private final BigDecimal monthlySalaryAmount;
+    private final Map<String, BigDecimal> employeeInputs;
 
     public SegmentCalculationContext(
             String ruleSystemCode,
@@ -58,7 +60,8 @@ public final class SegmentCalculationContext {
             long daysInPeriod,
             long daysInSegment,
             BigDecimal workingTimePercentage,
-            BigDecimal monthlySalaryAmount
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -85,6 +88,7 @@ public final class SegmentCalculationContext {
         }
         requireNonNull(workingTimePercentage, "workingTimePercentage");
         requireNonNull(monthlySalaryAmount, "monthlySalaryAmount");
+        requireNonNull(employeeInputs, "employeeInputs");
         this.ruleSystemCode = ruleSystemCode;
         this.employeeTypeCode = employeeTypeCode;
         this.employeeNumber = employeeNumber;
@@ -98,6 +102,7 @@ public final class SegmentCalculationContext {
         this.daysInSegment = daysInSegment;
         this.workingTimePercentage = workingTimePercentage;
         this.monthlySalaryAmount = monthlySalaryAmount;
+        this.employeeInputs = employeeInputs;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -113,4 +118,5 @@ public final class SegmentCalculationContext {
     public long getDaysInSegment() { return daysInSegment; }
     public BigDecimal getWorkingTimePercentage() { return workingTimePercentage; }
     public BigDecimal getMonthlySalaryAmount() { return monthlySalaryAmount; }
+    public Map<String, BigDecimal> getEmployeeInputs() { return employeeInputs; }
 }

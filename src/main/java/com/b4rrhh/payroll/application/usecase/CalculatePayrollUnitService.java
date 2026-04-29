@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.AgreementProfileContext;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileContext;
+import com.b4rrhh.payroll.application.port.EmployeePayrollInputLookupPort;
 import com.b4rrhh.payroll.application.port.WorkCenterProfileContext;
 import com.b4rrhh.payroll.application.port.WorkCenterProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
@@ -64,6 +65,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final AgreementProfileLookupPort agreementProfileLookupPort;
     private final WorkCenterProfileLookupPort workCenterProfileLookupPort;
     private final Map<String, TechnicalConceptCalculator> technicalCalculatorsMap;
+    private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -75,7 +77,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             EmployeePersonalDataLookupPort employeePersonalDataLookupPort,
             AgreementProfileLookupPort agreementProfileLookupPort,
             WorkCenterProfileLookupPort workCenterProfileLookupPort,
-            List<TechnicalConceptCalculator> technicalConceptCalculators
+            List<TechnicalConceptCalculator> technicalConceptCalculators,
+            EmployeePayrollInputLookupPort employeePayrollInputLookupPort
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -88,6 +91,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.workCenterProfileLookupPort = workCenterProfileLookupPort;
         this.technicalCalculatorsMap = technicalConceptCalculators.stream()
                 .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
+        this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
     }
 
     @Override
@@ -193,6 +197,14 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         Map<ConceptNodeIdentity, BigDecimal> composedState = new HashMap<>();
         List<ConceptRow> payslipRows = new ArrayList<>();
 
+        int period = command.periodStart().getYear() * 100 + command.periodStart().getMonthValue();
+        Map<String, BigDecimal> employeeInputsForPeriod = employeePayrollInputLookupPort.findInputsByPeriod(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                period
+        );
+
         for (SegmentSpec seg : segments) {
             log.info("[NÓMINA] ▶ Segmento {} → {} ({} días, jornada={}%)",
                     seg.segmentStart(), seg.segmentEnd(), seg.daysInSegment(), seg.workingTimePercentage());
@@ -256,6 +268,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         }
                         amount = calculator.resolve(techData);
                         log.info("[NÓMINA] [{}/{}] {} JAVA_PROVIDED → {}",
+                                step, total, conceptCode, amount);
+                    }
+                    case EMPLOYEE_INPUT -> {
+                        amount = employeeInputsForPeriod.getOrDefault(conceptCode, BigDecimal.ZERO);
+                        log.info("[NÓMINA] [{}/{}] {} EMPLOYEE_INPUT → {}",
                                 step, total, conceptCode, amount);
                     }
                     default -> throw new UnsupportedOperationException(
