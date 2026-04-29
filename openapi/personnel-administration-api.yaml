@@ -4244,6 +4244,69 @@ paths:
               schema:
                 $ref: "#/components/schemas/PayrollErrorResponse"
 
+  /payrolls/invalidate-bulk:
+    post:
+      summary: Bulk invalidate payrolls
+      operationId: bulkInvalidatePayroll
+      tags:
+        - Payroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkInvalidatePayrollRequest"
+      responses:
+        "200":
+          description: Bulk invalidation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkInvalidatePayrollResponse"
+
+  /payroll/calculation-runs/launch:
+    post:
+      summary: Launch a payroll calculation run
+      operationId: launchPayrollCalculation
+      tags:
+        - Payroll Calculation Run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchPayrollCalculationRequest"
+      responses:
+        "201":
+          description: Calculation run created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollCalculationRunResponse"
+
+  /payroll/calculation-runs/{runId}:
+    get:
+      summary: Get a payroll calculation run by ID
+      operationId: getPayrollCalculationRun
+      tags:
+        - Payroll Calculation Run
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Calculation run found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollCalculationRunResponse"
+        "404":
+          description: Run not found
+
   /payroll-engine/{ruleSystemCode}/concepts:
     get:
       tags:
@@ -4718,6 +4781,154 @@ paths:
 
 components:
   schemas:
+    PayrollLaunchTargetSelectionType:
+      type: string
+      enum:
+        - ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD
+        - EMPLOYEE_LIST
+        - SINGLE_EMPLOYEE
+
+    PayrollLaunchEmployeeTargetRequest:
+      type: object
+      required:
+        - employeeTypeCode
+        - employeeNumber
+      properties:
+        employeeTypeCode:
+          type: string
+        employeeNumber:
+          type: string
+
+    PayrollLaunchTargetSelectionRequest:
+      type: object
+      required:
+        - selectionType
+      properties:
+        selectionType:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionType"
+        employee:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PayrollLaunchEmployeeTargetRequest"
+        employees:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/PayrollLaunchEmployeeTargetRequest"
+
+    LaunchPayrollCalculationRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - calculationEngineCode
+        - calculationEngineVersion
+        - targetSelection
+      properties:
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        calculationEngineCode:
+          type: string
+        calculationEngineVersion:
+          type: string
+        targetSelection:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
+
+    PayrollCalculationRunResponse:
+      type: object
+      properties:
+        runId:
+          type: integer
+          format: int64
+        status:
+          type: string
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        calculationEngineCode:
+          type: string
+        calculationEngineVersion:
+          type: string
+        totalCandidates:
+          type: integer
+        totalEligible:
+          type: integer
+        totalClaimed:
+          type: integer
+        totalSkippedNotEligible:
+          type: integer
+        totalSkippedAlreadyClaimed:
+          type: integer
+        totalCalculated:
+          type: integer
+        totalNotValid:
+          type: integer
+        totalErrors:
+          type: integer
+        requestedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    BulkInvalidatePayrollRequest:
+      type: object
+      required:
+        - ruleSystemCode
+        - payrollPeriodCode
+        - payrollTypeCode
+        - statusReasonCode
+        - targetSelection
+      properties:
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        statusReasonCode:
+          type: string
+        targetSelection:
+          $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
+
+    BulkInvalidatePayrollResponse:
+      type: object
+      properties:
+        ruleSystemCode:
+          type: string
+        payrollPeriodCode:
+          type: string
+        payrollTypeCode:
+          type: string
+        totalCandidates:
+          type: integer
+        totalFound:
+          type: integer
+        totalInvalidated:
+          type: integer
+        totalSkippedAlreadyNotValid:
+          type: integer
+        totalSkippedProtected:
+          type: integer
+        totalSkippedNotFound:
+          type: integer
+        statusReasonCode:
+          type: string
+
     HireEmployeeRequest:
       type: object
       required:
