@@ -13,13 +13,11 @@ import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphB
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateConceptIdentityException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateOperandDefinitionException;
-import com.b4rrhh.payroll_engine.execution.domain.exception.MissingAggregateSourcesException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
-import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
@@ -28,10 +26,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link DefaultExecutionPlanBuilder}.
@@ -580,15 +578,19 @@ class ExecutionPlanBuilderTest {
     }
 
     @Test
-    void missingAggregateSourcesThrowsMissingAggregateSourcesException() {
-        // TOTAL node is in the graph but has no declared dependencies.
+    void aggregateWithNoSourcesProducesEmptySourcesList() {
         PayrollConcept total = concept("TOTAL_ISOLATED", CalculationType.AGGREGATE);
         ConceptDependencyGraph graph = new ConceptDependencyGraphBuilder()
                 .addNode(total)
                 .build();
 
-        assertThrows(MissingAggregateSourcesException.class,
-                () -> builder.build(graph, List.of(total), LocalDate.of(2025, 1, 1)));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total), LocalDate.of(2025, 1, 1));
+
+        assertEquals(1, plan.size());
+        ConceptExecutionPlanEntry entry = plan.getFirst();
+        assertEquals("TOTAL_ISOLATED", entry.identity().getConceptCode());
+        assertEquals(CalculationType.AGGREGATE, entry.calculationType());
+        assertTrue(entry.aggregateSources().isEmpty());
     }
 
     // ── PERCENTAGE enrichment ─────────────────────────────────────────────────

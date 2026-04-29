@@ -12,7 +12,6 @@ import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateAggregateSourceException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateConceptIdentityException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateOperandDefinitionException;
-import com.b4rrhh.payroll_engine.execution.domain.exception.MissingAggregateSourcesException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
@@ -123,7 +122,8 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         if (calculationType == CalculationType.AGGREGATE) {
             Set<ConceptNodeIdentity> graphDeps = graph.getDependenciesOf(identity);
             if (graphDeps.isEmpty()) {
-                throw new MissingAggregateSourcesException(identity);
+                log.debug("[ENGINE]     PLAN {} | AGGREGATE sin fuentes → resultado 0", identity.getConceptCode());
+                return new ConceptExecutionPlanEntry(identity, calculationType, Map.of(), List.of());
             }
 
             Long targetObjectId = concept.getObject().getId();
