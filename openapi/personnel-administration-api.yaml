@@ -7913,6 +7913,9 @@ components:
         persistToConcepts:
           type: boolean
           default: true
+        summary:
+          type: string
+          nullable: true
 
     PayrollConceptDesignerResponse:
       type: object

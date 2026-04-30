@@ -44,7 +44,7 @@ class CreatePayrollConceptServiceTest {
         CreatePayrollConceptCommand command = new CreatePayrollConceptCommand(
                 "ES", "201", "PLUS_TRANSPORTE",
                 CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING,
-                ResultCompositionMode.ACCUMULATE, ExecutionScope.SEGMENT, "20", true
+                ResultCompositionMode.ACCUMULATE, ExecutionScope.SEGMENT, "20", true, null
         );
         when(conceptRepository.existsByBusinessKey("ES", "201")).thenReturn(false);
         when(objectRepository.save(any(PayrollObject.class))).thenAnswer(invocation -> {
@@ -90,7 +90,7 @@ class CreatePayrollConceptServiceTest {
         CreatePayrollConceptCommand command = new CreatePayrollConceptCommand(
                 "ES", "101", "SALARIO_BASE",
                 CalculationType.DIRECT_AMOUNT, FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE, ExecutionScope.PERIOD, "10", true
+                ResultCompositionMode.REPLACE, ExecutionScope.PERIOD, "10", true, null
         );
         when(conceptRepository.existsByBusinessKey("ES", "101")).thenReturn(true);
 

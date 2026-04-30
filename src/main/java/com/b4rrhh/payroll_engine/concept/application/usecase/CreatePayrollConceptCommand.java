@@ -14,6 +14,7 @@ public record CreatePayrollConceptCommand(
         ResultCompositionMode resultCompositionMode,
         ExecutionScope executionScope,
         String payslipOrderCode,
-        boolean persistToConcepts
+        boolean persistToConcepts,
+        String summary
 ) {
 }

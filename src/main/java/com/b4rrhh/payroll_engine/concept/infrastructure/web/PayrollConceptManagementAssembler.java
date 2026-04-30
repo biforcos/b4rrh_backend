@@ -36,7 +36,8 @@ public class PayrollConceptManagementAssembler {
                 parseEnum(ResultCompositionMode.class, request.resultCompositionMode(), "resultCompositionMode"),
                 parseEnum(ExecutionScope.class, request.executionScope(), "executionScope"),
                 request.payslipOrderCode(),
-                request.persistToConcepts() != null ? request.persistToConcepts() : true
+                request.persistToConcepts() != null ? request.persistToConcepts() : true,
+                request.summary()
         );
     }
 
