@@ -367,3 +367,12 @@ The architecture decisions of this project are documented as ADRs.
 See:
 
 - docs/architecture/adr/ADR-001-vertical-architecture-and-api-identity.md
+
+
+## License
+
+This project is source-available under a Business Source License (BSL).
+
+Commercial use is not permitted without explicit authorization.
+
+See LICENSE.md for details.
