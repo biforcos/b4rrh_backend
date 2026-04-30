@@ -5,6 +5,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.object.domain.port.PayrollObjectRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -14,6 +15,15 @@ public class PayrollObjectPersistenceAdapter implements PayrollObjectRepository 
 
     public PayrollObjectPersistenceAdapter(SpringDataPayrollObjectRepository springDataRepository) {
         this.springDataRepository = springDataRepository;
+    }
+
+    @Override
+    public List<PayrollObject> findAllByType(String ruleSystemCode, PayrollObjectTypeCode objectTypeCode) {
+        return springDataRepository
+                .findAllByRuleSystemCodeAndObjectTypeCodeOrderByObjectCodeAsc(ruleSystemCode, objectTypeCode.name())
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
