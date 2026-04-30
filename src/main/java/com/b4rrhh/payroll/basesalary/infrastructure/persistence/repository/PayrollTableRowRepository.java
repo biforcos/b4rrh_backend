@@ -36,4 +36,10 @@ public interface PayrollTableRowRepository extends JpaRepository<PayrollTableRow
             @Param("effectiveDate") LocalDate effectiveDate,
             Pageable pageable
     );
+
+    List<PayrollTableRowEntity> findByRuleSystemCodeAndTableCodeOrderBySearchCodeAscStartDateAsc(
+            String ruleSystemCode, String tableCode);
+
+    boolean existsByRuleSystemCodeAndTableCodeAndSearchCodeAndStartDate(
+            String ruleSystemCode, String tableCode, String searchCode, LocalDate startDate);
 }
