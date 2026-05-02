@@ -41,6 +41,9 @@ public class EmployeeEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "photo_url")
+    private String photoUrl;
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
@@ -143,5 +146,13 @@ public class EmployeeEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public void setPhotoUrl(String photoUrl) {
+        this.photoUrl = photoUrl;
     }
 }

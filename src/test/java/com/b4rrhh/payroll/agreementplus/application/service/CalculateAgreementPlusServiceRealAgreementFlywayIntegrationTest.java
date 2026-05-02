@@ -87,6 +87,7 @@ class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
         copyMigration(migrationDirectory, "V68__seed_payroll_object_activation_for_plus_convenio_99002405011982.sql");
         copyMigration(migrationDirectory, "V69__seed_payroll_object_binding_for_plus_convenio_99002405011982.sql");
         copyMigration(migrationDirectory, "V70__seed_payroll_table_row_for_plus_convenio_pc_99002405011982.sql");
+        copyMigration(migrationDirectory, "V83__add_employee_photo_url.sql");
 
         recreateDatabase();
 

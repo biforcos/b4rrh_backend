@@ -791,7 +791,8 @@ class RehireEmployeeServiceTest {
                 "Ani",
                 status,
                 LocalDateTime.now(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
     }
 

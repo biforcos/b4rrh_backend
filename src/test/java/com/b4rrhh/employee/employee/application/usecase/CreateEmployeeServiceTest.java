@@ -57,7 +57,7 @@ class CreateEmployeeServiceTest {
     @Test
     void failsWhenEmployeeWithSameBusinessKeyAlreadyExists() {
         Employee existing = new Employee(1L, "ESP", "ORD", "00001", "Juan", "García", null, null,
-                "ACTIVE", java.time.LocalDateTime.now(), java.time.LocalDateTime.now());
+                "ACTIVE", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), null);
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "ORD", "00001"))
                 .thenReturn(Optional.of(existing));
 

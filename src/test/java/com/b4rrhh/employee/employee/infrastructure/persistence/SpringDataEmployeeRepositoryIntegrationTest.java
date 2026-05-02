@@ -43,7 +43,8 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                     preferred_name varchar(300),
                     status varchar(30) not null,
                     created_at timestamp not null,
-                    updated_at timestamp not null
+                    updated_at timestamp not null,
+                    photo_url varchar(512)
                 )
                 """);
 

@@ -339,7 +339,8 @@ public class TerminateEmployeeService implements TerminateEmployeeUseCase {
                 employee.getPreferredName(),
                 TERMINATED_STATUS,
                 employee.getCreatedAt(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                employee.getPhotoUrl()
         ));
 
         List<Presence> presencesAfterClose = listEmployeePresencesUseCase

@@ -394,6 +394,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                     status varchar(30) not null default 'ACTIVE',
                     created_at timestamp not null default now(),
                     updated_at timestamp not null default now(),
+                    photo_url varchar(512),
                     constraint fk_employee_rule_system_code foreign key (rule_system_code) references rulesystem.rule_system(code),
                     constraint uk_employee_business_key unique (rule_system_code, employee_type_code, employee_number)
                 );

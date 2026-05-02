@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -16,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableConfigurationProperties({JwtProperties.class, DevAuthProperties.class})
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtProperties jwtProperties;

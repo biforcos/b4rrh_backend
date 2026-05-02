@@ -15,6 +15,7 @@ public class Employee {
     private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
+    private final String photoUrl;
 
     public Employee(
             Long id,
@@ -27,7 +28,8 @@ public class Employee {
             String preferredName,
             String status,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            LocalDateTime updatedAt,
+            String photoUrl
     ) {
         this.id = id;
         this.ruleSystemCode = ruleSystemCode;
@@ -40,6 +42,7 @@ public class Employee {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.photoUrl = photoUrl;
     }
 
     public Long getId() { return id; }
@@ -53,6 +56,7 @@ public class Employee {
     public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public String getPhotoUrl() { return photoUrl; }
 
     public boolean isActive() {
         return EmployeeStatus.ACTIVE.matches(status);
@@ -62,40 +66,26 @@ public class Employee {
         return EmployeeStatus.TERMINATED.matches(status);
     }
 
+    public Employee withPhotoUrl(String photoUrl) {
+        return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
+                firstName, lastName1, lastName2, preferredName, status,
+                createdAt, updatedAt, photoUrl);
+    }
+
+    public Employee withoutPhotoUrl() {
+        return withPhotoUrl(null);
+    }
+
     public Employee activate() {
-        return new Employee(
-                id,
-                ruleSystemCode,
-                employeeTypeCode,
-                employeeNumber,
-                firstName,
-                lastName1,
-                lastName2,
-                preferredName,
-                EmployeeStatus.ACTIVE.name(),
-                createdAt,
-                LocalDateTime.now()
-        );
+        return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
+                firstName, lastName1, lastName2, preferredName,
+                EmployeeStatus.ACTIVE.name(), createdAt, LocalDateTime.now(), photoUrl);
     }
 
     public Employee updateIdentityFields(
-            String firstName,
-            String lastName1,
-            String lastName2,
-            String preferredName
-    ) {
-        return new Employee(
-                id,
-                ruleSystemCode,
-                employeeTypeCode,
-                employeeNumber,
-                firstName,
-                lastName1,
-                lastName2,
-                preferredName,
-                status,
-                createdAt,
-                LocalDateTime.now()
-        );
+            String firstName, String lastName1, String lastName2, String preferredName) {
+        return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
+                firstName, lastName1, lastName2, preferredName, status,
+                createdAt, LocalDateTime.now(), photoUrl);
     }
 }

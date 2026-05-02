@@ -60,7 +60,8 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
                 entity.getPreferredName(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getPhotoUrl()
         );
     }
 
@@ -77,6 +78,7 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
         entity.setStatus(employee.getStatus());
         entity.setCreatedAt(employee.getCreatedAt());
         entity.setUpdatedAt(employee.getUpdatedAt());
+        entity.setPhotoUrl(employee.getPhotoUrl());
         return entity;
     }
 }

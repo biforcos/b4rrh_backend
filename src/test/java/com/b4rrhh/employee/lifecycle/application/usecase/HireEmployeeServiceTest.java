@@ -109,7 +109,7 @@ class HireEmployeeServiceTest {
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
                         100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
-                        LocalDateTime.now(), LocalDateTime.now()
+                        LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(new Presence(
@@ -187,7 +187,7 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = validCommand();
         Employee existingEmployee = new Employee(
                 1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
-                LocalDateTime.now(), LocalDateTime.now()
+                LocalDateTime.now(), LocalDateTime.now(), null
         );
 
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
@@ -206,7 +206,7 @@ class HireEmployeeServiceTest {
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
                         1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "ACTIVE",
-                        LocalDateTime.now(), LocalDateTime.now()
+                        LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenThrow(new PresenceCatalogValueInvalidException("companyCode", "BAD"));
@@ -223,7 +223,7 @@ class HireEmployeeServiceTest {
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
                         1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "ACTIVE",
-                        LocalDateTime.now(), LocalDateTime.now()
+                        LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(new Presence(1L, 1L, 1, "C", "R", null, LocalDate.now(), null, LocalDateTime.now(), LocalDateTime.now()));
@@ -343,7 +343,7 @@ class HireEmployeeServiceTest {
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
                         100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
-                        LocalDateTime.now(), LocalDateTime.now()
+                        LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(new Presence(
@@ -375,7 +375,7 @@ class HireEmployeeServiceTest {
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
                         100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
-                        LocalDateTime.now(), LocalDateTime.now()
+                        LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
                 .thenReturn(new Presence(
