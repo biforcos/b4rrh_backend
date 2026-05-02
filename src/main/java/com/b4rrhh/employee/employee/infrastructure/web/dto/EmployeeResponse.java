@@ -9,6 +9,7 @@ public record EmployeeResponse(
         String lastName1,
         String lastName2,
         String preferredName,
-        String status
+        String status,
+        String photoUrl
 ) {
 }

@@ -92,7 +92,8 @@ public class EmployeeBusinessKeyController {
                 employee.getLastName1(),
                 employee.getLastName2(),
                 employee.getPreferredName(),
-                employee.getStatus()
+                employee.getStatus(),
+                employee.getPhotoUrl()
         );
     }
 }

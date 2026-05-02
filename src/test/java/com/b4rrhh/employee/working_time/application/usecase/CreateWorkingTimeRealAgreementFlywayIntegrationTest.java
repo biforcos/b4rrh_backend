@@ -86,6 +86,7 @@ class CreateWorkingTimeRealAgreementFlywayIntegrationTest {
         copyMigration(migrationDirectory, "V49__seed_esp_baseline_rule_system.sql");
         copyMigration(migrationDirectory, "V59__create_agreement_profile_table.sql");
         copyMigration(migrationDirectory, "V61__seed_esp_real_agreement_boe_a_2023_13740.sql");
+        copyMigration(migrationDirectory, "V83__add_employee_photo_url.sql");
 
         recreateDatabase();
 

@@ -57,6 +57,7 @@ class EmployeeAgreementContextLookupAdapterTest {
                     status varchar(30) not null,
                     created_at timestamp not null default current_timestamp,
                     updated_at timestamp not null default current_timestamp,
+                    photo_url varchar(512),
                     constraint uk_employee_business unique (rule_system_code, employee_type_code, employee_number)
                 )
                 """);

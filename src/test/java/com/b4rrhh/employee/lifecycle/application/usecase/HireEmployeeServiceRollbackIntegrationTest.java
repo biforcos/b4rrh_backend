@@ -72,6 +72,7 @@ class HireEmployeeServiceRollbackIntegrationTest {
                     status varchar(30) not null,
                     created_at timestamp not null,
                     updated_at timestamp not null,
+                    photo_url varchar(512),
                     constraint uk_employee_business_key unique (rule_system_code, employee_type_code, employee_number)
                 )
                 """);

@@ -47,7 +47,8 @@ class GetEmployeeByBusinessKeyServiceTest {
                 null,
                 "ACTIVE",
                 LocalDateTime.now(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
 
         when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));

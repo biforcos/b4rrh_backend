@@ -153,7 +153,8 @@ class UpdateEmployeeServiceTest {
                 preferredName,
                 status,
                 LocalDateTime.now().minusDays(1),
-                LocalDateTime.now().minusDays(1)
+                LocalDateTime.now().minusDays(1),
+                null
         );
     }
 

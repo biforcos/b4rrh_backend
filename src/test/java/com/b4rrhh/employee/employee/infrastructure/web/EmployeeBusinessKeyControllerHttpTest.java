@@ -68,7 +68,8 @@ class EmployeeBusinessKeyControllerHttpTest {
                         "Ali",
                         "ACTIVE",
                         LocalDateTime.now(),
-                        LocalDateTime.now()
+                        LocalDateTime.now(),
+                        null
                 ));
 
         mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001")

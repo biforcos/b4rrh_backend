@@ -89,6 +89,7 @@ class CalculateBaseSalaryServiceRealAgreementFlywayIntegrationTest {
         copyMigration(migrationDirectory, "V65__seed_payroll_object_activation_for_agreement_99002405011982.sql");
         copyMigration(migrationDirectory, "V66__seed_payroll_object_binding_for_agreement_99002405011982.sql");
         copyMigration(migrationDirectory, "V67__seed_payroll_table_row_for_base_salary_sb_99002405011982.sql");
+        copyMigration(migrationDirectory, "V83__add_employee_photo_url.sql");
 
         recreateDatabase();
 
