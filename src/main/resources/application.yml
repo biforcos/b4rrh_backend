@@ -46,3 +46,10 @@ payroll:
     execution:
       mode: ELIGIBLE_REAL
       collapse-segment-rows: true
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: b4rrhh
+  secret-key: b4rrhh123
+  bucket-name: b4rrhh-employee-photos
+  presigned-url-expiry-minutes: 10
