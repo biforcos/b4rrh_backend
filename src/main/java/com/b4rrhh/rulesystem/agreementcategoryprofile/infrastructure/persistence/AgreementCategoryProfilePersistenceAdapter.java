@@ -25,6 +25,11 @@ public class AgreementCategoryProfilePersistenceAdapter implements AgreementCate
     }
 
     @Override
+    public Optional<String> findGrupoCotizacionCodeByCategoryCode(String ruleSystemCode, String categoryCode) {
+        return springDataRepository.findGrupoCotizacionCodeByCategoryCode(ruleSystemCode, categoryCode);
+    }
+
+    @Override
     public AgreementCategoryProfile save(Long categoryRuleEntityId, AgreementCategoryProfile profile) {
         AgreementCategoryProfileEntity entity = springDataRepository
                 .findByAgreementCategoryRuleEntityId(categoryRuleEntityId)

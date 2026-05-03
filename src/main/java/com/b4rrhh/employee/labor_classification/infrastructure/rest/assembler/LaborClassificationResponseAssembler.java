@@ -23,12 +23,16 @@ public class LaborClassificationResponseAssembler {
         String agreementCategoryName = laborClassificationCatalogReadPort
                 .findAgreementCategoryName(ruleSystemCode, laborClassification.getAgreementCategoryCode())
                 .orElse(null);
+        String grupoCotizacionCode = laborClassificationCatalogReadPort
+                .findGrupoCotizacionCode(ruleSystemCode, laborClassification.getAgreementCategoryCode())
+                .orElse(null);
 
         return new LaborClassificationResponse(
                 laborClassification.getAgreementCode(),
                 agreementName,
                 laborClassification.getAgreementCategoryCode(),
                 agreementCategoryName,
+                grupoCotizacionCode,
                 laborClassification.getStartDate(),
                 laborClassification.getEndDate()
         );

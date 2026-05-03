@@ -37,6 +37,8 @@ class LaborClassificationResponseAssemblerTest {
                 .thenReturn(Optional.of("Office Agreement"));
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
                 .thenReturn(Optional.of("Administrative Category"));
+        when(laborClassificationCatalogReadPort.findGrupoCotizacionCode("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.of("05"));
 
         LaborClassificationResponse response = assembler.toResponse("ESP", laborClassification);
 
@@ -44,6 +46,7 @@ class LaborClassificationResponseAssemblerTest {
         assertEquals("Office Agreement", response.agreementName());
         assertEquals("CAT_ADMIN", response.agreementCategoryCode());
         assertEquals("Administrative Category", response.agreementCategoryName());
+        assertEquals("05", response.grupoCotizacionCode());
     }
 
     @Test
@@ -58,6 +61,8 @@ class LaborClassificationResponseAssemblerTest {
                 .thenReturn(Optional.empty());
         when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
                 .thenReturn(Optional.empty());
+        when(laborClassificationCatalogReadPort.findGrupoCotizacionCode("ESP", "CAT_ADMIN"))
+                .thenReturn(Optional.empty());
 
         LaborClassificationResponse response = assembler.toResponse("ESP", laborClassification);
 
@@ -65,6 +70,7 @@ class LaborClassificationResponseAssemblerTest {
         assertEquals("CAT_ADMIN", response.agreementCategoryCode());
         assertNull(response.agreementName());
         assertNull(response.agreementCategoryName());
+        assertNull(response.grupoCotizacionCode());
     }
 
     private LaborClassification laborClassification(
