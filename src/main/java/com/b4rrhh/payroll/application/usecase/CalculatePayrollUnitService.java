@@ -101,10 +101,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
 
     @Override
     public Payroll calculate(CalculatePayrollUnitCommand command) {
-        return switch (payrollLaunchExecutionProperties.getMode()) {
-            case ELIGIBLE_REAL -> calculateEligibleReal(command);
-            case FAKE -> calculateFake(command);
-        };
+        return calculateEligibleReal(command);
     }
 
     private Payroll calculateEligibleReal(CalculatePayrollUnitCommand command) {
@@ -126,7 +123,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     "ELIGIBLE_INPUT_CONTEXT_NOT_FOUND",
                     "Eligible real execution skipped: launcher input context is missing for payroll unit",
                     Map.of(
-                            "executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name(),
+                            "executionMode", "ELIGIBLE_REAL",
                             "employeeTypeCode", command.employeeTypeCode(),
                             "employeeNumber", command.employeeNumber(),
                             "presenceNumber", command.presenceNumber()
@@ -139,14 +136,14 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             throw new PayrollLaunchInputMissingException(
                     "AGREEMENT_CODE_MISSING",
                     "Eligible real execution skipped: agreementCode is required but missing in launcher context",
-                    Map.of("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name())
+                    Map.of("executionMode", "ELIGIBLE_REAL")
             );
         }
         if (input.agreementCategoryCode() == null || input.agreementCategoryCode().isBlank()) {
             throw new PayrollLaunchInputMissingException(
                     "AGREEMENT_CATEGORY_MISSING",
                     "Eligible real execution skipped: agreementCategoryCode is required but missing in launcher context",
-                    Map.of("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name())
+                    Map.of("executionMode", "ELIGIBLE_REAL")
             );
         }
 
@@ -571,7 +568,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             PayrollLaunchEligibleInputContext input
     ) {
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name());
+        details.put("executionMode", "ELIGIBLE_REAL");
         details.put("employeeTypeCode", command.employeeTypeCode());
         details.put("employeeNumber", command.employeeNumber());
         details.put("agreementCode", input.agreementCode());
@@ -712,7 +709,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         sourceKey.put("presenceNumber", command.presenceNumber());
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("executionMode", PayrollExecutionMode.ELIGIBLE_REAL.name());
+        payload.put("executionMode", "ELIGIBLE_REAL");
         payload.put("agreementCode", input.agreementCode());
         payload.put("agreementCategoryCode", input.agreementCategoryCode());
         payload.put("presenceStartDate", input.presenceStartDate() != null ? input.presenceStartDate().toString() : null);
@@ -723,67 +720,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 "PAYROLL_LAUNCH",
                 toJson(sourceKey),
                 toJson(payload)
-        );
-    }
-
-    private Payroll calculateFake(CalculatePayrollUnitCommand command) {
-        return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
-                command.ruleSystemCode(),
-                command.employeeTypeCode(),
-                command.employeeNumber(),
-                command.payrollPeriodCode(),
-                command.payrollTypeCode(),
-                command.presenceNumber(),
-                PayrollStatus.CALCULATED,
-                null,
-                LocalDateTime.now(),
-                command.calculationEngineCode(),
-                command.calculationEngineVersion(),
-                fakeWarnings(command),
-                fakeConcepts(command),
-                List.of(fakeSnapshot(command)),
-                List.of()
-        ));
-    }
-
-    private List<PayrollConcept> fakeConcepts(CalculatePayrollUnitCommand command) {
-        return List.of(
-                new PayrollConcept(1, "BASE_FAKE", "Base fake amount", new BigDecimal("1000.00"), BigDecimal.ONE, new BigDecimal("1000.00"), "EARNING", command.payrollPeriodCode(), 1),
-                new PayrollConcept(2, "SENIORITY_FAKE", "Seniority fake bonus", new BigDecimal("150.00"), BigDecimal.ONE, new BigDecimal("150.00"), "EARNING", command.payrollPeriodCode(), 2),
-                new PayrollConcept(3, "TRANSPORT_FAKE", "Transport fake allowance", new BigDecimal("80.00"), BigDecimal.ONE, new BigDecimal("80.00"), "EARNING", command.payrollPeriodCode(), 3),
-                new PayrollConcept(4, "BONUS_FAKE", "Performance fake bonus", new BigDecimal("120.00"), BigDecimal.ONE, new BigDecimal("120.00"), "EARNING", command.payrollPeriodCode(), 4),
-                new PayrollConcept(5, "OVERTIME_FAKE", "Overtime fake amount", new BigDecimal("50.00"), BigDecimal.ONE, new BigDecimal("50.00"), "EARNING", command.payrollPeriodCode(), 5),
-                new PayrollConcept(6, "GROSS_FAKE", "Gross fake amount", new BigDecimal("1400.00"), BigDecimal.ONE, new BigDecimal("1400.00"), "GROSS", command.payrollPeriodCode(), 6),
-                new PayrollConcept(7, "TAX_FAKE", "Tax fake deduction", new BigDecimal("-210.00"), BigDecimal.ONE, new BigDecimal("210.00"), "DEDUCTION", command.payrollPeriodCode(), 7),
-                new PayrollConcept(8, "SS_FAKE", "Social security fake deduction", new BigDecimal("-90.00"), BigDecimal.ONE, new BigDecimal("90.00"), "DEDUCTION", command.payrollPeriodCode(), 8),
-                new PayrollConcept(9, "DEDUCTION_FAKE", "Other fake deduction", new BigDecimal("-20.00"), BigDecimal.ONE, new BigDecimal("20.00"), "DEDUCTION", command.payrollPeriodCode(), 9),
-                new PayrollConcept(10, "NET_FAKE", "Net fake amount", new BigDecimal("1080.00"), BigDecimal.ONE, new BigDecimal("1080.00"), "NET", command.payrollPeriodCode(), 10)
-        );
-    }
-
-    private List<PayrollWarning> fakeWarnings(CalculatePayrollUnitCommand command) {
-        return List.of(new PayrollWarning(
-                null,
-                null,
-                "DETERMINISTIC_FAKE_PAYROLL",
-                "INFO",
-                "Payroll generated by deterministic fake calculator",
-                "{\"calculationEngineCode\":\"" + command.calculationEngineCode() + "\",\"calculationEngineVersion\":\""
-                        + command.calculationEngineVersion() + "\",\"executionMode\":\"" + PayrollExecutionMode.FAKE.name() + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
-        ));
-    }
-
-    private PayrollContextSnapshot fakeSnapshot(CalculatePayrollUnitCommand command) {
-        return new PayrollContextSnapshot(
-                "EMPLOYEE_PAYROLL_CONTEXT",
-                "PAYROLL_LAUNCH",
-                "{\"ruleSystemCode\":\"" + command.ruleSystemCode() + "\",\"employeeTypeCode\":\""
-                        + command.employeeTypeCode() + "\",\"employeeNumber\":\"" + command.employeeNumber()
-                        + "\",\"payrollPeriodCode\":\"" + command.payrollPeriodCode() + "\",\"payrollTypeCode\":\""
-                        + command.payrollTypeCode() + "\",\"presenceNumber\":" + command.presenceNumber() + "}",
-                "{\"calculationEngineCode\":\"" + command.calculationEngineCode() + "\",\"calculationEngineVersion\":\""
-                        + command.calculationEngineVersion() + "\",\"executionMode\":\"" + PayrollExecutionMode.FAKE.name()
-                        + "\",\"mode\":\"DETERMINISTIC_FAKE\"}"
         );
     }
 
