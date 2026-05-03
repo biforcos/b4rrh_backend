@@ -24,6 +24,25 @@ services:
       - "9001:9001"
     volumes:
       - b4rrhh_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: b4rrhh-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 b4rrhh b4rrhh123;
+        mc mb --ignore-existing local/b4rrhh-employee-photos;
+        mc anonymous set download local/b4rrhh-employee-photos;
+      "
+    restart: "no"
 
 volumes:
   b4rrhh_postgres_data:
