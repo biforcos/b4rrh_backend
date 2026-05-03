@@ -1,378 +1,359 @@
-# B4RRHH Backend
+# B4RRHH — HR & Payroll Engine
 
-Backend for **B4RRHH**, a personal project to build a Human Resources application focused initially on **Personnel Administration for Spain**.
-
-The project is designed as an exploration of:
-
-- HR domain modeling
-- Historical and temporal data
-- Hexagonal architecture
-- Contract-first development
-- Controlled schema evolution
-- Separation between employee facts and rule-system parameterization
-
-This repository contains the backend component.
+> A personnel administration system and configurable payroll engine built around domain-driven design, hexagonal architecture, and temporal data integrity — with zero tolerance for shortcuts.
 
 ---
 
-## Project Structure
+## What problem does this solve?
 
-B4RRHH is split into separate repositories:
+HR and payroll systems tend to collapse under one of two failure modes:
 
-- `b4rrhh-backend`
-- `b4rrhh-frontend`
+- **Over-engineering early**: event buses, microservices, CQRS — before the domain is understood.
+- **Under-engineering late**: CRUD controllers that accumulate business logic until the system is unmaintainable.
 
-Each component is designed to be **fully autonomous**.
-
-Communication between frontend and backend is defined using **OpenAPI contracts**.
+B4RRHH takes a different path. It models **the actual domain** — employee lifecycle, temporal employment data, a graph-based payroll calculation engine — before introducing any infrastructure abstraction. The architecture follows from the domain, not from a framework tutorial.
 
 ---
 
-## Architecture Principles
+## Architecture at a glance
 
-The backend follows these architectural principles:
+```
+bounded context → vertical (domain slice) → hexagonal layer
+```
 
-- **Strict hexagonal architecture**
-- **Contract-first API design**
-- **Domain model independent from frameworks**
-- **Separation between employee facts and rule-system entities**
-- **Explicit database evolution using Flyway**
+```
+com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateService
+           ^^^^^^^^ ^^^^^^^^ ^^^^^^^^^^^
+           context  vertical     layer
+```
 
-### Technology Stack
+Two bounded contexts:
 
-- Java 21
-- Spring Boot
-- Maven
-- PostgreSQL
-- Flyway
-- JPA / Hibernate (infrastructure only)
-- Spring Security
-- OpenAPI
+| Context | Verticals |
+|---------|-----------|
+| `employee` | employee, presence, contact, address, identifier, contract, labor\_classification, cost\_center, work\_center, working\_time, payroll\_input |
+| `rulesystem` | company, company\_profile, work\_center, catalog\_binding, catalog\_option, rule\_entity |
+
+Hard rules enforced throughout:
+- Domain classes have **zero** Spring or JPA imports
+- Business logic never touches controllers or repositories
+- APIs expose **business keys only** — no surrogate IDs, ever
 
 ---
 
-## Run With Local Profile
+## The Payroll Engine
 
-The backend base configuration expects PostgreSQL running on `localhost:5432` with these credentials:
+This is the core of the system. It is not a calculator. It is a **configurable, graph-based execution engine** for payroll concepts.
 
-- database: `b4rrhh`
-- user: `b4rrhh`
-- password: `b4rrhh`
+### Eight modules with clear responsibilities
 
-You can start the local PostgreSQL instance defined in this repository with:
-
-```bash
-docker compose -f docker/postgres/docker-compose.yaml up -d
+```
+payroll_engine/
+├── concept      — concept catalog: calculation type, operands, feed relations
+├── object       — payroll objects (assignable salary tables)
+├── table        — salary value lookup tables
+├── eligibility  — determines which concepts apply to a payroll unit
+├── dependency   — builds the DAG of concept dependencies with cycle detection
+├── planning     — resolves topological execution order
+├── segment      — splits the calculation period at intra-period changes
+└── execution    — runs calculators per segment, accumulates results
 ```
 
-The `local` profile loads `application-local.yml` and enables local development helpers such as `app.dev-auth`.
+### Calculation types
 
-Start the backend with Maven and the `local` profile:
+Every payroll concept declares exactly how it computes its value:
 
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+| Type | Description |
+|------|-------------|
+| `DIRECT_AMOUNT` | Fixed amount from salary table lookup |
+| `RATE_BY_QUANTITY` | Rate × quantity (e.g. hours worked) |
+| `PERCENTAGE` | Percentage of another concept's result |
+| `AGGREGATE` | Sum of other concepts |
+| `ENGINE_PROVIDED` | Value injected by the engine (SS group, payroll type) |
+| `EMPLOYEE_INPUT` | Employee-declared value (e.g. voluntary pension) |
+| `GREATEST` | max(computed, floor) — used for SS contribution floors |
+| `LEAST` | min(computed, cap) — used for SS contribution caps |
+
+### Execution flow
+
+```
+Payroll Unit
+    │
+    ▼
+Eligibility Filter          ← which concepts apply to this employee?
+    │
+    ▼
+Dependency Graph Build      ← DAG construction, cycle detection
+    │
+    ▼
+Topological Sort            ← resolves execution order across the graph
+    │
+    ▼
+Segmentation                ← splits month at mid-period changes
+    │  (contract change on the 15th → two independent segments)
+    ▼
+Calculator Execution        ← runs per segment, per concept, in dependency order
+    │
+    ▼
+Result Accumulation         ← merges segments into final payroll totals
 ```
 
-Alternatively, you can activate it with an environment variable:
+No concept executes before its dependencies. No hardcoded payroll logic anywhere in the codebase.
 
-```bash
-SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+```mermaid
+flowchart TB
+    Launch[["POST /payrolls/launch"]]
+
+    subgraph Orchestration["Launch Orchestration"]
+        Run[calculation_run\ncreated + persisted]
+        Claim[calculation_claim\nunit-level mutex]
+    end
+
+    subgraph Selection["Population Resolution"]
+        Employees[Employee records]
+        Presences[Presence periods]
+        Inputs[Payroll inputs]
+    end
+
+    subgraph Engine["Payroll Engine"]
+        direction TB
+        Eligibility["Eligibility Filter\nwhich concepts apply?"]
+        Graph["Dependency Graph\nDAG + cycle detection"]
+        Topo["Topological Sort\nexecution order"]
+        Segments["Segmentation\nsplit at mid-period changes"]
+        Calc["Calculator Execution\nper segment · per concept · in order"]
+    end
+
+    subgraph Config["Engine Configuration (DB)"]
+        Concepts["Concepts\n8 calculation types"]
+        Assignments[Assignments]
+        Tables[Salary tables]
+        Feeds[Feed relations]
+        Operands[Operands]
+    end
+
+    subgraph Result["Payroll Result"]
+        Root[payroll root\nimmutable]
+        Lines[concept lines]
+        Snapshot[context snapshot]
+        Status["status workflow\nNOT_VALID → CALCULATED → CLOSED"]
+    end
+
+    Launch --> Run
+    Run --> Claim
+    Claim --> Selection
+    Selection --> Eligibility
+    Config --> Eligibility
+    Eligibility --> Graph
+    Feeds --> Graph
+    Operands --> Graph
+    Graph --> Topo
+    Topo --> Segments
+    Segments --> Calc
+    Tables --> Calc
+    Calc --> Root
+    Root --> Lines & Snapshot & Status
 ```
 
-In PowerShell, use:
+### Concurrent safety
 
-```powershell
-$env:SPRING_PROFILES_ACTIVE = "local"
+Payroll launches are protected by an explicit domain model — not a `synchronized` block:
+
+- **`calculation_run`** — persisted record of a launch: population, progress, status
+- **`calculation_claim`** — unit-level mutex; two concurrent runs cannot calculate the same payroll unit
+
+---
+
+## Temporal data integrity
+
+Most employee data is historized. The system enforces this without exception.
+
+### Strong Timeline Replace
+
+A reusable pattern (`StrongTimelineReplacePlanner`) governs any `replaceFromDate` operation across all temporal verticals:
+
+```
+Existing periods:     [Jan ─────────── Jun] [Jul ─────────── Dec]
+replaceFromDate(Mar):
+Result:               [Jan ── Feb] [Mar ──── Jun] [Jul ─────────── Dec]
+                                    ^^^^^^^^^^^^
+                                    new period, boundaries recalculated
+```
+
+Three outcomes — all handled, none silently ignored:
+
+- **Exact match** — new period replaces existing at the same start date
+- **Split** — existing period is divided; new period takes over from effective date
+- **No coverage** — rejected; gaps in the timeline are a domain error
+
+This same logic governs contracts, labor classifications, cost centers, work centers, and working time.
+
+---
+
+## Employee lifecycle as explicit workflows
+
+Creating an employee is not a POST to `/employees`. It is a **Hire workflow** that coordinates multiple verticals atomically:
+
+```
+HireEmployee
+├── create employee record
+├── open presence period
+├── assign contract
+├── assign labor classification
+├── assign cost center
+├── assign work center
+└── assign working time
+```
+
+`TerminateEmployee` and `RehireEmployee` follow the same discipline. Each workflow enforces cross-vertical consistency and temporal rules that cannot be expressed as independent CRUD operations.
+
+---
+
+## API design
+
+The API operates entirely on **functional identifiers**:
+
+```http
+GET  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contract
+PUT  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classification/replace-from-date
+GET  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}
+```
+
+No `id` path variable exists anywhere in this API. This is intentional and documented in [ADR-001](docs/architecture/adr/ADR-001-vertical-architecture-and-api-identity.md).
+
+---
+
+## Architecture Decision Records
+
+Every non-obvious decision is documented. There are currently **31 ADRs** covering:
+
+- Vertical architecture and API identity strategy
+- Employee business key design
+- Rule entity metamodel
+- Employee lifecycle workflows
+- Strong timeline replace pattern
+- Employee journey model
+- Cost center design
+- Company as enriched, rule-anchored catalog
+- Payroll status workflow and state machine
+- Payroll root model (immutable result, not editable record)
+- Concurrent launch orchestration with calculation\_run and claim
+- Hierarchical authorization model
+- UI interaction contracts per vertical
+
+Full bundle: [`docs/architecture/adr/ADR_BUNDLE.md`](docs/architecture/adr/ADR_BUNDLE.md)
+
+---
+
+## Domain coverage — Spain, Régimen General
+
+The system models real Spanish HR and payroll law through the concept graph — nothing hardcoded:
+
+- **Grupo de cotización** (SS contribution group, 1–11) — drives salary tables and contribution rates
+- **SS employer contributions**: contingencias comunes, desempleo (empresa), FOGASA, formación profesional, MEI
+- **SS worker deductions**: CC trabajador (4.70%), desempleo (1.55%), FP (0.10%), MEI (0.10%)
+- **IRPF withholding** with configurable rates per employee
+- **Convenio colectivo** — agreement category profiles with real salary tables
+- Topes de cotización (contribution floors and caps via `GREATEST` / `LEAST`)
+
+---
+
+## By the numbers
+
+| Metric | Value |
+|--------|-------|
+| Java source files | ~1,400 |
+| Test files | ~270 |
+| Flyway migrations | 91 |
+| Architecture Decision Records | 31 |
+| Payroll engine modules | 8 |
+| Calculation types | 8 |
+| Bounded contexts | 2 |
+| Employee domain verticals | 11 |
+
+---
+
+## Running the project
+
+**Requirements:** Java 21, Docker
+
+```bash
+# 1. Start PostgreSQL
+cd docker/postgres && docker compose up -d
+
+# 2. Run the application (Flyway migrations run automatically on startup)
 mvn spring-boot:run
+
+# 3. Run all tests (H2 in-memory — no Docker required)
+mvn test
+
+# Run a specific test class
+mvn test -Dtest=CalculatePayrollUnitServiceTest
+```
+
+Credentials: `b4rrhh / b4rrhh` at `localhost:5432/b4rrhh`
+
+---
+
+## Project structure
+
+```
+src/main/java/com/b4rrhh/
+├── employee/           ← 11 domain verticals
+├── rulesystem/         ← catalog and configuration management
+├── payroll/            ← payroll domain (launch, run, claim, result)
+├── payroll_engine/     ← 8-module graph-based calculation engine
+├── authorization/      ← JWT + role-based access (ADMIN, HR_MANAGER, HR_VIEWER)
+└── shared/             ← minimal cross-cutting abstractions
+
+src/main/resources/
+└── db/migration/       ← 91 Flyway migrations (schema evolution + seed data)
+
+openapi/
+└── personnel-administration-api.yaml   ← source of truth for the API contract
+
+docs/
+└── architecture/adr/   ← 31 Architecture Decision Records
 ```
 
 ---
 
-## Package Organization
+## Tech stack
 
-The codebase is organized **by business capability first**, then by layer:
-
-```
-com.b4rrhh
-├─ employee
-├─ rulesystem
-└─ shared
-```
-
-Each capability is internally split into:
-
-```
-domain
-application
-infrastructure
-```
-
-Example:
-
-```
-com.b4rrhh.employee
-├─ domain
-├─ application
-└─ infrastructure
-```
-
-This structure helps maintain clarity as the system grows.
+- **Java 21** — records, sealed classes, pattern matching
+- **Spring Boot 3.3** — web, data JPA, security
+- **PostgreSQL** — primary store
+- **Flyway** — schema versioning and seed data
+- **Docker** — local database
+- **H2** — test isolation (no external dependencies in CI)
 
 ---
 
-## TODO
+## Status
 
-- Normalize HTTP adapter package naming to a single convention (`infrastructure.rest` vs `infrastructure.web`).
+Active development. The payroll engine is the current focus: concept graph construction, segmentation, and real SS/IRPF calculations are working. The launch orchestration model (`calculation_run` + `calculation_claim`) is designed and partially implemented.
 
----
-
-## Domain Overview
-
-### Employee Module
-
-The `employee` module contains **employee-related business facts**.
-
-Examples of domain concepts:
-
-- Employee
-- EmployeePersonalData
-- EmployeeCompanyPresence
-- EmploymentContract
-
-These represent historical information about a person's employment lifecycle.
+This is a solo project. The pace is deliberate — correctness over speed.
 
 ---
 
-### Rule System Module
+## Why this exists
 
-The `rulesystem` module contains **parameterized entities** and configuration structures used by the rest of the system.
+Most HR backends I have seen were either too simple (CRUD over employee tables) or too complex (event sourcing, CQRS, microservices) for a domain that doesn't need that complexity yet.
 
-Examples include:
+This project is an exploration of what it looks like to model a genuinely complex domain — temporal employment data, payroll calculation graphs, lifecycle workflows — with enough discipline that the system stays comprehensible as it grows.
 
-- RuleSystem
-- RuleEntityType
-- RuleEntity
-- RuleEntityRelation
-
-These entities represent configurable elements such as:
-
-- Companies
-- Work centers
-- Cost centers
-- Collective agreements
-- Categories
-- Contract types
-
-Employee domain entities may reference these rule-system entities.
+The answer, so far: vertical slices + hexagonal architecture + explicit temporal patterns + documented decisions.
 
 ---
-
-### Shared Module
-
-The `shared` module contains **cross-cutting concerns**.
-
-Examples:
-
-- Common domain abstractions
-- Shared error definitions
-- Minimal infrastructure configuration
-
-This module must remain small and should not become a generic dumping ground.
-
----
-
-## Modeling Principles
-
-The system is designed around **historical HR data**, which means many entities include temporal validity.
-
-Key principles:
-
-- `employee` has a **technical autogenerated primary key**
-- `employeeNumber` is a **business identifier** represented as a string
-- `employeeNumber` is distinct from the database primary key
-- Historical data should use `validFrom` / `validTo`
-- Business history should not normally be deleted
-
----
-
-## Presence and Employment Relationship
-
-A key concept is **EmployeeCompanyPresence**.
-
-This entity represents periods where an employee has an active relationship with a company.
-
-Examples:
-
-- Hire
-- Termination
-- Rehire
-- Transfers between companies
-
-Other employment information such as contracts or category assignments must remain **temporally consistent** with a valid company presence.
-
-However, in the initial version, these entities are **not forced to be structural children** of presence. Business rules enforce that their validity periods remain compatible with presence periods.
-
-This keeps the model flexible while preserving domain integrity.
-
----
-
-## OpenAPI
-
-The project follows a **contract-first API design**.
-
-The OpenAPI specification lives in:
-
-```
-/openapi
-```
-
-Rules:
-
-- OpenAPI is the **source of truth** for backend/frontend communication
-- API changes must start by updating the OpenAPI contract
-- API models must not leak persistence structures
-- Domain entities must not be exposed directly through the API
-
----
-
-## Database and Migrations
-
-The system uses:
-
-- PostgreSQL
-- Flyway
-
-Flyway is used to manage **database schema evolution**.
-
-Migration scripts are located in:
-
-```
-src/main/resources/db/migration
-```
-
-Migration rules:
-
-- Every schema change must be introduced through a new migration
-- Existing migrations must not be edited after being applied
-- Schema evolution must be deliberate and versioned
-
-### ESP Baseline Seed
-
-Fresh installations include a minimal ESP baseline seed through these migrations:
-
-- `V49__seed_esp_baseline_rule_system.sql`
-- `V50__seed_esp_baseline_catalogs.sql`
-- `V51__seed_esp_baseline_organization.sql`
-- `V52__seed_esp_baseline_relationships.sql`
-
-The baseline is intentionally small and is meant to support employee creation, core lifecycle flows, and workforce loader simulations with coherent business-key combinations.
-
-| Scenario | Rule system | Company | Work center | Agreement | Agreement category | Contract | Contract subtype | Employee type | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Base office indefinite | ESP | ES01 | MAIN_OFFICE | AGR_OFFICE | CAT_ADMIN | IND | FT1 | INTERNAL | Default office happy path |
-| Scenario A technical employee | ESP | ES01 | BRANCH_NORTH | AGR_TECH | CAT_TECH_1 | IND | FT1 | INTERNAL | Technical branch assignment in ES01 |
-| Scenario B temporary part time | ESP | ES01 | MAIN_OFFICE | AGR_OFFICE | CAT_ADMIN | TMP | PT1 | INTERNAL | Temporary and part-time office path |
-| Scenario C second company | ESP | ES02 | BRANCH_SOUTH | AGR_TECH | CAT_TECH_2 | IND | FT1 | INTERNAL | Happy path covering the second seeded company |
-
-The integration coverage for these combinations is exercised in `HireEmployeeBaselineFlywayIntegrationTest`.
-
-JPA/Hibernate is used only as a persistence adapter.
-
-The database schema is considered a **first-class architectural artifact**, not a byproduct of ORM mapping.
-
----
-
-## Security
-
-The backend uses **Spring Security** with a simple role model.
-
-Initial roles:
-
-- ADMIN
-- HR_MANAGER
-- HR_VIEWER
-
-Authorization rules must remain explicit and testable.
-
----
-
-## Development Guidelines
-
-### Copilot Usage
-
-GitHub Copilot is used as a development assistant.
-
-Copilot may help with:
-
-- Scaffolding
-- Refactoring
-- Repetitive code
-- Test generation
-
-Copilot must **not** be trusted to invent:
-
-- HR business rules
-- Legal interpretations
-- Database schema changes
-- Architectural shortcuts
-
----
-
-### Coding Rules
-
-- Domain must not depend on Spring
-- Business logic must not live in controllers
-- Business logic must not live in repositories
-- JPA entities must remain in infrastructure
-- Persistence entities must not be exposed through APIs
-
----
-
-## Project Status
-
-Current phase:
-
-- Architecture decisions defined
-- Backend structure created
-- Domain model under discussion
-- OpenAPI contract not yet finalized
-- Relational model in early design phase
-
-Next steps:
-
-1. Define the initial relational model
-2. Define the first OpenAPI endpoints
-3. Implement the first vertical slice
-
----
-
-## Philosophy
-
-B4RRHH is not intended to be a simple CRUD application.
-
-The goal is to explore:
-
-- HR domain modeling
-- Historical and temporal data structures
-- Hexagonal architecture
-- Contract-first design
-- Controlled schema evolution
-
-The project prioritizes **clarity and domain integrity over speed**.
-
-## Architecture
-
-The architecture decisions of this project are documented as ADRs.
-
-See:
-
-- docs/architecture/adr/ADR-001-vertical-architecture-and-api-identity.md
-
 
 ## License
 
-This project is source-available under a Business Source License (BSL).
+This project is distributed under a **Business Source License (BSL)**.
 
-Commercial use is not permitted without explicit authorization.
+Source code is publicly visible for learning, evaluation, and non-commercial use.  
+Commercial use — including SaaS, hosted services, or revenue-generating products — is **not permitted** without an explicit commercial license.
 
-See LICENSE.md for details.
+See [`LICENSE.md`](LICENSE.md) for full terms and [`NOTICE.md`](NOTICE.md) for authorship details.
+
+For commercial licensing inquiries, contact the author.
