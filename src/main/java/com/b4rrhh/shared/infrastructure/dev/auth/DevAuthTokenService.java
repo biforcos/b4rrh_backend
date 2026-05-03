@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @Profile("local")
@@ -35,9 +36,10 @@ public class DevAuthTokenService {
         String normalizedSubject = request.subject().trim();
 
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-            .subject(normalizedSubject)
+                .subject(normalizedSubject)
                 .issueTime(Date.from(issuedAt))
                 .expirationTime(Date.from(expiresAt))
+                .claim("roles", List.of("ADMIN", "HR_MANAGER", "HR_VIEWER"))
                 .build();
 
         return new DevAuthTokenResponse(
