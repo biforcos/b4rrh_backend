@@ -3353,6 +3353,81 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompanyProfileErrorResponse"
 
+  /agreement-categories/{ruleSystemCode}/{categoryCode}/profile:
+    get:
+      tags:
+        - Agreement Category Profile
+      summary: Get SS cotización profile for an agreement category
+      operationId: getAgreementCategoryProfile
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "ESP"
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "CAT_ADMIN"
+      responses:
+        "200":
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgreementCategoryProfileResponse'
+        "404":
+          description: Category or profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgreementCategoryProfileErrorResponse'
+    put:
+      tags:
+        - Agreement Category Profile
+      summary: Create or update SS cotización profile for an agreement category
+      operationId: upsertAgreementCategoryProfile
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "ESP"
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "CAT_ADMIN"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertAgreementCategoryProfileRequest'
+      responses:
+        "200":
+          description: Profile created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgreementCategoryProfileResponse'
+        "404":
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgreementCategoryProfileErrorResponse'
+        "422":
+          description: Grupo de cotización invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgreementCategoryProfileErrorResponse'
   /agreements/{ruleSystemCode}/{agreementCode}/profile:
     get:
       operationId: getAgreementProfile
@@ -7490,6 +7565,12 @@ components:
           nullable: true
         address:
           $ref: "#/components/schemas/CompanyProfileAddress"
+        epigrafeAtCode:
+          type: string
+          maxLength: 10
+          nullable: true
+          description: "Epígrafe AT/EP de la empresa ante la TGSS (código de tarifa de accidentes de trabajo)"
+          example: "6210"
     CompanyProfileResponse:
       type: object
       required:
@@ -7509,10 +7590,47 @@ components:
           nullable: true
         address:
           $ref: "#/components/schemas/CompanyProfileAddress"
+        epigrafeAtCode:
+          type: string
+          nullable: true
+          description: "Epígrafe AT/EP registrado ante la TGSS"
+          example: "6210"
     CompanyProfileErrorResponse:
       type: object
       required:
         - message
+      properties:
+        message:
+          type: string
+    UpsertAgreementCategoryProfileRequest:
+      type: object
+      required:
+        - grupoCotizacionCode
+        - tipoNomina
+      properties:
+        grupoCotizacionCode:
+          type: string
+          maxLength: 2
+          description: "Grupo de cotización SS (01–11)"
+          example: "05"
+        tipoNomina:
+          type: string
+          enum: [MENSUAL, DIARIO]
+          description: "Tipo de base de cotización: mensual (grupos 1-7) o diaria (grupos 8-11)"
+          example: "MENSUAL"
+    AgreementCategoryProfileResponse:
+      type: object
+      properties:
+        categoryCode:
+          type: string
+        grupoCotizacionCode:
+          type: string
+          description: "Grupo de cotización SS (01–11)"
+        tipoNomina:
+          type: string
+          enum: [MENSUAL, DIARIO]
+    AgreementCategoryProfileErrorResponse:
+      type: object
       properties:
         message:
           type: string
