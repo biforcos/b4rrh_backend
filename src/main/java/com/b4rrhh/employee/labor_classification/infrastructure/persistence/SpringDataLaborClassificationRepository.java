@@ -14,14 +14,14 @@ public interface SpringDataLaborClassificationRepository extends JpaRepository<L
 
     List<LaborClassificationEntity> findByEmployeeIdOrderByStartDateAsc(Long employeeId);
 
-    @Query("""
-            select case when count(l) > 0 then true else false end
-            from LaborClassificationEntity l
-            where l.employeeId = :employeeId
-              and l.startDate <= :effectiveEndDate
-              and :startDate <= coalesce(l.endDate, :maxDate)
-              and (:excludeStartDate is null or l.startDate <> :excludeStartDate)
-            """)
+    @Query(value = """
+            select case when count(*) > 0 then true else false end
+            from employee.labor_classification l
+            where l.employee_id = :employeeId
+              and l.start_date <= :effectiveEndDate
+              and :startDate <= coalesce(l.end_date, :maxDate)
+              and (cast(:excludeStartDate as date) is null or l.start_date <> :excludeStartDate)
+            """, nativeQuery = true)
     boolean existsOverlappingPeriod(
             @Param("employeeId") Long employeeId,
             @Param("startDate") LocalDate startDate,
