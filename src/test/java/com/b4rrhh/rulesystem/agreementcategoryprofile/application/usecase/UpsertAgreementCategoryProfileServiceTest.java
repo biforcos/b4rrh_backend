@@ -43,7 +43,6 @@ class UpsertAgreementCategoryProfileServiceTest {
                 .thenReturn(Optional.of(ruleEntity(42L, "ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN")));
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "GRUPO_COTIZACION", "05", LocalDate.now()))
                 .thenReturn(Optional.of(ruleEntity(99L, "ESP", "GRUPO_COTIZACION", "05")));
-        when(profileRepository.findByCategoryRuleEntityId(42L)).thenReturn(Optional.empty());
         when(profileRepository.save(any(Long.class), any(AgreementCategoryProfile.class)))
                 .thenAnswer(inv -> inv.getArgument(1));
 
@@ -63,8 +62,6 @@ class UpsertAgreementCategoryProfileServiceTest {
                 .thenReturn(Optional.of(ruleEntity(42L, "ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN")));
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "GRUPO_COTIZACION", "07", LocalDate.now()))
                 .thenReturn(Optional.of(ruleEntity(88L, "ESP", "GRUPO_COTIZACION", "07")));
-        when(profileRepository.findByCategoryRuleEntityId(42L))
-                .thenReturn(Optional.of(new AgreementCategoryProfile("05", TipoNomina.MENSUAL)));
         when(profileRepository.save(any(Long.class), any(AgreementCategoryProfile.class)))
                 .thenAnswer(inv -> inv.getArgument(1));
 

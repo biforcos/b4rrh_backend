@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
 
 @Service
 public class UpsertAgreementCategoryProfileService implements UpsertAgreementCategoryProfileUseCase {
@@ -49,12 +48,7 @@ public class UpsertAgreementCategoryProfileService implements UpsertAgreementCat
 
         AgreementCategoryProfile requested = new AgreementCategoryProfile(grupoCotizacionCode, tipoNomina);
 
-        Optional<AgreementCategoryProfile> existing = profileRepository.findByCategoryRuleEntityId(category.getId());
-        AgreementCategoryProfile toSave = existing
-                .map(e -> new AgreementCategoryProfile(requested.getGrupoCotizacionCode(), requested.getTipoNomina()))
-                .orElse(requested);
-
-        return profileRepository.save(category.getId(), toSave);
+        return profileRepository.save(category.getId(), requested);
     }
 
     private TipoNomina parseTipoNomina(String value) {

@@ -7620,6 +7620,10 @@ components:
           example: "MENSUAL"
     AgreementCategoryProfileResponse:
       type: object
+      required:
+        - categoryCode
+        - grupoCotizacionCode
+        - tipoNomina
       properties:
         categoryCode:
           type: string
