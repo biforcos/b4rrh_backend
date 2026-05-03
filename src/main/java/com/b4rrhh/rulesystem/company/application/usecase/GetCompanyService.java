@@ -82,6 +82,7 @@ public class GetCompanyService implements GetCompanyUseCase {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }

@@ -48,7 +48,7 @@ class GetCompanyServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Acme Spain SA", "A123", "Gran Via 1", "Madrid", "28013", "MD", "ESP")
+                new CompanyProfile("Acme Spain SA", "A123", "Gran Via 1", "Madrid", "28013", "MD", "ESP", null)
         ));
 
         var result = service.get(new GetCompanyQuery("esp", "acme"));

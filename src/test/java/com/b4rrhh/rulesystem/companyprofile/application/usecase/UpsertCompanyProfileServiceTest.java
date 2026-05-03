@@ -66,7 +66,8 @@ class UpsertCompanyProfileServiceTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "esp"
+                "esp",
+                null
         ));
 
         ArgumentCaptor<CompanyProfile> captor = ArgumentCaptor.forClass(CompanyProfile.class);
@@ -88,6 +89,7 @@ class UpsertCompanyProfileServiceTest {
                         "Madrid",
                         null,
                         null,
+                        null,
                         null
                 )));
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", java.time.LocalDate.now()))
@@ -104,7 +106,8 @@ class UpsertCompanyProfileServiceTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "ESP"
+                "ESP",
+                null
         ));
 
         assertEquals("Acme Spain SA", result.getLegalName());
@@ -125,6 +128,7 @@ class UpsertCompanyProfileServiceTest {
                         "ESP",
                         "MISSING",
                         "Missing Company SA",
+                        null,
                         null,
                         null,
                         null,
@@ -153,7 +157,8 @@ class UpsertCompanyProfileServiceTest {
                         null,
                         null,
                         null,
-                        "ZZZ"
+                        "ZZZ",
+                        null
                 ))
         );
     }
@@ -176,9 +181,28 @@ class UpsertCompanyProfileServiceTest {
                         null,
                         null,
                         null,
+                        null,
                         null
                 ))
         );
+    }
+
+    @Test
+    void storesEpigrafeAtCodeWhenProvided() {
+        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
+                .thenReturn(Optional.of(ruleEntity(10L, "ESP", "COMPANY", "ACME")));
+        when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
+        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
+                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP")));
+        when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+
+        CompanyProfile result = service.upsert(new UpsertCompanyProfileCommand(
+                "ESP", "ACME", "Acme Spain SA", null,
+                null, null, null, null, "ESP", "6210"
+        ));
+
+        assertEquals("6210", result.getEpigrafeAtCode());
     }
 
     private RuleEntity ruleEntity(Long id, String ruleSystemCode, String ruleEntityTypeCode, String code) {

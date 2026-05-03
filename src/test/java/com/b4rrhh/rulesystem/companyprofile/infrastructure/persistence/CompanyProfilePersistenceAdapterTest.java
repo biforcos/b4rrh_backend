@@ -53,7 +53,8 @@ class CompanyProfilePersistenceAdapterTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "ESP"
+                "ESP",
+                null
         ));
 
         ArgumentCaptor<CompanyProfileEntity> captor = ArgumentCaptor.forClass(CompanyProfileEntity.class);
@@ -80,6 +81,7 @@ class CompanyProfilePersistenceAdapterTest {
 
         adapter.save(10L, new CompanyProfile(
                 "Acme Spain SA",
+                null,
                 null,
                 null,
                 null,

@@ -67,7 +67,8 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 command.city(),
                 command.postalCode(),
                 command.regionCode(),
-                countryCode
+                countryCode,
+                null
         );
 
         CompanyProfile savedProfile = companyProfileRepository.save(savedCompanyEntity.getId(), updatedProfile);
@@ -106,6 +107,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
     private CompanyProfile fallbackProfile(RuleEntity companyEntity) {
         return new CompanyProfile(
                 companyEntity.getName(),
+                null,
                 null,
                 null,
                 null,

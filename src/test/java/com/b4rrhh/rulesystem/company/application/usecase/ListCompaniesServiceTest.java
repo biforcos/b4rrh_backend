@@ -53,7 +53,7 @@ class ListCompaniesServiceTest {
         when(ruleEntityRepository.findByFilters(null, "COMPANY", null, true, LocalDate.now()))
                 .thenReturn(List.of(company));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Acme Spain SA", "A123", null, null, null, null, "ESP")
+                new CompanyProfile("Acme Spain SA", "A123", null, null, null, null, "ESP", null)
         ));
 
         var result = service.list(new ListCompaniesQuery(null));

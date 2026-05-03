@@ -19,7 +19,8 @@ public class CompanyProfileResponseAssembler {
                         companyProfile.getPostalCode(),
                         companyProfile.getRegionCode(),
                         companyProfile.getCountryCode()
-                )
+                ),
+                companyProfile.getEpigrafeAtCode()
         );
     }
 

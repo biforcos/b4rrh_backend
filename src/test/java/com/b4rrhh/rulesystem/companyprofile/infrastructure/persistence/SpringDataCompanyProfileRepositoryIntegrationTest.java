@@ -37,6 +37,7 @@ class SpringDataCompanyProfileRepositoryIntegrationTest {
                     postal_code varchar(20),
                     region_code varchar(30),
                     country_code char(3),
+                    epigrafe_at_code varchar(10),
                     created_at timestamp not null,
                     updated_at timestamp not null,
                     constraint uk_company_profile_company_rule_entity unique (company_rule_entity_id)

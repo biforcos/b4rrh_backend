@@ -65,7 +65,8 @@ public class CompanyProfileController {
                         address == null ? null : address.city(),
                         address == null ? null : address.postalCode(),
                         address == null ? null : address.regionCode(),
-                        address == null ? null : address.countryCode()
+                        address == null ? null : address.countryCode(),
+                        request.epigrafeAtCode()
                 )
         );
 

@@ -9,6 +9,7 @@ public record UpsertCompanyProfileCommand(
         String city,
         String postalCode,
         String regionCode,
-        String countryCode
+        String countryCode,
+        String epigrafeAtCode
 ) {
 }

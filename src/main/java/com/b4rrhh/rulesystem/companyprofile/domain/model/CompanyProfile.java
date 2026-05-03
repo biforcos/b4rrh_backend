@@ -8,6 +8,7 @@ public class CompanyProfile {
     private static final int CITY_MAX_LENGTH = 120;
     private static final int POSTAL_CODE_MAX_LENGTH = 20;
     private static final int REGION_CODE_MAX_LENGTH = 30;
+    private static final int EPIGRAFE_AT_CODE_MAX_LENGTH = 10;
 
     private final String legalName;
     private final String taxIdentifier;
@@ -16,6 +17,7 @@ public class CompanyProfile {
     private final String postalCode;
     private final String regionCode;
     private final String countryCode;
+    private final String epigrafeAtCode;
 
     public CompanyProfile(
             String legalName,
@@ -24,7 +26,8 @@ public class CompanyProfile {
             String city,
             String postalCode,
             String regionCode,
-            String countryCode
+            String countryCode,
+            String epigrafeAtCode
     ) {
         this.legalName = normalizeRequiredText("legalName", legalName, LEGAL_NAME_MAX_LENGTH);
         this.taxIdentifier = normalizeOptionalText("taxIdentifier", taxIdentifier, TAX_IDENTIFIER_MAX_LENGTH);
@@ -33,6 +36,7 @@ public class CompanyProfile {
         this.postalCode = normalizeOptionalText("postalCode", postalCode, POSTAL_CODE_MAX_LENGTH);
         this.regionCode = normalizeOptionalCode("regionCode", regionCode, REGION_CODE_MAX_LENGTH);
         this.countryCode = normalizeOptionalCode(countryCode);
+        this.epigrafeAtCode = normalizeOptionalText("epigrafeAtCode", epigrafeAtCode, EPIGRAFE_AT_CODE_MAX_LENGTH);
     }
 
     public CompanyProfile update(
@@ -42,7 +46,8 @@ public class CompanyProfile {
             String city,
             String postalCode,
             String regionCode,
-            String countryCode
+            String countryCode,
+            String epigrafeAtCode
     ) {
         return new CompanyProfile(
                 legalName,
@@ -51,7 +56,8 @@ public class CompanyProfile {
                 city,
                 postalCode,
                 regionCode,
-                countryCode
+                countryCode,
+                epigrafeAtCode
         );
     }
 
@@ -81,6 +87,10 @@ public class CompanyProfile {
 
     public String getCountryCode() {
         return countryCode;
+    }
+
+    public String getEpigrafeAtCode() {
+        return epigrafeAtCode;
     }
 
     private String normalizeRequiredText(String fieldName, String value, int maxLength) {

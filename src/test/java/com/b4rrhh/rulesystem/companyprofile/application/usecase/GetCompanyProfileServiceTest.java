@@ -110,6 +110,6 @@ class GetCompanyProfileServiceTest {
     }
 
     private CompanyProfile companyProfile(String legalName) {
-        return new CompanyProfile(legalName, "A12345678", "Gran Via 1", "Madrid", "28013", "MD", "ESP");
+        return new CompanyProfile(legalName, "A12345678", "Gran Via 1", "Madrid", "28013", "MD", "ESP", null);
     }
 }

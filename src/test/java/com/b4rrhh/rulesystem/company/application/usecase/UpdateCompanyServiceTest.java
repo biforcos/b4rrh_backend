@@ -54,7 +54,7 @@ class UpdateCompanyServiceTest {
                 .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Old legal", null, null, null, null, null, null)
+                new CompanyProfile("Old legal", null, null, null, null, null, null, null)
         ));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));

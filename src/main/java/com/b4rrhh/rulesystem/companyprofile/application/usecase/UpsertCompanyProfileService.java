@@ -49,7 +49,8 @@ public class UpsertCompanyProfileService implements UpsertCompanyProfileUseCase 
                 command.city(),
                 command.postalCode(),
                 command.regionCode(),
-                countryCode
+                countryCode,
+                command.epigrafeAtCode()
         );
 
         Optional<CompanyProfile> existingProfile = companyProfileRepository.findByCompanyRuleEntityId(company.getId());
@@ -62,7 +63,8 @@ public class UpsertCompanyProfileService implements UpsertCompanyProfileUseCase 
                         requestedProfile.getCity(),
                         requestedProfile.getPostalCode(),
                         requestedProfile.getRegionCode(),
-                        requestedProfile.getCountryCode()
+                        requestedProfile.getCountryCode(),
+                        requestedProfile.getEpigrafeAtCode()
                 ))
                 .orElse(requestedProfile);
 

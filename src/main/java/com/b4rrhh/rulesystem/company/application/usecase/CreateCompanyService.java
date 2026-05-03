@@ -90,7 +90,8 @@ public class CreateCompanyService implements CreateCompanyUseCase {
                 command.city(),
                 command.postalCode(),
                 command.regionCode(),
-                countryCode
+                countryCode,
+                null
         );
 
         Company savedProfile = toCompany(savedCompanyEntity, companyProfileRepository.save(savedCompanyEntity.getId(), companyProfile));

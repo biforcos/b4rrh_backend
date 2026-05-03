@@ -65,7 +65,7 @@ class CompanyProfileControllerHttpTest {
     @Test
     void getAlwaysReturnsNonNullAddressObject() throws Exception {
         when(getCompanyProfileUseCase.get(any(GetCompanyProfileQuery.class)))
-                .thenReturn(new CompanyProfile("Acme Spain SA", null, null, null, null, null, null));
+                .thenReturn(new CompanyProfile("Acme Spain SA", null, null, null, null, null, null, null));
 
         mockMvc.perform(get("/companies/esp/acme/profile"))
                 .andExpect(status().isOk())
@@ -124,7 +124,8 @@ class CompanyProfileControllerHttpTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "ESP"
+                "ESP",
+                null
         );
     }
 }
