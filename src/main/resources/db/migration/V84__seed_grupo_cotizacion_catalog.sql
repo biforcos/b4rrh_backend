@@ -3,11 +3,10 @@
 -- Seed GRUPO_COTIZACION rule_entity_type and 11 standard ESP entries
 -- =========================================================
 
-insert into rulesystem.rule_entity_type (code, name, description)
-values ('GRUPO_COTIZACION', 'Grupo de Cotización SS', 'Grupo de cotización a la Seguridad Social (1-11)')
+insert into rulesystem.rule_entity_type (code, name)
+values ('GRUPO_COTIZACION', 'Grupo de Cotización SS')
 on conflict (code) do update
-    set name = excluded.name,
-        description = excluded.description;
+    set name = excluded.name;
 
 insert into rulesystem.rule_entity (rule_system_code, rule_entity_type_code, code, name, description, active, start_date)
 select
