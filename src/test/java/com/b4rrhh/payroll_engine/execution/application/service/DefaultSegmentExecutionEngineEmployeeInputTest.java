@@ -46,6 +46,8 @@ class DefaultSegmentExecutionEngineEmployeeInputTest {
                     new SegmentTechnicalValueResolver(),
                     new RateByQuantityOperandResolver(),
                     new PercentageConceptResolver(),
+                    new GreatestConceptResolver(),
+                    new LeastConceptResolver(),
                     List.of());
 
     @Test

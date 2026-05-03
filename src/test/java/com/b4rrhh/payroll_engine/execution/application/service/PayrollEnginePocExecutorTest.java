@@ -52,6 +52,8 @@ class PayrollEnginePocExecutorTest {
                             new SegmentTechnicalValueResolver(),
                             new RateByQuantityOperandResolver(),
                             new PercentageConceptResolver(),
+                            new GreatestConceptResolver(),
+                            new LeastConceptResolver(),
                             List.of()));
 
     private static final LocalDate APR_01 = LocalDate.of(2026, 4, 1);
@@ -208,6 +210,8 @@ class PayrollEnginePocExecutorTest {
                                 new SegmentTechnicalValueResolver(),
                                 new RateByQuantityOperandResolver(),
                                 new PercentageConceptResolver(),
+                            new GreatestConceptResolver(),
+                            new LeastConceptResolver(),
                             List.of()));
         assertThrows(MissingPocConceptException.class, () ->
                 executorWithEmptyRepo.execute(referenceRequest()));

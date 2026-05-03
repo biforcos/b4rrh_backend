@@ -6,5 +6,7 @@ public enum CalculationType {
     PERCENTAGE,
     AGGREGATE,
     JAVA_PROVIDED,
-    EMPLOYEE_INPUT
+    EMPLOYEE_INPUT,
+    GREATEST,
+    LEAST
 }

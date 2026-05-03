@@ -41,6 +41,8 @@ class SegmentExecutionEngineTest {
                     new SegmentTechnicalValueResolver(),
                     new RateByQuantityOperandResolver(),
                     new PercentageConceptResolver(),
+                    new GreatestConceptResolver(),
+                    new LeastConceptResolver(),
                     List.of());
 
     /** Builds an enriched SALARIO_BASE plan entry with QUANTITY and RATE operand wiring. */

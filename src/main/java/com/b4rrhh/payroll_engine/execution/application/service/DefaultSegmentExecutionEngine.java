@@ -56,17 +56,23 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
     private final SegmentTechnicalValueResolver technicalValueResolver;
     private final RateByQuantityOperandResolver rateByQuantityResolver;
     private final PercentageConceptResolver percentageConceptResolver;
+    private final GreatestConceptResolver greatestConceptResolver;
+    private final LeastConceptResolver leastConceptResolver;
     private final Map<String, TechnicalConceptCalculator> technicalCalculators;
 
     public DefaultSegmentExecutionEngine(
             SegmentTechnicalValueResolver technicalValueResolver,
             RateByQuantityOperandResolver rateByQuantityResolver,
             PercentageConceptResolver percentageConceptResolver,
+            GreatestConceptResolver greatestConceptResolver,
+            LeastConceptResolver leastConceptResolver,
             List<TechnicalConceptCalculator> technicalCalculators
     ) {
         this.technicalValueResolver = technicalValueResolver;
         this.rateByQuantityResolver = rateByQuantityResolver;
         this.percentageConceptResolver = percentageConceptResolver;
+        this.greatestConceptResolver = greatestConceptResolver;
+        this.leastConceptResolver = leastConceptResolver;
         this.technicalCalculators = technicalCalculators.stream()
                 .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
     }
@@ -88,6 +94,12 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
                 case PERCENTAGE ->
                         percentageConceptResolver.resolve(entry, state);
+
+                case GREATEST ->
+                        greatestConceptResolver.resolve(entry, state);
+
+                case LEAST ->
+                        leastConceptResolver.resolve(entry, state);
 
                 case AGGREGATE -> {
                     BigDecimal sum = BigDecimal.ZERO;

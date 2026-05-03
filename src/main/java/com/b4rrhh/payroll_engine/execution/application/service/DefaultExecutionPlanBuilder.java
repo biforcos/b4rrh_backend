@@ -180,6 +180,26 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             return entry;
         }
 
+        if (calculationType == CalculationType.GREATEST) {
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+                    OperandRole.LEFT, OperandRole.RIGHT);
+            log.debug("[ENGINE]     PLAN {} | GREATEST: LEFT={} RIGHT={}",
+                    identity.getConceptCode(),
+                    entry.operands().get(OperandRole.LEFT).getConceptCode(),
+                    entry.operands().get(OperandRole.RIGHT).getConceptCode());
+            return entry;
+        }
+
+        if (calculationType == CalculationType.LEAST) {
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+                    OperandRole.LEFT, OperandRole.RIGHT);
+            log.debug("[ENGINE]     PLAN {} | LEAST: LEFT={} RIGHT={}",
+                    identity.getConceptCode(),
+                    entry.operands().get(OperandRole.LEFT).getConceptCode(),
+                    entry.operands().get(OperandRole.RIGHT).getConceptCode());
+            return entry;
+        }
+
         log.debug("[ENGINE]     PLAN {} | {} (sin operandos)", identity.getConceptCode(), calculationType);
         return new ConceptExecutionPlanEntry(identity, calculationType);
     }

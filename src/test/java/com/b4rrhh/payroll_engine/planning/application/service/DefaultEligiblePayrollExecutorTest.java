@@ -20,6 +20,8 @@ import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentReposi
 import com.b4rrhh.payroll_engine.execution.application.service.DefaultExecutionPlanBuilder;
 import com.b4rrhh.payroll_engine.execution.application.service.DefaultSegmentExecutionEngine;
 import com.b4rrhh.payroll_engine.execution.application.service.OperandConfigurationValidator;
+import com.b4rrhh.payroll_engine.execution.application.service.GreatestConceptResolver;
+import com.b4rrhh.payroll_engine.execution.application.service.LeastConceptResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.PercentageConceptResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.RateByQuantityOperandResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentTechnicalValueResolver;
@@ -142,6 +144,8 @@ class DefaultEligiblePayrollExecutorTest {
                         new SegmentTechnicalValueResolver(),
                         new RateByQuantityOperandResolver(),
                         new PercentageConceptResolver(),
+                        new GreatestConceptResolver(),
+                        new LeastConceptResolver(),
                         List.of()));
     }
 
