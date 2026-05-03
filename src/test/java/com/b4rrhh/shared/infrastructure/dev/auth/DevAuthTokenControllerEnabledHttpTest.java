@@ -10,8 +10,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,7 +51,7 @@ class DevAuthTokenControllerEnabledHttpTest {
 
         SignedJWT signedJwt = SignedJWT.parse(token);
         assertEquals("bifor", signedJwt.getJWTClaimsSet().getSubject());
-    assertNull(signedJwt.getJWTClaimsSet().getClaim("roles"));
+    assertEquals(List.of("ADMIN", "HR_MANAGER", "HR_VIEWER"), signedJwt.getJWTClaimsSet().getClaim("roles"));
     }
 
     @Test
