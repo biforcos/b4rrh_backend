@@ -1,6 +1,7 @@
 -- =========================================================
 -- V87__seed_agreement_category_profile.sql
--- Link ESP seed agreement categories to their grupo de cotización
+-- Link agreement categories from convenio 99002405011982
+-- (Grandes Almacenes BOE-A-2023-13740) to their grupo de cotización SS
 -- =========================================================
 
 insert into rulesystem.agreement_category_profile (
@@ -15,9 +16,9 @@ select
 from rulesystem.rule_entity cat
 join (
     values
-        ('CAT_ADMIN',   '05', 'MENSUAL'),
-        ('CAT_TECH_1',  '01', 'MENSUAL'),
-        ('CAT_TECH_2',  '02', 'MENSUAL')
+        ('99002405-G1', '01', 'MENSUAL'),
+        ('99002405-G2', '05', 'MENSUAL'),
+        ('99002405-G3', '07', 'MENSUAL')
 ) as mapping(category_code, grupo_cotizacion_code, tipo_nomina)
     on mapping.category_code = cat.code
 where cat.rule_entity_type_code = 'AGREEMENT_CATEGORY'
