@@ -1,6 +1,10 @@
 package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileQuery;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileUseCase;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.model.AgreementCategoryProfile;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.model.TipoNomina;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePayrollInputLookupPort;
@@ -64,6 +68,8 @@ class CalculatePayrollUnitServiceTest {
     private WorkCenterProfileLookupPort workCenterProfileLookupPort;
     @Mock
     private EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
+    @Mock
+    private GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     @Test
         void generatesDeterministicFakeConceptsAndSnapshotForInternalLaunchCalculation() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -80,7 +86,8 @@ class CalculatePayrollUnitServiceTest {
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
             List.of(),
-            employeePayrollInputLookupPort
+            employeePayrollInputLookupPort,
+            getAgreementCategoryProfileUseCase
         );
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
                 .thenReturn(payroll());
@@ -143,7 +150,8 @@ class CalculatePayrollUnitServiceTest {
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
             List.of(),
-            employeePayrollInputLookupPort
+            employeePayrollInputLookupPort,
+            getAgreementCategoryProfileUseCase
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -185,6 +193,9 @@ class CalculatePayrollUnitServiceTest {
         when(buildEligibleExecutionPlanUseCase.build(
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(planResult);
+        when(getAgreementCategoryProfileUseCase.get(
+                new GetAgreementCategoryProfileQuery("ESP", "99002405-G2")))
+                .thenReturn(new AgreementCategoryProfile("05", TipoNomina.MENSUAL));
 
         service.calculate(new CalculatePayrollUnitCommand(
             "ESP",
@@ -228,7 +239,8 @@ class CalculatePayrollUnitServiceTest {
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
             List.of(),
-            employeePayrollInputLookupPort
+            employeePayrollInputLookupPort,
+            getAgreementCategoryProfileUseCase
         );
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(

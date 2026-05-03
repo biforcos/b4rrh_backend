@@ -110,7 +110,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                     yield sum.setScale(2, RoundingMode.HALF_UP);
                 }
 
-                case JAVA_PROVIDED -> {
+                case ENGINE_PROVIDED -> {
                     String conceptCode = entry.identity().getConceptCode();
                     TechnicalConceptCalculator calculator = technicalCalculators.get(conceptCode);
                     if (calculator == null) {
@@ -122,7 +122,10 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                             context.getSegmentStart(),
                             context.getSegmentEnd(),
                             context.getDaysInSegment(),
-                            context.getWorkingTimePercentage()
+                            context.getWorkingTimePercentage(),
+                            context.getRuleSystemCode(),
+                            null,
+                            null
                     ));
                 }
 

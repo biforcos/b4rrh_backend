@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * {@code JAVA_PROVIDED} calculator for concept D03 — días naturales reales del mes.
+ * {@code ENGINE_PROVIDED} calculator for concept D03 — días naturales reales del mes.
  *
  * <p>Returns the actual number of calendar days in the payroll period month:
  * 28 or 29 for February, 30 for April/June/September/November, 31 for the rest.

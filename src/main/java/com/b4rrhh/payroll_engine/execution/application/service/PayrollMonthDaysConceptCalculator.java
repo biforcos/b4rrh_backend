@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * {@code JAVA_PROVIDED} calculator for concept D02 — días de mes nómina.
+ * {@code ENGINE_PROVIDED} calculator for concept D02 — días de mes nómina.
  *
  * <p>Always returns 30, the conventional payroll month length used as the accrual
  * denominator for monthly concepts. February and 31-day months are treated as 30

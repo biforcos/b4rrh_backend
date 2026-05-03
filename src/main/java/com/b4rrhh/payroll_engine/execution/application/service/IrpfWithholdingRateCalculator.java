@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * {@code JAVA_PROVIDED} calculator for concept P_IRPF — tipo de retención IRPF.
+ * {@code ENGINE_PROVIDED} calculator for concept P_IRPF — tipo de retención IRPF.
  *
  * <p>Returns a fixed withholding rate (15.00%). This is a placeholder value until
  * a proper IRPF calculation engine is available. In production, the rate would come

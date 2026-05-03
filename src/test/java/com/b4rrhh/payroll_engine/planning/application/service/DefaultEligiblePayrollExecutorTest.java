@@ -328,7 +328,7 @@ class DefaultEligiblePayrollExecutorTest {
             }
             @Override
             public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
+                return findByTarget(rs, code);
             }
             @Override
             public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {

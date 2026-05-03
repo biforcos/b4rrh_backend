@@ -2,6 +2,8 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.AgreementProfileContext;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileQuery;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileUseCase;
 import com.b4rrhh.payroll.application.port.CompanyProfileContext;
 import com.b4rrhh.payroll.application.port.EmployeePayrollInputLookupPort;
 import com.b4rrhh.payroll.application.port.WorkCenterProfileContext;
@@ -66,6 +68,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final WorkCenterProfileLookupPort workCenterProfileLookupPort;
     private final Map<String, TechnicalConceptCalculator> technicalCalculatorsMap;
     private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
+    private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -78,7 +81,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             AgreementProfileLookupPort agreementProfileLookupPort,
             WorkCenterProfileLookupPort workCenterProfileLookupPort,
             List<TechnicalConceptCalculator> technicalConceptCalculators,
-            EmployeePayrollInputLookupPort employeePayrollInputLookupPort
+            EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
+            GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -92,6 +96,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.technicalCalculatorsMap = technicalConceptCalculators.stream()
                 .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
         this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
+        this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
     }
 
     @Override
@@ -148,6 +153,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         log.info("[NÓMINA] Contexto resuelto | empresa={} convenio={} categoría={} ventanas={}",
                 input.companyCode(), input.agreementCode(), input.agreementCategoryCode(),
                 input.workingTimeWindows() != null ? input.workingTimeWindows().size() : 0);
+
+        var categoryProfile = getAgreementCategoryProfileUseCase.get(
+                new GetAgreementCategoryProfileQuery(command.ruleSystemCode(), input.agreementCategoryCode()));
+        String grupoCotizacionCode = categoryProfile.getGrupoCotizacionCode();
+        String tipoNomina = categoryProfile.getTipoNomina().name();
 
         EmployeeAssignmentContext assignmentContext = new EmployeeAssignmentContext(
                 command.ruleSystemCode(),
@@ -254,12 +264,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                                 step, total, conceptCode,
                                 baseId.getConceptCode(), base, pct, amount);
                     }
-                    case JAVA_PROVIDED -> {
+                    case ENGINE_PROVIDED -> {
                         TechnicalConceptSegmentData techData = new TechnicalConceptSegmentData(
                                 command.periodStart(), command.periodEnd(),
                                 seg.segmentStart(), seg.segmentEnd(),
                                 seg.daysInSegment(),
-                                seg.workingTimePercentage()
+                                seg.workingTimePercentage(),
+                                command.ruleSystemCode(),
+                                grupoCotizacionCode,
+                                tipoNomina
                         );
                         TechnicalConceptCalculator calculator = technicalCalculatorsMap.get(conceptCode);
                         if (calculator == null) {
@@ -267,8 +280,22 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                                     "No TechnicalConceptCalculator registered for concept: " + conceptCode);
                         }
                         amount = calculator.resolve(techData);
-                        log.info("[NÓMINA] [{}/{}] {} JAVA_PROVIDED → {}",
+                        log.info("[NÓMINA] [{}/{}] {} ENGINE_PROVIDED → {}",
                                 step, total, conceptCode, amount);
+                    }
+                    case GREATEST -> {
+                        BigDecimal left  = requireStateAmount(segmentState, entry.operands().get(OperandRole.LEFT));
+                        BigDecimal right = requireStateAmount(segmentState, entry.operands().get(OperandRole.RIGHT));
+                        amount = left.max(right);
+                        log.info("[NÓMINA] [{}/{}] {} GREATEST → max({},{}) = {}",
+                                step, total, conceptCode, left, right, amount);
+                    }
+                    case LEAST -> {
+                        BigDecimal left  = requireStateAmount(segmentState, entry.operands().get(OperandRole.LEFT));
+                        BigDecimal right = requireStateAmount(segmentState, entry.operands().get(OperandRole.RIGHT));
+                        amount = left.min(right);
+                        log.info("[NÓMINA] [{}/{}] {} LEAST → min({},{}) = {}",
+                                step, total, conceptCode, left, right, amount);
                     }
                     case EMPLOYEE_INPUT -> {
                         amount = employeeInputsForPeriod.getOrDefault(conceptCode, BigDecimal.ZERO);
@@ -339,8 +366,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             aggStep, aggTotal, conceptCode,
                             baseId.getConceptCode(), quantity, rate, amount);
                 }
-                case JAVA_PROVIDED -> {
-                    // JAVA_PROVIDED concepts with no segment dependencies (e.g. fixed rates like P_SS, P_IRPF)
+                case ENGINE_PROVIDED -> {
+                    // ENGINE_PROVIDED concepts with no segment dependencies (e.g. fixed rates like P_SS, P_IRPF)
                     // may appear in the post-segment plan due to topological ordering.
                     // The segment context fields are irrelevant for these constants.
                     TechnicalConceptCalculator calc = technicalCalculatorsMap.get(conceptCode);
@@ -354,11 +381,28 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             firstSeg != null ? firstSeg.segmentStart() : command.periodStart(),
                             firstSeg != null ? firstSeg.segmentEnd()   : command.periodEnd(),
                             firstSeg != null ? firstSeg.daysInSegment() : 0L,
-                            firstSeg != null ? firstSeg.workingTimePercentage() : BigDecimal.ZERO
+                            firstSeg != null ? firstSeg.workingTimePercentage() : BigDecimal.ZERO,
+                            command.ruleSystemCode(),
+                            grupoCotizacionCode,
+                            tipoNomina
                     );
                     amount = calc.resolve(techData);
-                    log.info("[NÓMINA] [{}/{}] {} JAVA_PROVIDED → {}",
+                    log.info("[NÓMINA] [{}/{}] {} ENGINE_PROVIDED → {}",
                             aggStep, aggTotal, conceptCode, amount);
+                }
+                case GREATEST -> {
+                    BigDecimal left  = requireStateAmount(composedState, entry.operands().get(OperandRole.LEFT));
+                    BigDecimal right = requireStateAmount(composedState, entry.operands().get(OperandRole.RIGHT));
+                    amount = left.max(right);
+                    log.info("[NÓMINA] [{}/{}] {} GREATEST → max({},{}) = {}",
+                            aggStep, aggTotal, conceptCode, left, right, amount);
+                }
+                case LEAST -> {
+                    BigDecimal left  = requireStateAmount(composedState, entry.operands().get(OperandRole.LEFT));
+                    BigDecimal right = requireStateAmount(composedState, entry.operands().get(OperandRole.RIGHT));
+                    amount = left.min(right);
+                    log.info("[NÓMINA] [{}/{}] {} LEAST → min({},{}) = {}",
+                            aggStep, aggTotal, conceptCode, left, right, amount);
                 }
                 default -> throw new UnsupportedOperationException(
                         "Unsupported calculation type in post-segment plan: " + entry.calculationType());

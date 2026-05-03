@@ -101,9 +101,10 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
             }
 
             CalculationType calcType = target.getCalculationType();
-            if (calcType == CalculationType.RATE_BY_QUANTITY || calcType == CalculationType.PERCENTAGE) {
+            if (calcType == CalculationType.RATE_BY_QUANTITY || calcType == CalculationType.PERCENTAGE
+                    || calcType == CalculationType.GREATEST || calcType == CalculationType.LEAST) {
                 List<PayrollConceptOperand> operands =
-                        operandRepository.findByTarget(target.getRuleSystemCode(), target.getConceptCode());
+                        operandRepository.findByRuleSystemCodeAndConceptCode(target.getRuleSystemCode(), target.getConceptCode());
 
                 for (PayrollConceptOperand operand : operands) {
                     String sourceCode = operand.getSourceObject().getObjectCode();

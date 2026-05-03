@@ -5,7 +5,7 @@ import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentD
 import java.math.BigDecimal;
 
 /**
- * Strategy interface for {@code JAVA_PROVIDED} payroll concepts.
+ * Strategy interface for {@code ENGINE_PROVIDED} payroll concepts.
  *
  * <p>Implementations are discovered by Spring and registered in
  * {@link DefaultSegmentExecutionEngine} and {@link com.b4rrhh.payroll.application.usecase.CalculatePayrollUnitService}

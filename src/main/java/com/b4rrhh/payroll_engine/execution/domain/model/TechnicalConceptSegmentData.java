@@ -9,5 +9,8 @@ public record TechnicalConceptSegmentData(
         LocalDate segmentStart,
         LocalDate segmentEnd,
         long daysInSegment,
-        BigDecimal workingTimePercentage
+        BigDecimal workingTimePercentage,
+        String ruleSystemCode,
+        String grupoCotizacionCode,
+        String tipoNomina
 ) {}

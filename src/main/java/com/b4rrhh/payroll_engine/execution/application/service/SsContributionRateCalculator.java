@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * {@code JAVA_PROVIDED} calculator for concept P_SS — tipo de cotización SS trabajador.
+ * {@code ENGINE_PROVIDED} calculator for concept P_SS — tipo de cotización SS trabajador.
  *
  * <p>Returns the fixed employee Social Security contribution rate (6.35%).
  * This is a flat rate per the Spanish general regime (contingencias comunes 4.70% +
