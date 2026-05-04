@@ -23,6 +23,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
+import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculatorRegistry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
@@ -74,6 +75,7 @@ class CalculatePayrollUnitServiceTest {
     private GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     @Mock
     private SegmentExecutionEngine segmentExecutionEngine;
+    private final TechnicalConceptCalculatorRegistry technicalConceptCalculatorRegistry = new TechnicalConceptCalculatorRegistry(List.of());
 
     @Test
         void eligibleRealMode_persistsSingleConcept101FromMinimalExecutor() {
@@ -89,7 +91,7 @@ class CalculatePayrollUnitServiceTest {
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
-            List.of(),
+            technicalConceptCalculatorRegistry,
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase
@@ -193,7 +195,7 @@ class CalculatePayrollUnitServiceTest {
             employeePersonalDataLookupPort,
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
-            List.of(),
+            technicalConceptCalculatorRegistry,
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase

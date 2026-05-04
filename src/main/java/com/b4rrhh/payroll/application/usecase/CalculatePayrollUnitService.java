@@ -30,6 +30,7 @@ import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
 import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculator;
+import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculatorRegistry;
 import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
@@ -71,7 +72,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
     private final AgreementProfileLookupPort agreementProfileLookupPort;
     private final WorkCenterProfileLookupPort workCenterProfileLookupPort;
-    private final Map<String, TechnicalConceptCalculator> technicalCalculatorsMap;
+    private final TechnicalConceptCalculatorRegistry technicalCalculatorRegistry;
     private final SegmentExecutionEngine segmentExecutionEngine;
     private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
@@ -86,7 +87,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             EmployeePersonalDataLookupPort employeePersonalDataLookupPort,
             AgreementProfileLookupPort agreementProfileLookupPort,
             WorkCenterProfileLookupPort workCenterProfileLookupPort,
-            List<TechnicalConceptCalculator> technicalConceptCalculators,
+            TechnicalConceptCalculatorRegistry technicalCalculatorRegistry,
             SegmentExecutionEngine segmentExecutionEngine,
             EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
             GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase
@@ -100,8 +101,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.employeePersonalDataLookupPort = employeePersonalDataLookupPort;
         this.agreementProfileLookupPort = agreementProfileLookupPort;
         this.workCenterProfileLookupPort = workCenterProfileLookupPort;
-        this.technicalCalculatorsMap = technicalConceptCalculators.stream()
-                .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
+        this.technicalCalculatorRegistry = technicalCalculatorRegistry;
         this.segmentExecutionEngine = segmentExecutionEngine;
         this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
         this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
@@ -350,7 +350,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     // ENGINE_PROVIDED concepts with no segment dependencies (e.g. fixed rates like P_SS, P_IRPF)
                     // may appear in the post-segment plan due to topological ordering.
                     // The segment context fields are irrelevant for these constants.
-                    TechnicalConceptCalculator calc = technicalCalculatorsMap.get(conceptCode);
+                    TechnicalConceptCalculator calc = technicalCalculatorRegistry.get(conceptCode);
                     if (calc == null) {
                         throw new UnsupportedOperationException(
                                 "No TechnicalConceptCalculator registered for concept: " + conceptCode);
