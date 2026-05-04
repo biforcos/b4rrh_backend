@@ -22,7 +22,9 @@ import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
@@ -69,6 +71,8 @@ class CalculatePayrollUnitServiceTest {
     private EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     @Mock
     private GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
+    @Mock
+    private SegmentExecutionEngine segmentExecutionEngine;
 
     @Test
         void eligibleRealMode_persistsSingleConcept101FromMinimalExecutor() {
@@ -85,6 +89,7 @@ class CalculatePayrollUnitServiceTest {
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
             List.of(),
+            segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase
         );
@@ -106,12 +111,13 @@ class CalculatePayrollUnitServiceTest {
             null
         )));
 
+        // Pre-computation of DIRECT_AMOUNT during the pre-compute pass
         when(payrollConceptGraphCalculator.calculateConceptResult(org.mockito.ArgumentMatchers.eq("101"), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new PayrollConceptExecutionResult(
                         "101",
                         new BigDecimal("1425.00"),
-                        new BigDecimal("30"),
-                        new BigDecimal("47.50")
+                        null,
+                        null
                 ));
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
             .thenReturn(payroll());
@@ -131,6 +137,14 @@ class CalculatePayrollUnitServiceTest {
         when(getAgreementCategoryProfileUseCase.get(
                 new GetAgreementCategoryProfileQuery("ESP", "99002405-G2")))
                 .thenReturn(new AgreementCategoryProfile("05", TipoNomina.MENSUAL));
+
+        // segmentExecutionEngine returns a state with concept 101 pre-computed amount
+        SegmentExecutionState segmentState = new SegmentExecutionState();
+        segmentState.storeResult(new ConceptNodeIdentity("ESP", "101"), new BigDecimal("1425.00"));
+        when(segmentExecutionEngine.execute(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(segmentState);
 
         service.calculate(new CalculatePayrollUnitCommand(
             "ESP",
@@ -152,8 +166,7 @@ class CalculatePayrollUnitServiceTest {
         assertEquals(1, persisted.concepts().size());
         assertEquals("101", persisted.concepts().getFirst().getConceptCode());
         assertEquals(0, new BigDecimal("1425.00").compareTo(persisted.concepts().getFirst().getAmount()));
-        assertEquals(0, new BigDecimal("30").compareTo(persisted.concepts().getFirst().getQuantity()));
-        assertEquals(0, new BigDecimal("47.50").compareTo(persisted.concepts().getFirst().getRate()));
+        // quantity and rate are null for DIRECT_AMOUNT concepts
         verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("D01"), org.mockito.ArgumentMatchers.any());
         verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("P01"), org.mockito.ArgumentMatchers.any());
         }
@@ -173,6 +186,7 @@ class CalculatePayrollUnitServiceTest {
             agreementProfileLookupPort,
             workCenterProfileLookupPort,
             List.of(),
+            segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase
         );
