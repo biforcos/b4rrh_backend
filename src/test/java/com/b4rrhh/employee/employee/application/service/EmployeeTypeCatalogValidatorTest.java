@@ -10,11 +10,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,10 +32,12 @@ class EmployeeTypeCatalogValidatorTest {
 
     @Test
     void acceptsActiveCodeWithinDateRange() {
-        RuleEntity entity = mock(RuleEntity.class);
-        when(entity.isActive()).thenReturn(true);
-        when(entity.getStartDate()).thenReturn(LocalDate.of(1900, 1, 1));
-        when(entity.getEndDate()).thenReturn(null);
+        RuleEntity entity = new RuleEntity(
+                1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL",
+                "Internal Employee", null, true,
+                LocalDate.of(1900, 1, 1), null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
         when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
                 .thenReturn(Optional.of(entity));
 
@@ -54,8 +56,12 @@ class EmployeeTypeCatalogValidatorTest {
 
     @Test
     void rejectsInactiveCode() {
-        RuleEntity entity = mock(RuleEntity.class);
-        when(entity.isActive()).thenReturn(false);
+        RuleEntity entity = new RuleEntity(
+                2L, "ESP", "EMPLOYEE_TYPE", "INTERNAL",
+                "Internal Employee", null, false,
+                LocalDate.of(1900, 1, 1), null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
         when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
                 .thenReturn(Optional.of(entity));
 
