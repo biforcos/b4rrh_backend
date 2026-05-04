@@ -124,12 +124,6 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             throw new HireEmployeeAlreadyExistsException(ruleSystemCode, employeeTypeCode, employeeNumber);
         }
 
-        try {
-            employeeTypeCatalogValidator.validateEmployeeTypeCode(ruleSystemCode, employeeTypeCode, hireDate);
-        } catch (EmployeeTypeInvalidException ex) {
-            throw new HireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
-        }
-
         workCenterCompanyValidator.validateBelongsToCompany(
                 ruleSystemCode,
                 workCenterCode,
@@ -146,6 +140,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         WorkingTime createdWorkingTime;
 
         try {
+            employeeTypeCatalogValidator.validateEmployeeTypeCode(ruleSystemCode, employeeTypeCode, hireDate);
+
             createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
                     ruleSystemCode, employeeTypeCode, employeeNumber, firstName, lastName1, lastName2, preferredName
             ));
@@ -188,7 +184,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                     hireDate,
                     workingTime.workingTimePercentage()
             ));
-        } catch (PresenceCatalogValueInvalidException
+        } catch (EmployeeTypeInvalidException
+                 | PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
                  | LaborClassificationCategoryInvalidException
                  | ContractInvalidException

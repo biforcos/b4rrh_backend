@@ -2,7 +2,6 @@ package com.b4rrhh.employee.lifecycle.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
-import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
@@ -93,8 +92,12 @@ class HireEmployeeServiceTest {
     void setUp() {
         workCenterCompanyValidator = new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
         employeeTypeCatalogValidator = new EmployeeTypeCatalogValidator(ruleEntityRepository);
+        RuleEntity validEmployeeType = new RuleEntity(
+                1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL", "Internal", null, true,
+                LocalDate.of(2000, 1, 1), null, LocalDateTime.now(), LocalDateTime.now()
+        );
         lenient().when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
-                .thenReturn(Optional.of(validEmployeeType()));
+                .thenReturn(Optional.of(validEmployeeType));
         service = new HireEmployeeService(
                 employeeRepository,
                 createEmployeeUseCase,
@@ -437,19 +440,15 @@ class HireEmployeeServiceTest {
     @Test
     void mapsInvalidEmployeeTypeToLifecycleException() {
         HireEmployeeCommand command = validCommand();
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", command.hireDate()))
+                .thenReturn(Optional.of("COMP"));
+        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.empty());
         when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
-                .thenReturn(Optional.empty()); // override setUp default — unknown type
+                .thenReturn(Optional.empty());
 
         assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
         verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
-    }
-
-    private RuleEntity validEmployeeType() {
-        return new RuleEntity(
-                1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL", "Internal", null, true,
-                LocalDate.of(2020, 1, 1), null,
-                LocalDateTime.now(), LocalDateTime.now()
-        );
     }
 
     private WorkingTime workingTime(Long employeeId, Integer workingTimeNumber, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
