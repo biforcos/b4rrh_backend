@@ -37,6 +37,9 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatch
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,13 +82,19 @@ class HireEmployeeServiceTest {
     private CreateWorkingTimeUseCase createWorkingTimeUseCase;
     @Mock
     private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
+    @Mock
+    private RuleEntityRepository ruleEntityRepository;
 
     private WorkCenterCompanyValidator workCenterCompanyValidator;
+    private EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
     private HireEmployeeService service;
 
     @BeforeEach
     void setUp() {
         workCenterCompanyValidator = new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
+        employeeTypeCatalogValidator = new EmployeeTypeCatalogValidator(ruleEntityRepository);
+        lenient().when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
+                .thenReturn(Optional.of(validEmployeeType()));
         service = new HireEmployeeService(
                 employeeRepository,
                 createEmployeeUseCase,
@@ -94,7 +104,8 @@ class HireEmployeeServiceTest {
                 createWorkCenterUseCase,
                 createCostCenterDistributionUseCase,
                 createWorkingTimeUseCase,
-                workCenterCompanyValidator
+                workCenterCompanyValidator,
+                employeeTypeCatalogValidator
         );
     }
 
@@ -420,6 +431,24 @@ class HireEmployeeServiceTest {
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
                 new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+        );
+    }
+
+    @Test
+    void mapsInvalidEmployeeTypeToLifecycleException() {
+        HireEmployeeCommand command = validCommand();
+        when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
+                .thenReturn(Optional.empty()); // override setUp default — unknown type
+
+        assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
+        verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
+    }
+
+    private RuleEntity validEmployeeType() {
+        return new RuleEntity(
+                1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL", "Internal", null, true,
+                LocalDate.of(2020, 1, 1), null,
+                LocalDateTime.now(), LocalDateTime.now()
         );
     }
 

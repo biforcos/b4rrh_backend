@@ -48,6 +48,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCas
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
+import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +69,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
     private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
+    private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
 
     public HireEmployeeService(
             EmployeeRepository employeeRepository,
@@ -77,7 +80,8 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             CreateWorkingTimeUseCase createWorkingTimeUseCase,
-            WorkCenterCompanyValidator workCenterCompanyValidator
+            WorkCenterCompanyValidator workCenterCompanyValidator,
+            EmployeeTypeCatalogValidator employeeTypeCatalogValidator
     ) {
         this.employeeRepository = employeeRepository;
         this.createEmployeeUseCase = createEmployeeUseCase;
@@ -88,6 +92,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.createWorkingTimeUseCase = createWorkingTimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
+        this.employeeTypeCatalogValidator = employeeTypeCatalogValidator;
     }
 
     @Override
@@ -119,6 +124,12 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             throw new HireEmployeeAlreadyExistsException(ruleSystemCode, employeeTypeCode, employeeNumber);
         }
 
+        try {
+            employeeTypeCatalogValidator.validateEmployeeTypeCode(ruleSystemCode, employeeTypeCode, hireDate);
+        } catch (EmployeeTypeInvalidException ex) {
+            throw new HireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
+        }
+
         workCenterCompanyValidator.validateBelongsToCompany(
                 ruleSystemCode,
                 workCenterCode,
@@ -126,10 +137,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
                 hireDate
         );
 
-        Employee createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
-                ruleSystemCode, employeeTypeCode, employeeNumber, firstName, lastName1, lastName2, preferredName
-        ));
-
+        Employee createdEmployee;
         Presence createdPresence;
         LaborClassification createdLaborClassification;
         Contract createdContract;
@@ -138,6 +146,10 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         WorkingTime createdWorkingTime;
 
         try {
+            createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
+                    ruleSystemCode, employeeTypeCode, employeeNumber, firstName, lastName1, lastName2, preferredName
+            ));
+
             createdPresence = createPresenceUseCase.create(new CreatePresenceCommand(
                     ruleSystemCode, employeeTypeCode, employeeNumber, companyCode, entryReasonCode, null, hireDate, null
             ));
