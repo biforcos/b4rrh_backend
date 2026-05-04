@@ -6,6 +6,7 @@ import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
@@ -16,7 +17,6 @@ import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployee
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
-import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
@@ -33,6 +33,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCenter
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -136,6 +139,60 @@ class RehireEmployeeServiceRollbackIntegrationTest {
 
     @TestConfiguration
     static class RehireEmployeeRollbackTestConfig {
+
+        @Bean
+        RuleEntityRepository ruleEntityRepository() {
+            return new RuleEntityRepository() {
+                @Override
+                public List<RuleEntity> findAll() {
+                    return List.of();
+                }
+
+                @Override
+                public List<RuleEntity> findByFilters(String ruleSystemCode, String ruleEntityTypeCode, String code, Boolean active, LocalDate referenceDate) {
+                    return List.of();
+                }
+
+                @Override
+                public Optional<RuleEntity> findApplicableByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate referenceDate) {
+                    return Optional.empty();
+                }
+
+                @Override
+                public Optional<RuleEntity> findByBusinessKey(String ruleSystemCode, String ruleEntityTypeCode, String code) {
+                    return Optional.of(new RuleEntity(
+                            1L, ruleSystemCode, ruleEntityTypeCode, code,
+                            code, null, true,
+                            LocalDate.of(1900, 1, 1), null,
+                            LocalDateTime.now(), LocalDateTime.now()
+                    ));
+                }
+
+                @Override
+                public Optional<RuleEntity> findByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate) {
+                    return Optional.empty();
+                }
+
+                @Override
+                public boolean existsOverlapExcludingStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate projectedStartDate, LocalDate projectedEndDate, LocalDate excludedStartDate) {
+                    return false;
+                }
+
+                @Override
+                public void deleteByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate) {
+                }
+
+                @Override
+                public RuleEntity save(RuleEntity ruleEntity) {
+                    return ruleEntity;
+                }
+            };
+        }
+
+        @Bean
+        EmployeeTypeCatalogValidator employeeTypeCatalogValidator(RuleEntityRepository ruleEntityRepository) {
+            return new EmployeeTypeCatalogValidator(ruleEntityRepository);
+        }
 
         @Bean
         GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase(EmployeeRepository employeeRepository) {

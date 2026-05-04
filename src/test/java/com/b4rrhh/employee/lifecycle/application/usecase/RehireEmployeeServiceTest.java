@@ -10,9 +10,13 @@ import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistr
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
@@ -99,13 +103,27 @@ class RehireEmployeeServiceTest {
         private CreateWorkingTimeUseCase createWorkingTimeUseCase;
         @Mock
         private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
+    @Mock
+    private RuleEntityRepository employeeTypeRuleEntityRepository;
 
         private WorkCenterCompanyValidator workCenterCompanyValidator;
+    private EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
     private RehireEmployeeService service;
 
     @BeforeEach
     void setUp() {
                 workCenterCompanyValidator = new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
+        employeeTypeCatalogValidator = new EmployeeTypeCatalogValidator(employeeTypeRuleEntityRepository);
+
+        RuleEntity validEmployeeType = new RuleEntity(
+                1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL",
+                "Internal Employee", null, true,
+                java.time.LocalDate.of(1900, 1, 1), null,
+                java.time.LocalDateTime.now(), java.time.LocalDateTime.now()
+        );
+        lenient().when(employeeTypeRuleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
+                .thenReturn(java.util.Optional.of(validEmployeeType));
+
         service = new RehireEmployeeService(
                 getEmployeeByBusinessKeyUseCase,
                 employeeRepository,
@@ -120,7 +138,8 @@ class RehireEmployeeServiceTest {
                 createWorkCenterUseCase,
                                 createCostCenterDistributionUseCase,
                                 createWorkingTimeUseCase,
-                                workCenterCompanyValidator
+                                workCenterCompanyValidator,
+                employeeTypeCatalogValidator
         );
 
                 lenient().when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
@@ -286,6 +305,28 @@ class RehireEmployeeServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(RehireEmployeeEmployeeNotFoundException.class, () -> service.rehire(validCommand()));
+        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
+    }
+
+    @Test
+    void mapsInvalidEmployeeTypeToLifecycleException() {
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("TERMINATED")));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(closedPresence(LocalDate.of(2026, 3, 31))));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of());
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of());
+        // Override the lenient stub: employee type NOT found → validator throws EmployeeTypeInvalidException
+        when(employeeTypeRuleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(RehireEmployeeCatalogValueInvalidException.class, () -> service.rehire(validCommand()));
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
     }
 

@@ -18,7 +18,9 @@ import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistr
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
+import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.domain.model.EmployeeStatus;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
@@ -97,6 +99,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
     private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
+    private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
 
     public RehireEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
@@ -112,7 +115,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             CreateWorkingTimeUseCase createWorkingTimeUseCase,
-            WorkCenterCompanyValidator workCenterCompanyValidator
+            WorkCenterCompanyValidator workCenterCompanyValidator,
+            EmployeeTypeCatalogValidator employeeTypeCatalogValidator
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -128,6 +132,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.createWorkingTimeUseCase = createWorkingTimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
+        this.employeeTypeCatalogValidator = employeeTypeCatalogValidator;
     }
 
     @Override
@@ -232,6 +237,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         WorkingTime createdWorkingTime;
 
         try {
+            employeeTypeCatalogValidator.validateEmployeeTypeCode(ruleSystemCode, employeeTypeCode, rehireDate);
+
             createdPresence = createPresenceUseCase.create(new CreatePresenceCommand(
                     ruleSystemCode,
                     employeeTypeCode,
@@ -295,7 +302,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     rehireDate,
                     workingTime.workingTimePercentage()
             ));
-        } catch (PresenceCatalogValueInvalidException
+        } catch (EmployeeTypeInvalidException
+                 | PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
                  | LaborClassificationCategoryInvalidException
                  | ContractInvalidException
