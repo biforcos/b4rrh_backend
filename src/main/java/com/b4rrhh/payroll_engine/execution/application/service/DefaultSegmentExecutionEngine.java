@@ -86,8 +86,14 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
         for (ConceptExecutionPlanEntry entry : plan) {
             BigDecimal amount = switch (entry.calculationType()) {
-                case DIRECT_AMOUNT ->
-                        technicalValueResolver.resolve(entry.identity().getConceptCode(), context);
+                case DIRECT_AMOUNT -> {
+                    String conceptCode = entry.identity().getConceptCode();
+                    BigDecimal precomputed = context.getPrecomputedDirectAmounts().get(conceptCode);
+                    if (precomputed != null) {
+                        yield precomputed;
+                    }
+                    yield technicalValueResolver.resolve(conceptCode, context);
+                }
 
                 case RATE_BY_QUANTITY ->
                         rateByQuantityResolver.resolve(entry, state);
@@ -124,8 +130,8 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                             context.getDaysInSegment(),
                             context.getWorkingTimePercentage(),
                             context.getRuleSystemCode(),
-                            null,
-                            null
+                            context.getGrupoCotizacionCode(),
+                            context.getTipoNomina()
                     ));
                 }
 

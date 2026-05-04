@@ -96,6 +96,9 @@ class SegmentExecutionEngineTest {
                 daysInPeriod, daysInSegment,
                 new BigDecimal("100"),
                 salary,
+                Map.of(),
+                "G02",
+                "MENSUAL",
                 Map.of()
         );
     }
@@ -142,6 +145,9 @@ class SegmentExecutionEngineTest {
                 s, e, false, true, 30, 16,
                 new BigDecimal("50"),
                 new BigDecimal("2000.00"),
+                Map.of(),
+                "G02",
+                "MENSUAL",
                 Map.of()
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
@@ -183,6 +189,9 @@ class SegmentExecutionEngineTest {
                 s, e, false, true, 30, 16,
                 new BigDecimal("50"),
                 new BigDecimal("2000.00"),
+                Map.of(),
+                "G02",
+                "MENSUAL",
                 Map.of()
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
@@ -331,5 +340,34 @@ class SegmentExecutionEngineTest {
         );
 
         assertThrows(MissingConceptResultException.class, () -> engine.execute(plan, ctx));
+    }
+
+    @Test
+    void directAmountUsesPrecomputedValueWhenConceptCodeIsNotTechnical() {
+        BigDecimal precioDiaPleno = new BigDecimal("56.32");
+        ConceptNodeIdentity priceId = new ConceptNodeIdentity(RULE_SYSTEM, "PRECIO_DIA_PLENO");
+
+        SegmentCalculationContext ctx = new SegmentCalculationContext(
+                RULE_SYSTEM, "EMP", "EMP0001",
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30),
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 14),
+                true, false,
+                30L, 14L,
+                new BigDecimal("100"),
+                new BigDecimal("2000.00"),
+                Map.of(),
+                "G02",
+                "MENSUAL",
+                Map.of("PRECIO_DIA_PLENO", precioDiaPleno)
+        );
+
+        List<ConceptExecutionPlanEntry> plan = List.of(
+                new ConceptExecutionPlanEntry(priceId, CalculationType.DIRECT_AMOUNT)
+        );
+
+        SegmentExecutionState state = engine.execute(plan, ctx);
+
+        assertEquals(0, precioDiaPleno.compareTo(state.getRequiredAmount(priceId)),
+                "DIRECT_AMOUNT must return precomputed value when conceptCode is in precomputedDirectAmounts");
     }
 }

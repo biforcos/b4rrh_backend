@@ -46,6 +46,9 @@ public final class SegmentCalculationContext {
     private final BigDecimal workingTimePercentage;
     private final BigDecimal monthlySalaryAmount;
     private final Map<String, BigDecimal> employeeInputs;
+    private final String grupoCotizacionCode;
+    private final String tipoNomina;
+    private final Map<String, BigDecimal> precomputedDirectAmounts;
 
     public SegmentCalculationContext(
             String ruleSystemCode,
@@ -61,7 +64,10 @@ public final class SegmentCalculationContext {
             long daysInSegment,
             BigDecimal workingTimePercentage,
             BigDecimal monthlySalaryAmount,
-            Map<String, BigDecimal> employeeInputs
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -89,6 +95,9 @@ public final class SegmentCalculationContext {
         requireNonNull(workingTimePercentage, "workingTimePercentage");
         requireNonNull(monthlySalaryAmount, "monthlySalaryAmount");
         requireNonNull(employeeInputs, "employeeInputs");
+        requireNonBlank(grupoCotizacionCode, "grupoCotizacionCode");
+        requireNonBlank(tipoNomina, "tipoNomina");
+        requireNonNull(precomputedDirectAmounts, "precomputedDirectAmounts");
         this.ruleSystemCode = ruleSystemCode;
         this.employeeTypeCode = employeeTypeCode;
         this.employeeNumber = employeeNumber;
@@ -103,6 +112,9 @@ public final class SegmentCalculationContext {
         this.workingTimePercentage = workingTimePercentage;
         this.monthlySalaryAmount = monthlySalaryAmount;
         this.employeeInputs = employeeInputs;
+        this.grupoCotizacionCode = grupoCotizacionCode;
+        this.tipoNomina = tipoNomina;
+        this.precomputedDirectAmounts = precomputedDirectAmounts;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -119,4 +131,7 @@ public final class SegmentCalculationContext {
     public BigDecimal getWorkingTimePercentage() { return workingTimePercentage; }
     public BigDecimal getMonthlySalaryAmount() { return monthlySalaryAmount; }
     public Map<String, BigDecimal> getEmployeeInputs() { return employeeInputs; }
+    public String getGrupoCotizacionCode() { return grupoCotizacionCode; }
+    public String getTipoNomina() { return tipoNomina; }
+    public Map<String, BigDecimal> getPrecomputedDirectAmounts() { return precomputedDirectAmounts; }
 }

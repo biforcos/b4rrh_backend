@@ -37,7 +37,10 @@ class DefaultSegmentExecutionEngineEmployeeInputTest {
                 30, 30,
                 new BigDecimal("100"),
                 new BigDecimal("2000.00"),
-                employeeInputs
+                employeeInputs,
+                "G02",
+                "MENSUAL",
+                Map.of()
         );
     }
 
