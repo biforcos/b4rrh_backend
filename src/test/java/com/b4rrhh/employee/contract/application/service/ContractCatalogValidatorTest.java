@@ -1,7 +1,6 @@
 package com.b4rrhh.employee.contract.application.service;
 
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
-import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,29 +46,18 @@ class ContractCatalogValidatorTest {
     }
 
     @Test
-    void rejectsContractSubtypeCodeShorterThanThreeBeforeCatalogLookup() {
-        assertThrows(
-                ContractSubtypeInvalidException.class,
-                () -> validator.normalizeRequiredCode("contractSubtypeCode", "AB")
-        );
-
+    void acceptsContractSubtypeCodeOfAnyLengthBeforeCatalogLookup() {
+        // Subtypes have no fixed-length constraint; "01" (2-char) and "ABCD" (4-char) are both accepted
+        assertEquals("01",   validator.normalizeRequiredCode("contractSubtypeCode", "01"));
+        assertEquals("AB",   validator.normalizeRequiredCode("contractSubtypeCode", "AB"));
+        assertEquals("ABCD", validator.normalizeRequiredCode("contractSubtypeCode", "ABCD"));
         verifyNoInteractions(ruleEntityRepository);
     }
 
     @Test
-    void rejectsContractSubtypeCodeLongerThanThreeBeforeCatalogLookup() {
-        assertThrows(
-                ContractSubtypeInvalidException.class,
-                () -> validator.normalizeRequiredCode("contractSubtypeCode", "ABCD")
-        );
-
-        verifyNoInteractions(ruleEntityRepository);
-    }
-
-    @Test
-    void normalizesValidThreeCharacterCodes() {
+    void normalizesValidCodes() {
         assertEquals("IND", validator.normalizeRequiredCode("contractCode", " ind "));
-        assertEquals("FT1", validator.normalizeRequiredCode("contractSubtypeCode", " ft1 "));
+        assertEquals("01",  validator.normalizeRequiredCode("contractSubtypeCode", " 01 "));
         verifyNoInteractions(ruleEntityRepository);
     }
 }

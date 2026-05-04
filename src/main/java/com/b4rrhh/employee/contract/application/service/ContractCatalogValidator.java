@@ -33,13 +33,8 @@ public class ContractCatalogValidator {
             throw new IllegalArgumentException(fieldName + " is required");
         }
 
-        if (normalized.length() != CONTRACT_CODE_LENGTH) {
-            if ("contractCode".equals(fieldName)) {
-                throw new ContractInvalidException(normalized);
-            }
-            if ("contractSubtypeCode".equals(fieldName)) {
-                throw new ContractSubtypeInvalidException(normalized);
-            }
+        if (normalized.length() != CONTRACT_CODE_LENGTH && "contractCode".equals(fieldName)) {
+            throw new ContractInvalidException(normalized);
         }
 
         return normalized;
