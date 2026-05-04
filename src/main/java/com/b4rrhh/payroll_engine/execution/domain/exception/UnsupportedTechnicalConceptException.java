@@ -1,13 +1,12 @@
 package com.b4rrhh.payroll_engine.execution.domain.exception;
 
 /**
- * Thrown when the technical value resolver encounters a concept code
- * that is not supported in this PoC iteration.
+ * Thrown when no {@link com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculator}
+ * is registered for a given ENGINE_PROVIDED concept code.
  */
 public class UnsupportedTechnicalConceptException extends RuntimeException {
 
     public UnsupportedTechnicalConceptException(String conceptCode) {
-        super("Technical concept not supported in PoC resolver: '" + conceptCode +
-              "'. Supported codes: T_DIAS_PRESENCIA_SEGMENTO, T_SALARIO_MENSUAL, T_FACTOR_JORNADA, T_PRECIO_DIA.");
+        super("No TechnicalConceptCalculator registered for concept: '" + conceptCode + "'.");
     }
 }

@@ -35,6 +35,7 @@ import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentData;
+import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
@@ -352,8 +353,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     // The segment context fields are irrelevant for these constants.
                     TechnicalConceptCalculator calc = technicalCalculatorRegistry.get(conceptCode);
                     if (calc == null) {
-                        throw new UnsupportedOperationException(
-                                "No TechnicalConceptCalculator registered for concept: " + conceptCode);
+                        throw new UnsupportedTechnicalConceptException(conceptCode);
                     }
                     SegmentSpec firstSeg = segments.isEmpty() ? null : segments.get(0);
                     TechnicalConceptSegmentData techData = new TechnicalConceptSegmentData(
