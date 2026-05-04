@@ -23,7 +23,8 @@ import java.util.stream.Collectors;
  *   <li>Iterates the execution plan in the provided order (must be topological).</li>
  *   <li>For each entry, dispatches based on {@link com.b4rrhh.payroll_engine.concept.domain.model.CalculationType}:
  *       <ul>
- *         <li>{@code DIRECT_AMOUNT} — delegates to {@link SegmentTechnicalValueResolver}</li>
+ *         <li>{@code DIRECT_AMOUNT} — checks {@code precomputedDirectAmounts} first; falls back to
+ *             {@link SegmentTechnicalValueResolver} when the concept code is absent</li>
  *         <li>{@code RATE_BY_QUANTITY} — reads pre-resolved QUANTITY and RATE operand
  *             identities from the plan entry, fetches them from state, multiplies
  *             rate × quantity, rounds to 2 decimal places HALF_UP</li>
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
  * </ol>
  *
  * <h3>In-memory execution</h3>
- * <p>For all non-DIRECT_AMOUNT calculation types, the engine reads pre-resolved source
+ * <p>For all calculation types, the engine reads pre-resolved source
  * identities directly from {@link ConceptExecutionPlanEntry} and pre-computed amounts from
  * {@link SegmentExecutionState}. No repository access occurs at runtime.
  *

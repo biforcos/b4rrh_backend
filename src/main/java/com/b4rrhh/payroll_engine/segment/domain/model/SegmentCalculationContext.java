@@ -111,10 +111,10 @@ public final class SegmentCalculationContext {
         this.daysInSegment = daysInSegment;
         this.workingTimePercentage = workingTimePercentage;
         this.monthlySalaryAmount = monthlySalaryAmount;
-        this.employeeInputs = employeeInputs;
+        this.employeeInputs = Map.copyOf(employeeInputs);
         this.grupoCotizacionCode = grupoCotizacionCode;
         this.tipoNomina = tipoNomina;
-        this.precomputedDirectAmounts = precomputedDirectAmounts;
+        this.precomputedDirectAmounts = Map.copyOf(precomputedDirectAmounts);
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
