@@ -24,6 +24,7 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
+import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
@@ -199,7 +200,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // Everything from the first AGGREGATE onwards is post-segment (derives from composed results).
         // This preserves topological correctness when PERCENTAGE concepts depend on AGGREGATE bases.
         int firstAggIdx = java.util.stream.IntStream.range(0, plan.size())
-                .filter(i -> plan.get(i).calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.AGGREGATE)
+                .filter(i -> plan.get(i).calculationType() == CalculationType.AGGREGATE)
                 .findFirst()
                 .orElse(plan.size());
         List<ConceptExecutionPlanEntry> perSegmentPlan = plan.subList(0, firstAggIdx);
@@ -222,7 +223,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // Pre-compute DIRECT_AMOUNT concepts once (period-level, invariant across segments)
         Map<String, BigDecimal> precomputedDirectAmounts = new HashMap<>();
         for (ConceptExecutionPlanEntry entry : perSegmentPlan) {
-            if (entry.calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.DIRECT_AMOUNT) {
+            if (entry.calculationType() == CalculationType.DIRECT_AMOUNT) {
                 String conceptCode = entry.identity().getConceptCode();
                 PayrollConceptExecutionResult directResult =
                         payrollConceptGraphCalculator.calculateConceptResult(conceptCode, calcContext);
@@ -270,7 +271,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 BigDecimal quantity = null;
                 BigDecimal rate = null;
 
-                if (entry.calculationType() == com.b4rrhh.payroll_engine.concept.domain.model.CalculationType.RATE_BY_QUANTITY) {
+                if (entry.calculationType() == CalculationType.RATE_BY_QUANTITY) {
                     quantity = state.getRequiredAmount(entry.operands().get(OperandRole.QUANTITY));
                     rate     = state.getRequiredAmount(entry.operands().get(OperandRole.RATE));
                 }
