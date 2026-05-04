@@ -12,8 +12,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link SegmentExecutionEngine}.
@@ -59,7 +57,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
     private final PercentageConceptResolver percentageConceptResolver;
     private final GreatestConceptResolver greatestConceptResolver;
     private final LeastConceptResolver leastConceptResolver;
-    private final Map<String, TechnicalConceptCalculator> technicalCalculators;
+    private final TechnicalConceptCalculatorRegistry technicalCalculatorRegistry;
 
     public DefaultSegmentExecutionEngine(
             SegmentTechnicalValueResolver technicalValueResolver,
@@ -67,15 +65,14 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
             PercentageConceptResolver percentageConceptResolver,
             GreatestConceptResolver greatestConceptResolver,
             LeastConceptResolver leastConceptResolver,
-            List<TechnicalConceptCalculator> technicalCalculators
+            TechnicalConceptCalculatorRegistry technicalCalculatorRegistry
     ) {
         this.technicalValueResolver = technicalValueResolver;
         this.rateByQuantityResolver = rateByQuantityResolver;
         this.percentageConceptResolver = percentageConceptResolver;
         this.greatestConceptResolver = greatestConceptResolver;
         this.leastConceptResolver = leastConceptResolver;
-        this.technicalCalculators = technicalCalculators.stream()
-                .collect(Collectors.toMap(TechnicalConceptCalculator::conceptCode, c -> c));
+        this.technicalCalculatorRegistry = technicalCalculatorRegistry;
     }
 
     @Override
@@ -119,7 +116,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
 
                 case ENGINE_PROVIDED -> {
                     String conceptCode = entry.identity().getConceptCode();
-                    TechnicalConceptCalculator calculator = technicalCalculators.get(conceptCode);
+                    TechnicalConceptCalculator calculator = technicalCalculatorRegistry.get(conceptCode);
                     if (calculator == null) {
                         throw new UnsupportedTechnicalConceptException(conceptCode);
                     }

@@ -43,7 +43,7 @@ class SegmentExecutionEngineTest {
                     new PercentageConceptResolver(),
                     new GreatestConceptResolver(),
                     new LeastConceptResolver(),
-                    List.of());
+                    new TechnicalConceptCalculatorRegistry(List.of()));
 
     /** Builds an enriched SALARIO_BASE plan entry with QUANTITY and RATE operand wiring. */
     private static ConceptExecutionPlanEntry enrichedSalarioBaseEntry() {

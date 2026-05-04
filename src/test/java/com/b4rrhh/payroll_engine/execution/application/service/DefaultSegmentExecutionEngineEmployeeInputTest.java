@@ -51,7 +51,7 @@ class DefaultSegmentExecutionEngineEmployeeInputTest {
                     new PercentageConceptResolver(),
                     new GreatestConceptResolver(),
                     new LeastConceptResolver(),
-                    List.of());
+                    new TechnicalConceptCalculatorRegistry(List.of()));
 
     @Test
     void employeeInputConceptReturnsRegisteredQuantity() {
