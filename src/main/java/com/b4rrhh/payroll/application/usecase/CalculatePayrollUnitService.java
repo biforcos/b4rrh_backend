@@ -353,6 +353,18 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
                             aggStep, aggTotal, conceptCode, sourceDesc, amount);
                 }
+                case RATE_BY_QUANTITY -> {
+                    ConceptNodeIdentity quantityId = entry.operands().get(OperandRole.QUANTITY);
+                    ConceptNodeIdentity rateId = entry.operands().get(OperandRole.RATE);
+                    quantity = requireStateAmount(composedState, quantityId);
+                    rate = requireStateAmount(composedState, rateId);
+                    amount = quantity.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                    log.info("[NÓMINA] [{}/{}] {} RATE_BY_QUANTITY → {}({}) × {}({}) = {}",
+                            aggStep, aggTotal, conceptCode,
+                            quantityId.getConceptCode(), quantity,
+                            rateId.getConceptCode(), rate,
+                            amount);
+                }
                 case PERCENTAGE -> {
                     ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
                     ConceptNodeIdentity pctId  = entry.operands().get(OperandRole.PERCENTAGE);

@@ -282,7 +282,7 @@ The system models real Spanish HR and payroll law through the concept graph — 
 cd docker/postgres && docker compose up -d
 
 # 2. Run the application (Flyway migrations run automatically on startup)
-mvn spring-boot:run
+mvn spring-boot:run  -Dspring-boot.run.profiles=local
 
 # 3. Run all tests (H2 in-memory — no Docker required)
 mvn test
