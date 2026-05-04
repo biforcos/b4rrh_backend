@@ -2,7 +2,6 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,23 +26,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class HireEmployeeDefaultingTest {
 
-                private static final String REQUIRED_HIRE_BLOCKS = """
-                                                        \"hireDate\": \"2026-03-23\",
-                                                        \"companyCode\": \"COMP\",
-                                                        \"entryReasonCode\": \"HIRE\",
-                                                        \"workCenterCode\": \"WC1\",
-                                                        \"laborClassification\": {
-                                                                \"agreementCode\": \"AGR\",
-                                                                \"agreementCategoryCode\": \"CAT\"
-                                                        },
-                                                        \"contract\": {
-                                                                \"contractTypeCode\": \"CON\",
-                                                                \"contractSubtypeCode\": \"SUB\"
-                                                        },
-                                                        \"workingTime\": {
-                                                                \"workingTimePercentage\": 75
-                                                        }
-                                                """;
+    private static final String REQUIRED_HIRE_BLOCKS = """
+                            "hireDate": "2026-03-23",
+                            "companyCode": "COMP",
+                            "entryReasonCode": "HIRE",
+                            "workCenterCode": "WC1",
+                            "laborClassification": {
+                                    "agreementCode": "AGR",
+                                    "agreementCategoryCode": "CAT"
+                            },
+                            "contract": {
+                                    "contractTypeCode": "CON",
+                                    "contractSubtypeCode": "SUB"
+                            },
+                            "workingTime": {
+                                    "workingTimePercentage": 75
+                            }
+                        """;
 
     @Mock
     private HireEmployeeUseCase hireEmployeeUseCase;
@@ -78,16 +77,16 @@ class HireEmployeeDefaultingTest {
     }
 
     @Test
-    void hireWithExplicitEmpUsesProvidedValue() throws Exception {
+    void hireWithExplicitInternalUsesProvidedValue() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenReturn(createMockResult("ESP", "EMP", "E001"));
+                .thenReturn(createMockResult("ESP", "INTERNAL", "E001"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "ruleSystemCode": "ESP",
-                                  "employeeTypeCode": "EMP",
+                                  "employeeTypeCode": "INTERNAL",
                                   "employeeNumber": "E001",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
@@ -98,13 +97,13 @@ class HireEmployeeDefaultingTest {
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
-        assertEquals("EMP", captor.getValue().employeeTypeCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
     }
 
     @Test
-    void hireWithoutEmployeeTypeCodeDefaultsToEmp() throws Exception {
+    void hireWithoutEmployeeTypeCodeDefaultsToInternal() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenReturn(createMockResult("ESP", "EMP", "E002"));
+                .thenReturn(createMockResult("ESP", "INTERNAL", "E002"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,13 +120,13 @@ class HireEmployeeDefaultingTest {
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
-        assertEquals("EMP", captor.getValue().employeeTypeCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
     }
 
     @Test
-    void hireWithBlankEmployeeTypeCodeDefaultsToEmp() throws Exception {
+    void hireWithBlankEmployeeTypeCodeDefaultsToInternal() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenReturn(createMockResult("ESP", "EMP", "E003"));
+                .thenReturn(createMockResult("ESP", "INTERNAL", "E003"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,20 +144,20 @@ class HireEmployeeDefaultingTest {
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
-        assertEquals("EMP", captor.getValue().employeeTypeCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
     }
 
     @Test
-    void hireWithExplicitNonBlankValuePreservesIt() throws Exception {
+    void hireWithExplicitExternalValuePreservesIt() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenReturn(createMockResult("ESP", "EXT", "E004"));
+                .thenReturn(createMockResult("ESP", "EXTERNAL", "E004"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "ruleSystemCode": "ESP",
-                                  "employeeTypeCode": "EXT",
+                                  "employeeTypeCode": "EXTERNAL",
                                   "employeeNumber": "E004",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
@@ -169,20 +168,20 @@ class HireEmployeeDefaultingTest {
 
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
-        assertEquals("EXT", captor.getValue().employeeTypeCode());
+        assertEquals("EXTERNAL", captor.getValue().employeeTypeCode());
     }
 
     @Test
     void hireWithLowercaseValueNormalizesToUppercase() throws Exception {
         when(hireEmployeeUseCase.hire(any(HireEmployeeCommand.class)))
-                .thenReturn(createMockResult("ESP", "EMP", "E005"));
+                .thenReturn(createMockResult("ESP", "INTERNAL", "E005"));
 
         mockMvc.perform(post("/employees/hire")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "ruleSystemCode": "esp",
-                                  "employeeTypeCode": "emp",
+                                  "employeeTypeCode": "internal",
                                   "employeeNumber": "E005",
                                   "firstName": "Ana",
                                   "lastName1": "Lopez",
@@ -194,6 +193,6 @@ class HireEmployeeDefaultingTest {
         ArgumentCaptor<HireEmployeeCommand> captor = ArgumentCaptor.forClass(HireEmployeeCommand.class);
         verify(hireEmployeeUseCase).hire(captor.capture());
         assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("EMP", captor.getValue().employeeTypeCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
     }
 }
