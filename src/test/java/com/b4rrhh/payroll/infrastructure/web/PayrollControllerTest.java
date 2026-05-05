@@ -96,7 +96,7 @@ class PayrollControllerTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.CALCULATED,
                 null,
@@ -113,15 +113,15 @@ class PayrollControllerTest {
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
         verify(calculatePayrollUseCase).calculate(captor.capture());
-        assertEquals("ORD", captor.getValue().payrollTypeCode());
+        assertEquals("NORMAL", captor.getValue().payrollTypeCode());
     }
 
     @Test
     void getsPayrollByBusinessKey() {
-        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(PayrollStatus.CALCULATED, null)));
 
-        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -131,7 +131,7 @@ class PayrollControllerTest {
 
         @Test
         void getsPayrollByBusinessKeyIncludingWarningsWhenPresent() {
-        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(getPayrollByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
             .thenReturn(Optional.of(payroll(
                 PayrollStatus.NOT_VALID,
                 "ENGINE_INVALID",
@@ -145,7 +145,7 @@ class PayrollControllerTest {
                 ))
             )));
 
-        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        ResponseEntity<PayrollResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -164,7 +164,7 @@ class PayrollControllerTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 new InvalidatePayrollRequest("USER_INVALIDATED")
         );
@@ -179,7 +179,7 @@ class PayrollControllerTest {
         when(validatePayrollUseCase.validate(any(ValidatePayrollCommand.class)))
                 .thenReturn(payroll(PayrollStatus.EXPLICIT_VALIDATED, null));
 
-        ResponseEntity<PayrollResponse> response = controller.validate("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        ResponseEntity<PayrollResponse> response = controller.validate("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.EXPLICIT_VALIDATED, response.getBody().status());
@@ -191,7 +191,7 @@ class PayrollControllerTest {
         when(finalizePayrollUseCase.finalizePayroll(any(FinalizePayrollCommand.class)))
                 .thenReturn(payroll(PayrollStatus.DEFINITIVE, null));
 
-        ResponseEntity<PayrollResponse> response = controller.finalizePayroll("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        ResponseEntity<PayrollResponse> response = controller.finalizePayroll("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(PayrollStatus.DEFINITIVE, response.getBody().status());
@@ -201,7 +201,7 @@ class PayrollControllerTest {
     @Test
     void bulkInvalidatesPayrolls() {
         BulkInvalidatePayrollResult result = new BulkInvalidatePayrollResult(
-                "ESP", "202501", "ORD", 3, 3, 2, 1, 0, 0, "BULK_RESET"
+                "ESP", "202501", "NORMAL", 3, 3, 2, 1, 0, 0, "BULK_RESET"
         );
         when(bulkInvalidatePayrollUseCase.invalidateBulk(any())).thenReturn(result);
 
@@ -209,7 +209,7 @@ class PayrollControllerTest {
                 new BulkInvalidatePayrollRequest(
                         "ESP",
                         "202501",
-                        "ORD",
+                        "NORMAL",
                         "BULK_RESET",
                         new com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest(
                                 com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
@@ -258,7 +258,7 @@ class PayrollControllerTest {
         when(recalculatePayrollUseCase.recalculate(any(RecalculatePayrollCommand.class))).thenReturn(recalculated);
 
         ResponseEntity<PayrollResponse> response = controller.recalculate(
-                "MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1
+                "MAS", "EMP", "MAS000001", "202604", "NORMAL", 1
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -277,7 +277,7 @@ class PayrollControllerTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 status,
                 statusReasonCode,

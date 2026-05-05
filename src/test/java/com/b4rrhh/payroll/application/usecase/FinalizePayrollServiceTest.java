@@ -40,7 +40,7 @@ class FinalizePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.EXPLICIT_VALIDATED,
                 null,
@@ -53,11 +53,11 @@ class FinalizePayrollServiceTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15)
         );
 
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(existing));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Payroll definitive = service.finalizePayroll(new FinalizePayrollCommand("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1));
+        Payroll definitive = service.finalizePayroll(new FinalizePayrollCommand("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1));
 
         assertEquals(7L, definitive.getId());
         assertEquals(PayrollStatus.DEFINITIVE, definitive.getStatus());

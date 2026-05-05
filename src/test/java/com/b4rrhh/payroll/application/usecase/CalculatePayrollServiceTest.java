@@ -50,7 +50,7 @@ class CalculatePayrollServiceTest {
         CalculatePayrollCommand command = command(PayrollStatus.CALCULATED);
         when(payrollEmployeePresenceLookupPort.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(new PayrollEmployeePresenceContext(10L, 20L, "ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -71,7 +71,7 @@ class CalculatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.NOT_VALID,
                 "USER_INVALIDATED",
@@ -86,14 +86,14 @@ class CalculatePayrollServiceTest {
 
         when(payrollEmployeePresenceLookupPort.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(new PayrollEmployeePresenceContext(10L, 20L, "ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(existing));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.calculate(command);
 
         InOrder inOrder = inOrder(payrollRepository);
-        inOrder.verify(payrollRepository).findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1);
+        inOrder.verify(payrollRepository).findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1);
         inOrder.verify(payrollRepository).deleteById(7L);
         inOrder.verify(payrollRepository).flush();
         inOrder.verify(payrollRepository).save(any(Payroll.class));
@@ -108,7 +108,7 @@ class CalculatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.CALCULATED,
                 null,
@@ -123,7 +123,7 @@ class CalculatePayrollServiceTest {
 
         when(payrollEmployeePresenceLookupPort.findByBusinessKeyForUpdate("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(new PayrollEmployeePresenceContext(10L, 20L, "ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(existing));
 
         assertThrows(PayrollRecalculationNotAllowedException.class, () -> service.calculate(command));
@@ -146,7 +146,7 @@ class CalculatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 status,
                 status == PayrollStatus.NOT_VALID ? "ENGINE_INVALID" : null,

@@ -48,7 +48,7 @@ class BulkInvalidatePayrollServiceTest {
     void singleEmployee_calculatedPayroll_isInvalidated() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.CALCULATED)));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -77,11 +77,11 @@ class BulkInvalidatePayrollServiceTest {
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1), presence("INTERNAL", "EMP001", 2)));
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP002"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP002", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 2))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 2))
                 .thenReturn(Optional.of(payroll(2L, "INTERNAL", "EMP001", 2, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP002", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP002", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(3L, "INTERNAL", "EMP002", 1, PayrollStatus.CALCULATED)));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -113,9 +113,9 @@ class BulkInvalidatePayrollServiceTest {
                 .thenReturn(List.of(presence("INTERNAL", "EMP010", 1)));
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP011"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP011", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP010", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP010", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(10L, "INTERNAL", "EMP010", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP011", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP011", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(11L, "INTERNAL", "EMP011", 1, PayrollStatus.CALCULATED)));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -136,7 +136,7 @@ class BulkInvalidatePayrollServiceTest {
     void alreadyNotValidPayroll_isSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.NOT_VALID)));
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
@@ -158,7 +158,7 @@ class BulkInvalidatePayrollServiceTest {
     void explicitValidatedPayroll_isProtectedAndSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.EXPLICIT_VALIDATED)));
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
@@ -180,7 +180,7 @@ class BulkInvalidatePayrollServiceTest {
     void definitivePayroll_isProtectedAndSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.DEFINITIVE)));
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
@@ -199,7 +199,7 @@ class BulkInvalidatePayrollServiceTest {
     void payrollNotFoundForCandidateUnit_countsSkippedNotFound() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
@@ -236,7 +236,7 @@ class BulkInvalidatePayrollServiceTest {
     // --- helpers ---
 
     private BulkInvalidatePayrollCommand command(PayrollLaunchTargetSelection targetSelection) {
-        return new BulkInvalidatePayrollCommand("ESP", "202501", "ORD", "BULK_RESET", targetSelection);
+        return new BulkInvalidatePayrollCommand("ESP", "202501", "NORMAL", "BULK_RESET", targetSelection);
     }
 
     private PayrollLaunchTargetSelection singleEmployeeSelection(String employeeTypeCode, String employeeNumber) {
@@ -274,7 +274,7 @@ class BulkInvalidatePayrollServiceTest {
                 employeeTypeCode,
                 employeeNumber,
                 "202501",
-                "ORD",
+                "NORMAL",
                 presenceNumber,
                 status,
                 null,

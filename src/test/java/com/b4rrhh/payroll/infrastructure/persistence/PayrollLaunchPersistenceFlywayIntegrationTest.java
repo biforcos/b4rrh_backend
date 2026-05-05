@@ -55,11 +55,11 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
         Long firstRunId = insertCalculationRun("REQUESTED");
         Long secondRunId = insertCalculationRun("REQUESTED");
 
-        insertCalculationClaim(firstRunId, "INTERNAL", "EMP001", "202501", "ORD", 1);
+        insertCalculationClaim(firstRunId, "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         assertThrows(
                 DataIntegrityViolationException.class,
-                () -> insertCalculationClaim(secondRunId, "INTERNAL", "EMP001", "202501", "ORD", 1)
+                () -> insertCalculationClaim(secondRunId, "INTERNAL", "EMP001", "202501", "NORMAL", 1)
         );
     }
 
@@ -100,7 +100,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
     @Test
     void cascadesClaimsWhenRunIsDeleted() {
         Long runId = insertCalculationRun("RUNNING");
-        insertCalculationClaim(runId, "INTERNAL", "EMP001", "202501", "ORD", 1);
+        insertCalculationClaim(runId, "INTERNAL", "EMP001", "202501", "NORMAL", 1);
 
         jdbcTemplate.update("delete from payroll.calculation_run where id = ?", runId);
 
@@ -125,7 +125,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
                 "insert into payroll.calculation_run (rule_system_code, payroll_period_code, payroll_type_code, calculation_engine_code, calculation_engine_version, requested_at, requested_by, status, target_selection_json, total_candidates, total_eligible, total_claimed, total_skipped_not_eligible, total_skipped_already_claimed, total_calculated, total_not_valid, total_errors, summary_json) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 Timestamp.valueOf(LocalDateTime.of(2026, 1, 31, 10, 15)),
@@ -175,7 +175,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 "CALCULATED",
                 null,

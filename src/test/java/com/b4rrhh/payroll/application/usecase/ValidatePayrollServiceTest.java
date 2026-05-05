@@ -40,7 +40,7 @@ class ValidatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.CALCULATED,
                 null,
@@ -53,11 +53,11 @@ class ValidatePayrollServiceTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15)
         );
 
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(existing));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Payroll validated = service.validate(new ValidatePayrollCommand("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1));
+        Payroll validated = service.validate(new ValidatePayrollCommand("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1));
 
         assertEquals(7L, validated.getId());
         assertEquals(PayrollStatus.EXPLICIT_VALIDATED, validated.getStatus());

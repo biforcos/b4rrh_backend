@@ -41,7 +41,7 @@ class InvalidatePayrollServiceTest {
     @Test
     void invalidatesExistingPayrollPreservingIdentity() {
         Payroll existing = payroll(PayrollStatus.CALCULATED);
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(existing));
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -50,7 +50,7 @@ class InvalidatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 "USER_INVALIDATED"
         ));
@@ -65,7 +65,7 @@ class InvalidatePayrollServiceTest {
 
     @Test
     void throwsWhenPayrollDoesNotExist() {
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
 
         assertThrows(PayrollNotFoundException.class, () -> service.invalidate(new InvalidatePayrollCommand(
@@ -73,7 +73,7 @@ class InvalidatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 "USER_INVALIDATED"
         )));
@@ -81,7 +81,7 @@ class InvalidatePayrollServiceTest {
 
     @Test
     void rejectsInvalidateWhenPayrollIsAlreadyDefinitive() {
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(PayrollStatus.DEFINITIVE)));
 
         assertThrows(PayrollInvalidStateTransitionException.class, () -> service.invalidate(new InvalidatePayrollCommand(
@@ -89,7 +89,7 @@ class InvalidatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 "USER_INVALIDATED"
         )));
@@ -102,7 +102,7 @@ class InvalidatePayrollServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 status,
                 null,

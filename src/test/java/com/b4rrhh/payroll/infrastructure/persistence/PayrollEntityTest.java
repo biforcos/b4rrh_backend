@@ -62,7 +62,7 @@ class PayrollEntityTest {
         payroll.setEmployeeTypeCode("INTERNAL");
         payroll.setEmployeeNumber("EMP001");
         payroll.setPayrollPeriodCode("202501");
-        payroll.setPayrollTypeCode("ORD");
+        payroll.setPayrollTypeCode("NORMAL");
         payroll.setPresenceNumber(1);
         payroll.setCalculatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
         return payroll;

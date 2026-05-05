@@ -30,8 +30,8 @@ class ListPayrollCalculationRunMessagesServiceTest {
     void listsMessagesFromRepositoryWithoutExtraFiltering() {
         LocalDateTime now = LocalDateTime.of(2026, 4, 11, 10, 0);
         when(calculationRunMessageRepository.findByRunIdOrderByCreatedAtAscIdAsc(7L)).thenReturn(List.of(
-                new CalculationRunMessage(1L, 7L, "A", "INFO", "ok", "{}", "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, now),
-                new CalculationRunMessage(2L, 99L, "B", "WARN", "kept as-is from repository", "{}", "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, now.plusSeconds(1))
+                new CalculationRunMessage(1L, 7L, "A", "INFO", "ok", "{}", "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, now),
+                new CalculationRunMessage(2L, 99L, "B", "WARN", "kept as-is from repository", "{}", "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, now.plusSeconds(1))
         ));
 
         List<CalculationRunMessage> result = service.listByRunId(7L);

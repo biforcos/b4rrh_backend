@@ -48,7 +48,7 @@ class PayrollPersistenceAdapterTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 PayrollStatus.NOT_VALID,
                 "USER_INVALIDATED",
@@ -85,7 +85,7 @@ class PayrollPersistenceAdapterTest {
         payroll.setEmployeeTypeCode("INTERNAL");
         payroll.setEmployeeNumber("EMP001");
         payroll.setPayrollPeriodCode("202501");
-        payroll.setPayrollTypeCode("ORD");
+        payroll.setPayrollTypeCode("NORMAL");
         payroll.setPresenceNumber(1);
         payroll.setStatus(status);
         payroll.setStatusReasonCode(statusReasonCode);

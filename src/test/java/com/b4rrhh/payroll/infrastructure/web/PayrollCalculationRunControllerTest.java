@@ -63,7 +63,7 @@ class PayrollCalculationRunControllerTest {
         ResponseEntity<PayrollCalculationRunResponse> response = controller.launch(new LaunchPayrollCalculationRequest(
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 new PayrollLaunchTargetSelectionRequest(
@@ -80,7 +80,7 @@ class PayrollCalculationRunControllerTest {
 
         ArgumentCaptor<LaunchPayrollCalculationCommand> captor = ArgumentCaptor.forClass(LaunchPayrollCalculationCommand.class);
         verify(launchPayrollCalculationUseCase).launch(captor.capture());
-        assertEquals("ORD", captor.getValue().payrollTypeCode());
+        assertEquals("NORMAL", captor.getValue().payrollTypeCode());
         assertEquals("INTERNAL", captor.getValue().targetSelection().employee().employeeTypeCode());
     }
 
@@ -91,7 +91,7 @@ class PayrollCalculationRunControllerTest {
         ResponseEntity<PayrollCalculationRunResponse> response = controller.launch(new LaunchPayrollCalculationRequest(
             "ESP",
             "202501",
-            "ORD",
+            "NORMAL",
             "ENGINE",
             "1.0",
             new PayrollLaunchTargetSelectionRequest(
@@ -150,7 +150,7 @@ class PayrollCalculationRunControllerTest {
                         "INTERNAL",
                         "EMP001",
                         "202501",
-                        "ORD",
+                        "NORMAL",
                         1,
                         LocalDateTime.of(2026, 4, 11, 10, 1)
                 )
@@ -192,7 +192,7 @@ class PayrollCalculationRunControllerTest {
                 1L,
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 LocalDateTime.of(2026, 4, 11, 10, 0),
