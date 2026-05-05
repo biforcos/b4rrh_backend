@@ -4142,7 +4142,7 @@ paths:
         - name: payrollTypeCode
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, enum: [NORMAL, EXTRA] }
         - name: presenceNumber
           in: path
           required: true
@@ -4185,7 +4185,7 @@ paths:
         - name: payrollTypeCode
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, enum: [NORMAL, EXTRA] }
         - name: presenceNumber
           in: path
           required: true
@@ -4240,7 +4240,7 @@ paths:
         - name: payrollTypeCode
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, enum: [NORMAL, EXTRA] }
         - name: presenceNumber
           in: path
           required: true
@@ -4297,6 +4297,7 @@ paths:
           required: true
           schema:
             type: string
+            enum: [NORMAL, EXTRA]
         - name: presenceNumber
           in: path
           required: true
@@ -5218,6 +5219,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         calculationEngineCode:
           type: string
         calculationEngineVersion:
@@ -5256,6 +5258,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         calculationEngineCode:
           type: string
         calculationEngineVersion:
@@ -5303,6 +5306,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         statusReasonCode:
           type: string
         targetSelection:
@@ -5328,6 +5332,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         totalCandidates:
           type: integer
         totalFound:
@@ -8092,6 +8097,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         presenceNumber:
           type: integer
         status:
@@ -8230,6 +8236,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         presenceNumber:
           type: integer
         status:

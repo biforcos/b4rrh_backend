@@ -346,6 +346,7 @@ components:
       required: true
       schema:
         type: string
+        enum: [NORMAL, EXTRA]
         maxLength: 30
     PresenceNumber:
       in: path
@@ -424,6 +425,7 @@ components:
           description: V1 launch requires YYYYMM format to resolve relevant employee presences by monthly overlap.
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
           maxLength: 30
         calculationEngineCode:
           type: string
@@ -471,6 +473,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         calculationEngineCode:
           type: string
         calculationEngineVersion:
@@ -574,6 +577,7 @@ components:
           maxLength: 30
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
           nullable: true
           maxLength: 30
         presenceNumber:
@@ -688,6 +692,7 @@ components:
           maxLength: 30
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
           maxLength: 30
         presenceNumber:
           type: integer
@@ -751,6 +756,7 @@ components:
           description: Must be in YYYYMM format. Used to resolve presence overlaps for the payroll month.
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
           maxLength: 30
         statusReasonCode:
           type: string
@@ -783,6 +789,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         totalCandidates:
           type: integer
           format: int32
@@ -874,6 +881,7 @@ components:
           type: string
         payrollTypeCode:
           type: string
+          enum: [NORMAL, EXTRA]
         presenceNumber:
           type: integer
           format: int32
