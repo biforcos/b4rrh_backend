@@ -101,10 +101,10 @@ class LaunchPayrollCalculationServiceTest {
     void launchHappyPathCreatesRunCalculatesEligibleUnitsAndCompletes() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(9L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(9L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
 
@@ -124,7 +124,7 @@ class LaunchPayrollCalculationServiceTest {
     void launchSkipsUnitsThatAreNotEligible() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(PayrollStatus.CALCULATED)));
 
         CalculationRun run = service.launch(singleEmployeeCommand());
@@ -138,7 +138,7 @@ class LaunchPayrollCalculationServiceTest {
     void launchSkipsUnitsAlreadyClaimed() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate claim"));
@@ -155,10 +155,10 @@ class LaunchPayrollCalculationServiceTest {
     void launchTreatsMissingPayrollAsEligibleAndCalculates() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(11L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(11L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
 
@@ -172,10 +172,10 @@ class LaunchPayrollCalculationServiceTest {
     void launchAllowsRecalculationWhenExistingPayrollIsNotValid() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll(PayrollStatus.NOT_VALID)));
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(12L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(12L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
 
@@ -190,10 +190,10 @@ class LaunchPayrollCalculationServiceTest {
     void launchPersistsRunMessageAndFinalizesWithErrorsWhenUnitCalculationFails() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(13L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(13L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenThrow(new IllegalStateException("boom"));
 
@@ -209,10 +209,10 @@ class LaunchPayrollCalculationServiceTest {
     void launchSkipsUnitExplicitlyWhenEligibleRealInputIsMissing() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(31L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(31L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenThrow(new PayrollLaunchInputMissingException(
                         "MONTHLY_SALARY_NOT_CONFIGURED",
@@ -239,14 +239,14 @@ class LaunchPayrollCalculationServiceTest {
                         new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1),
                         new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 2)
                 ));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 2))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 2))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
                 .thenReturn(
-                        new CalculationClaim(14L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null),
-                        new CalculationClaim(15L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2, LocalDateTime.now(), null)
+                        new CalculationClaim(14L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null),
+                        new CalculationClaim(15L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 2, LocalDateTime.now(), null)
                 );
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
@@ -312,9 +312,9 @@ class LaunchPayrollCalculationServiceTest {
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
                 .thenReturn(
-                        new CalculationClaim(21L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null),
-                        new CalculationClaim(22L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 2, LocalDateTime.now(), null),
-                        new CalculationClaim(23L, 1L, "ESP", "INTERNAL", "EMP002", "202501", "ORD", 1, LocalDateTime.now(), null)
+                        new CalculationClaim(21L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null),
+                        new CalculationClaim(22L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 2, LocalDateTime.now(), null),
+                        new CalculationClaim(23L, 1L, "ESP", "INTERNAL", "EMP002", "202501", "NORMAL", 1, LocalDateTime.now(), null)
                 );
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
@@ -333,10 +333,10 @@ class LaunchPayrollCalculationServiceTest {
                 .thenReturn(List.of(new PayrollLaunchEmployeeContext("INTERNAL", "EMP001")));
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "ORD", 1))
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
                 .thenReturn(Optional.empty());
         when(calculationClaimRepository.save(any(CalculationClaim.class)))
-                .thenReturn(new CalculationClaim(24L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "ORD", 1, LocalDateTime.now(), null));
+                .thenReturn(new CalculationClaim(24L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
         when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
                 .thenReturn(payroll(PayrollStatus.CALCULATED));
 
@@ -351,7 +351,7 @@ class LaunchPayrollCalculationServiceTest {
         return new LaunchPayrollCalculationCommand(
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 new PayrollLaunchTargetSelection(
@@ -366,7 +366,7 @@ class LaunchPayrollCalculationServiceTest {
         return new LaunchPayrollCalculationCommand(
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 new PayrollLaunchTargetSelection(
@@ -384,7 +384,7 @@ class LaunchPayrollCalculationServiceTest {
                 "INTERNAL",
                 "EMP001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 status,
                 null,

@@ -106,7 +106,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
         var run = launchPayrollCalculationUseCase.launch(new LaunchPayrollCalculationCommand(
                 "ESP",
                 "202501",
-                "ORD",
+                "NORMAL",
                 "ENGINE",
                 "1.0",
                 new PayrollLaunchTargetSelection(
@@ -127,7 +127,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                 "INTERNAL",
                 employeeNumber,
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 "CALCULATED"
         );

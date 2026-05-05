@@ -64,7 +64,7 @@ class SearchPayrollsServiceTest {
 
     private Payroll minimalPayroll(String employeeNumber, String periodCode, PayrollStatus status) {
         return Payroll.rehydrate(
-                1L, "MAS", "EMP", employeeNumber, periodCode, "MENSUAL", 1,
+                1L, "MAS", "EMP", employeeNumber, periodCode, "NORMAL", 1,
                 status, null,
                 LocalDateTime.now(), "ENGINE_001", "1.0",
                 List.of(), List.of(), List.of(),

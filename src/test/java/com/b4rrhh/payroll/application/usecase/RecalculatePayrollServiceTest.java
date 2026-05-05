@@ -37,11 +37,11 @@ class RecalculatePayrollServiceTest {
 
     @Test
     void delegatesToCalculateUnitWhenPayrollIsNotValid() {
-        RecalculatePayrollCommand command = command("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1);
+        RecalculatePayrollCommand command = command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1);
         Payroll notValidPayroll = payroll("MAS000001", "202604", PayrollStatus.NOT_VALID, "ENGINE_001", "1.0");
         Payroll recalculated = payroll("MAS000001", "202604", PayrollStatus.CALCULATED, "ENGINE_001", "1.0");
 
-        when(payrollRepository.findByBusinessKey("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1))
+        when(payrollRepository.findByBusinessKey("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1))
                 .thenReturn(Optional.of(notValidPayroll));
         when(calculatePayrollUnitUseCase.calculate(any())).thenReturn(recalculated);
 
@@ -64,16 +64,16 @@ class RecalculatePayrollServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(PayrollNotFoundException.class, () ->
-                service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1)));
+                service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1)));
     }
 
     @Test
     void throwsWhenPayrollIsNotInNotValidState() {
-        when(payrollRepository.findByBusinessKey("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1))
+        when(payrollRepository.findByBusinessKey("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1))
                 .thenReturn(Optional.of(payroll("MAS000001", "202604", PayrollStatus.CALCULATED, "ENGINE_001", "1.0")));
 
         assertThrows(PayrollRecalculationNotAllowedException.class, () ->
-                service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1)));
+                service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1)));
     }
 
     @Test
@@ -83,7 +83,7 @@ class RecalculatePayrollServiceTest {
         when(calculatePayrollUnitUseCase.calculate(any())).thenReturn(
                 payroll("MAS000001", "202604", PayrollStatus.CALCULATED, "ENG", "1"));
 
-        service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "MENSUAL", 1));
+        service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1));
 
         ArgumentCaptor<CalculatePayrollUnitCommand> captor = ArgumentCaptor.forClass(CalculatePayrollUnitCommand.class);
         verify(calculatePayrollUnitUseCase).calculate(captor.capture());
@@ -101,7 +101,7 @@ class RecalculatePayrollServiceTest {
         // id, ruleSystemCode, employeeTypeCode, employeeNumber, periodCode, payrollTypeCode, presenceNumber,
         // status, statusReasonCode (null=none), calculatedAt, engCode, engVer, warnings, concepts, contextSnapshots, createdAt, updatedAt
         return Payroll.rehydrate(
-                1L, "MAS", "EMP", employeeNumber, periodCode, "MENSUAL", 1,
+                1L, "MAS", "EMP", employeeNumber, periodCode, "NORMAL", 1,
                 status, null, LocalDateTime.now(), engCode, engVer,
                 List.of(), List.of(), List.of(),
                 LocalDateTime.now(), LocalDateTime.now()
