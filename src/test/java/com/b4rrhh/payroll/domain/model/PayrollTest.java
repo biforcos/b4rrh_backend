@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.domain.model;
 
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionException;
+import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -81,13 +82,54 @@ class PayrollTest {
         );
     }
 
+    @Test
+    void rejectsInvalidPayrollTypeCode() {
+        assertThrows(
+                PayrollTypeInvalidException.class,
+                () -> Payroll.create(
+                        "ESP",
+                        "INTERNAL",
+                        "0001",
+                        "202501",
+                        "ORD",   // invalid — must be NORMAL or EXTRA
+                        1,
+                        PayrollStatus.CALCULATED,
+                        null,
+                        LocalDateTime.of(2026, 1, 31, 10, 15),
+                        "PAYROLL_ENGINE",
+                        "1.0.0",
+                        List.of(
+                                new PayrollConcept(
+                                        1,
+                                        "BASE",
+                                        "Base salary",
+                                        new BigDecimal("1000.00"),
+                                        new BigDecimal("1.00"),
+                                        new BigDecimal("1000.00"),
+                                        "EARNING",
+                                        "202501",
+                                        1
+                                )
+                        ),
+                        List.of(
+                                new PayrollContextSnapshot(
+                                        "PRESENCE",
+                                        "EMPLOYEE",
+                                        "{\"presenceNumber\":1}",
+                                        "{\"companyCode\":\"ES01\"}"
+                                )
+                        )
+                )
+        );
+    }
+
     private Payroll payroll(PayrollStatus status) {
         return Payroll.create(
                 "ESP",
                 "INTERNAL",
                 "0001",
                 "202501",
-                "ORD",
+                "NORMAL",
                 1,
                 status,
                 status == PayrollStatus.NOT_VALID ? "ENGINE_INVALID" : null,

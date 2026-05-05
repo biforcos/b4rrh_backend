@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.domain.model;
 
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionException;
+import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,7 +53,11 @@ public class Payroll {
         this.employeeTypeCode = requireCode(employeeTypeCode, "employeeTypeCode", 30);
         this.employeeNumber = requireText(employeeNumber, "employeeNumber", 15);
         this.payrollPeriodCode = requireCode(payrollPeriodCode, "payrollPeriodCode", 30);
-        this.payrollTypeCode = requireCode(payrollTypeCode, "payrollTypeCode", 30);
+        String normalizedPayrollTypeCode = requireCode(payrollTypeCode, "payrollTypeCode", 30);
+        if (!PayrollTypeCodes.isValid(normalizedPayrollTypeCode)) {
+            throw new PayrollTypeInvalidException(normalizedPayrollTypeCode);
+        }
+        this.payrollTypeCode = normalizedPayrollTypeCode;
         this.presenceNumber = requirePositive(presenceNumber, "presenceNumber");
         this.status = requireStatus(status);
         this.statusReasonCode = normalizeReason(statusReasonCode);
