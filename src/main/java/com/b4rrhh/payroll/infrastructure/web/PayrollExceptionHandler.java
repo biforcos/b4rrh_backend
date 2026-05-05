@@ -6,6 +6,7 @@ import com.b4rrhh.payroll.domain.exception.PayrollEmployeePresenceNotFoundExcept
 import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionException;
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
+import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,8 @@ public class PayrollExceptionHandler {
 
     @ExceptionHandler({
             InvalidPayrollArgumentException.class,
-            IllegalArgumentException.class
+            IllegalArgumentException.class,
+            PayrollTypeInvalidException.class
     })
     public ResponseEntity<PayrollErrorResponse> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new PayrollErrorResponse(ex.getMessage()));
