@@ -45,4 +45,49 @@ class EmployeeTaxInformationTest {
         assertEquals(TaxTerritory.COMUN, EmployeeTaxInformation.DEFAULT.getTaxTerritory());
         assertEquals(DisabilityDegree.NONE, EmployeeTaxInformation.DEFAULT.getDisabilityDegree());
     }
+
+    @Test
+    void create_throwsOnNegativeAscendantsCount() {
+        assertThrows(IllegalArgumentException.class, () ->
+            EmployeeTaxInformation.create(1L, LocalDate.of(2025,1,1),
+                FamilySituation.SINGLE_OR_OTHER, 0, -1,
+                DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN));
+    }
+
+    @Test
+    void correct_throwsOnNegativeCounts() {
+        var original = EmployeeTaxInformation.rehydrate(7L, 1L, LocalDate.of(2025,1,1),
+            FamilySituation.SINGLE_OR_OTHER, 0, 0,
+            DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN, null, null);
+        assertThrows(IllegalArgumentException.class, () ->
+            original.correct(FamilySituation.SINGLE_OR_OTHER, -1, 0,
+                DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN));
+    }
+
+    @Test
+    void correct_preservesCreatedAt() {
+        var now = java.time.LocalDateTime.of(2025, 1, 1, 10, 0);
+        var original = EmployeeTaxInformation.rehydrate(7L, 1L, LocalDate.of(2025,1,1),
+            FamilySituation.SINGLE_OR_OTHER, 0, 0,
+            DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN, now, now);
+        var corrected = original.correct(FamilySituation.MARRIED_DEPENDENT_SPOUSE, 0, 0,
+            DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN);
+        assertEquals(now, corrected.getCreatedAt());
+        assertNull(corrected.getUpdatedAt());
+    }
+
+    @Test
+    void create_throwsOnNullRequiredFields() {
+        assertThrows(IllegalArgumentException.class, () ->
+            EmployeeTaxInformation.create(null, LocalDate.of(2025,1,1),
+                FamilySituation.SINGLE_OR_OTHER, 0, 0,
+                DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN));
+        assertThrows(IllegalArgumentException.class, () ->
+            EmployeeTaxInformation.create(1L, null,
+                FamilySituation.SINGLE_OR_OTHER, 0, 0,
+                DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN));
+        assertThrows(IllegalArgumentException.class, () ->
+            EmployeeTaxInformation.create(1L, LocalDate.of(2025,1,1),
+                null, 0, 0, DisabilityDegree.NONE, false, false, false, TaxTerritory.COMUN));
+    }
 }

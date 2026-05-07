@@ -49,6 +49,11 @@ public class EmployeeTaxInformation {
             FamilySituation familySituation, int descendantsCount, int ascendantsCount,
             DisabilityDegree disabilityDegree, boolean pensionCompensatoria,
             boolean geographicMobility, boolean habitualResidenceLoan, TaxTerritory taxTerritory) {
+        if (employeeId == null) throw new IllegalArgumentException("employeeId is required");
+        if (validFrom == null) throw new IllegalArgumentException("validFrom is required");
+        if (familySituation == null) throw new IllegalArgumentException("familySituation is required");
+        if (disabilityDegree == null) throw new IllegalArgumentException("disabilityDegree is required");
+        if (taxTerritory == null) throw new IllegalArgumentException("taxTerritory is required");
         if (descendantsCount < 0) throw new IllegalArgumentException("descendantsCount must be >= 0");
         if (ascendantsCount < 0) throw new IllegalArgumentException("ascendantsCount must be >= 0");
         return new EmployeeTaxInformation(null, employeeId, validFrom,
@@ -60,6 +65,9 @@ public class EmployeeTaxInformation {
     public EmployeeTaxInformation correct(FamilySituation familySituation, int descendantsCount,
             int ascendantsCount, DisabilityDegree disabilityDegree, boolean pensionCompensatoria,
             boolean geographicMobility, boolean habitualResidenceLoan, TaxTerritory taxTerritory) {
+        if (familySituation == null) throw new IllegalArgumentException("familySituation is required");
+        if (disabilityDegree == null) throw new IllegalArgumentException("disabilityDegree is required");
+        if (taxTerritory == null) throw new IllegalArgumentException("taxTerritory is required");
         if (descendantsCount < 0) throw new IllegalArgumentException("descendantsCount must be >= 0");
         if (ascendantsCount < 0) throw new IllegalArgumentException("ascendantsCount must be >= 0");
         return new EmployeeTaxInformation(this.id, this.employeeId, this.validFrom,
