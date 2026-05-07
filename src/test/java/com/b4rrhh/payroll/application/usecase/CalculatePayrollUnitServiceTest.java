@@ -1,6 +1,8 @@
 package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
+import com.b4rrhh.payroll.application.port.EmployeeTaxInfoContext;
+import com.b4rrhh.payroll.application.port.EmployeeTaxInfoPayrollLookupPort;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileQuery;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileUseCase;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.model.AgreementCategoryProfile;
@@ -74,6 +76,8 @@ class CalculatePayrollUnitServiceTest {
     @Mock
     private GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     @Mock
+    private EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
+    @Mock
     private SegmentExecutionEngine segmentExecutionEngine;
     private final TechnicalConceptCalculatorRegistry technicalConceptCalculatorRegistry = new TechnicalConceptCalculatorRegistry(List.of());
 
@@ -94,8 +98,14 @@ class CalculatePayrollUnitServiceTest {
             technicalConceptCalculatorRegistry,
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
-            getAgreementCategoryProfileUseCase
+            getAgreementCategoryProfileUseCase,
+            employeeTaxInfoLookupPort
         );
+
+        when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(EmployeeTaxInfoContext.ofDefault());
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
             "ESP", "INTERNAL", "EMP001", 2,
@@ -198,8 +208,14 @@ class CalculatePayrollUnitServiceTest {
             technicalConceptCalculatorRegistry,
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
-            getAgreementCategoryProfileUseCase
+            getAgreementCategoryProfileUseCase,
+            employeeTaxInfoLookupPort
         );
+
+        org.mockito.Mockito.lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(EmployeeTaxInfoContext.ofDefault());
 
         when(payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
             "ESP", "INTERNAL", "EMP001", 2,

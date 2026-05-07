@@ -2,6 +2,8 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.AgreementProfileContext;
 import com.b4rrhh.payroll.application.port.AgreementProfileLookupPort;
+import com.b4rrhh.payroll.application.port.EmployeeTaxInfoContext;
+import com.b4rrhh.payroll.application.port.EmployeeTaxInfoPayrollLookupPort;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileQuery;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.application.usecase.GetAgreementCategoryProfileUseCase;
 import com.b4rrhh.payroll.application.port.CompanyProfileContext;
@@ -77,6 +79,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final SegmentExecutionEngine segmentExecutionEngine;
     private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
+    private final EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -91,7 +94,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             TechnicalConceptCalculatorRegistry technicalCalculatorRegistry,
             SegmentExecutionEngine segmentExecutionEngine,
             EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
-            GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase
+            GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase,
+            EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -106,6 +110,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.segmentExecutionEngine = segmentExecutionEngine;
         this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
         this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
+        this.employeeTaxInfoLookupPort = employeeTaxInfoLookupPort;
     }
 
     @Override
@@ -601,7 +606,39 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     .ifPresent(snapshots::add);
         }
 
+        snapshots.add(buildTaxInfoSnapshot(command, input));
+
         return List.copyOf(snapshots);
+    }
+
+    private PayrollContextSnapshot buildTaxInfoSnapshot(
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input) {
+        LocalDate referenceDate = input.presenceStartDate() != null
+            ? input.presenceStartDate()
+            : command.periodStart();
+
+        EmployeeTaxInfoContext ctx = employeeTaxInfoLookupPort.findLatestOnOrBefore(
+            command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber(), referenceDate);
+
+        Map<String, Object> sourceKey = new LinkedHashMap<>();
+        sourceKey.put("ruleSystemCode", command.ruleSystemCode());
+        sourceKey.put("employeeTypeCode", command.employeeTypeCode());
+        sourceKey.put("employeeNumber", command.employeeNumber());
+        sourceKey.put("referenceDate", referenceDate.toString());
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("familySituation", ctx.familySituation());
+        payload.put("descendantsCount", ctx.descendantsCount());
+        payload.put("ascendantsCount", ctx.ascendantsCount());
+        payload.put("disabilityDegree", ctx.disabilityDegree());
+        payload.put("pensionCompensatoria", ctx.pensionCompensatoria());
+        payload.put("geographicMobility", ctx.geographicMobility());
+        payload.put("habitualResidenceLoan", ctx.habitualResidenceLoan());
+        payload.put("taxTerritory", ctx.taxTerritory());
+
+        return new PayrollContextSnapshot("EMPLOYEE_TAX_INFORMATION", "EMPLOYEE",
+            toJson(sourceKey), toJson(payload));
     }
 
     private PayrollContextSnapshot buildCompanySnapshot(
