@@ -5019,6 +5019,180 @@ paths:
         '204':
           description: Photo deleted
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/tax-information:
+    post:
+      summary: Register employee tax information (Modelo 145)
+      tags: [Employee Tax Information]
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeTaxInformationRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeTaxInformationResponse'
+        '400':
+          description: Invalid input or validFrom date
+        '404':
+          description: Employee not found
+        '409':
+          description: Tax information already exists for this validFrom
+    get:
+      summary: List all tax information records for an employee
+      tags: [Employee Tax Information]
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployeeTaxInformationResponse'
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/tax-information/{validFrom}:
+    get:
+      summary: Get a specific tax information record by validFrom date
+      tags: [Employee Tax Information]
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeNumber
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: validFrom
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeTaxInformationResponse'
+        '404':
+          description: Not found
+    put:
+      summary: Correct (replace all fields of) a tax information record
+      tags: [Employee Tax Information]
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeNumber
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: validFrom
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectEmployeeTaxInformationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeTaxInformationResponse'
+        '404':
+          description: Not found
+    delete:
+      summary: Delete a tax information record
+      tags: [Employee Tax Information]
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: employeeNumber
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: validFrom
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+
   /payroll-engine/{ruleSystemCode}/tables:
     post:
       operationId: createPayrollTable
@@ -8635,4 +8809,82 @@ components:
         - objectKey
       properties:
         objectKey:
+          type: string
+
+    CreateEmployeeTaxInformationRequest:
+      type: object
+      required: [validFrom, familySituation, descendantsCount, ascendantsCount, disabilityDegree, pensionCompensatoria, geographicMobility, habitualResidenceLoan, taxTerritory]
+      properties:
+        validFrom:
+          type: string
+          format: date
+        familySituation:
+          type: string
+          enum: [SINGLE_OR_OTHER, MARRIED_DEPENDENT_SPOUSE, SEPARATED_WITH_CHILDREN]
+        descendantsCount:
+          type: integer
+          minimum: 0
+        ascendantsCount:
+          type: integer
+          minimum: 0
+        disabilityDegree:
+          type: string
+          enum: [NONE, MODERATE, SEVERE]
+        pensionCompensatoria:
+          type: boolean
+        geographicMobility:
+          type: boolean
+        habitualResidenceLoan:
+          type: boolean
+        taxTerritory:
+          type: string
+          enum: [COMUN, ARABA, GIPUZKOA, BIZKAIA, NAVARRA]
+
+    CorrectEmployeeTaxInformationRequest:
+      type: object
+      required: [familySituation, descendantsCount, ascendantsCount, disabilityDegree, pensionCompensatoria, geographicMobility, habitualResidenceLoan, taxTerritory]
+      properties:
+        familySituation:
+          type: string
+          enum: [SINGLE_OR_OTHER, MARRIED_DEPENDENT_SPOUSE, SEPARATED_WITH_CHILDREN]
+        descendantsCount:
+          type: integer
+          minimum: 0
+        ascendantsCount:
+          type: integer
+          minimum: 0
+        disabilityDegree:
+          type: string
+          enum: [NONE, MODERATE, SEVERE]
+        pensionCompensatoria:
+          type: boolean
+        geographicMobility:
+          type: boolean
+        habitualResidenceLoan:
+          type: boolean
+        taxTerritory:
+          type: string
+          enum: [COMUN, ARABA, GIPUZKOA, BIZKAIA, NAVARRA]
+
+    EmployeeTaxInformationResponse:
+      type: object
+      properties:
+        validFrom:
+          type: string
+          format: date
+        familySituation:
+          type: string
+        descendantsCount:
+          type: integer
+        ascendantsCount:
+          type: integer
+        disabilityDegree:
+          type: string
+        pensionCompensatoria:
+          type: boolean
+        geographicMobility:
+          type: boolean
+        habitualResidenceLoan:
+          type: boolean
+        taxTerritory:
           type: string
