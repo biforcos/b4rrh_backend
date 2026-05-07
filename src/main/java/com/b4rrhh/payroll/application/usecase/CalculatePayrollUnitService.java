@@ -606,6 +606,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     .ifPresent(snapshots::add);
         }
 
+        // Tax info is always captured; ofDefault() applies when no record exists (single, no dependants, territory COMUN)
         snapshots.add(buildTaxInfoSnapshot(command, input));
 
         return List.copyOf(snapshots);

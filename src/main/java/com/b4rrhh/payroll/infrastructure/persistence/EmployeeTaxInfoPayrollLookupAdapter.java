@@ -1,6 +1,7 @@
-package com.b4rrhh.employee.tax_information.infrastructure.persistence;
+package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.employee.tax_information.application.port.EmployeeForTaxInfoLookupPort;
+import com.b4rrhh.employee.tax_information.infrastructure.persistence.SpringDataEmployeeTaxInformationRepository;
 import com.b4rrhh.payroll.application.port.EmployeeTaxInfoContext;
 import com.b4rrhh.payroll.application.port.EmployeeTaxInfoPayrollLookupPort;
 import org.springframework.stereotype.Component;
@@ -10,19 +11,19 @@ import java.time.LocalDate;
 public class EmployeeTaxInfoPayrollLookupAdapter implements EmployeeTaxInfoPayrollLookupPort {
 
     private final SpringDataEmployeeTaxInformationRepository springDataRepo;
-    private final EmployeeForTaxInfoLookupPort employeeLookupPort;
+    private final EmployeeForTaxInfoLookupPort employeeLookupAdapter;
 
     public EmployeeTaxInfoPayrollLookupAdapter(
             SpringDataEmployeeTaxInformationRepository springDataRepo,
-            EmployeeForTaxInfoLookupPort employeeLookupPort) {
+            EmployeeForTaxInfoLookupPort employeeLookupAdapter) {
         this.springDataRepo = springDataRepo;
-        this.employeeLookupPort = employeeLookupPort;
+        this.employeeLookupAdapter = employeeLookupAdapter;
     }
 
     @Override
     public EmployeeTaxInfoContext findLatestOnOrBefore(
             String ruleSystemCode, String employeeTypeCode, String employeeNumber, LocalDate referenceDate) {
-        return employeeLookupPort.findEmployeeId(ruleSystemCode, employeeTypeCode, employeeNumber)
+        return employeeLookupAdapter.findEmployeeId(ruleSystemCode, employeeTypeCode, employeeNumber)
             .flatMap(employeeId -> springDataRepo
                 .findFirstByEmployeeIdAndValidFromLessThanEqualOrderByValidFromDesc(employeeId, referenceDate))
             .map(e -> new EmployeeTaxInfoContext(

@@ -1,16 +1,24 @@
-package com.b4rrhh.employee.tax_information.infrastructure.persistence;
+package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.employee.tax_information.domain.model.DisabilityDegree;
+import com.b4rrhh.employee.tax_information.domain.model.FamilySituation;
+import com.b4rrhh.employee.tax_information.domain.model.TaxTerritory;
 import com.b4rrhh.employee.tax_information.application.port.EmployeeForTaxInfoLookupPort;
-import com.b4rrhh.employee.tax_information.domain.model.*;
+import com.b4rrhh.employee.tax_information.infrastructure.persistence.EmployeeTaxInformationEntity;
+import com.b4rrhh.employee.tax_information.infrastructure.persistence.SpringDataEmployeeTaxInformationRepository;
+import com.b4rrhh.payroll.application.port.EmployeeTaxInfoContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -18,16 +26,27 @@ import static org.mockito.Mockito.when;
 class EmployeeTaxInfoPayrollLookupAdapterTest {
 
     @Mock SpringDataEmployeeTaxInformationRepository springDataRepo;
-    @Mock EmployeeForTaxInfoLookupPort employeeLookupPort;
+    @Mock EmployeeForTaxInfoLookupPort employeeLookupAdapter;
     @InjectMocks EmployeeTaxInfoPayrollLookupAdapter adapter;
 
     @Test
+    void returnsDefault_whenEmployeeNotFound() {
+        when(employeeLookupAdapter.findEmployeeId(any(), any(), any())).thenReturn(Optional.empty());
+
+        EmployeeTaxInfoContext result = adapter.findLatestOnOrBefore("ESP", "INTERNAL", "EMP001", LocalDate.of(2025, 1, 1));
+
+        assertEquals("SINGLE_OR_OTHER", result.familySituation());
+        assertEquals("COMUN", result.taxTerritory());
+        assertEquals(0, result.descendantsCount());
+    }
+
+    @Test
     void returnsDefault_whenNoRecordFound() {
-        when(employeeLookupPort.findEmployeeId(any(), any(), any())).thenReturn(Optional.of(1L));
+        when(employeeLookupAdapter.findEmployeeId(any(), any(), any())).thenReturn(Optional.of(1L));
         when(springDataRepo.findFirstByEmployeeIdAndValidFromLessThanEqualOrderByValidFromDesc(any(), any()))
             .thenReturn(Optional.empty());
 
-        var result = adapter.findLatestOnOrBefore("ESP", "INTERNAL", "EMP001", LocalDate.of(2025, 1, 1));
+        EmployeeTaxInfoContext result = adapter.findLatestOnOrBefore("ESP", "INTERNAL", "EMP001", LocalDate.of(2025, 1, 1));
 
         assertEquals("SINGLE_OR_OTHER", result.familySituation());
         assertEquals("COMUN", result.taxTerritory());
@@ -36,9 +55,9 @@ class EmployeeTaxInfoPayrollLookupAdapterTest {
 
     @Test
     void returnsMappedContext_whenRecordFound() {
-        when(employeeLookupPort.findEmployeeId(any(), any(), any())).thenReturn(Optional.of(1L));
+        when(employeeLookupAdapter.findEmployeeId(any(), any(), any())).thenReturn(Optional.of(1L));
 
-        var entity = new EmployeeTaxInformationEntity();
+        EmployeeTaxInformationEntity entity = new EmployeeTaxInformationEntity();
         entity.setId(3L);
         entity.setEmployeeId(1L);
         entity.setValidFrom(LocalDate.of(2025, 1, 1));
@@ -56,7 +75,7 @@ class EmployeeTaxInfoPayrollLookupAdapterTest {
         when(springDataRepo.findFirstByEmployeeIdAndValidFromLessThanEqualOrderByValidFromDesc(any(), any()))
             .thenReturn(Optional.of(entity));
 
-        var result = adapter.findLatestOnOrBefore("ESP", "INTERNAL", "EMP001", LocalDate.of(2025, 1, 15));
+        EmployeeTaxInfoContext result = adapter.findLatestOnOrBefore("ESP", "INTERNAL", "EMP001", LocalDate.of(2025, 1, 15));
 
         assertEquals("MARRIED_DEPENDENT_SPOUSE", result.familySituation());
         assertEquals("BIZKAIA", result.taxTerritory());
