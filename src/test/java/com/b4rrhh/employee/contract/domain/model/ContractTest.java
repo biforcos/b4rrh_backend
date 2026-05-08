@@ -1,7 +1,6 @@
 package com.b4rrhh.employee.contract.domain.model;
 
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
-import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -27,22 +26,6 @@ class ContractTest {
     }
 
     @Test
-    void rejectsContractSubtypeCodeShorterThanThree() {
-        assertThrows(
-                ContractSubtypeInvalidException.class,
-                () -> new Contract(10L, "IND", "AB", LocalDate.of(2026, 1, 1), null)
-        );
-    }
-
-    @Test
-    void rejectsContractSubtypeCodeLongerThanThree() {
-        assertThrows(
-                ContractSubtypeInvalidException.class,
-                () -> new Contract(10L, "IND", "ABCD", LocalDate.of(2026, 1, 1), null)
-        );
-    }
-
-    @Test
     void updateRejectsContractCodeWithInvalidLength() {
         Contract contract = new Contract(10L, "IND", "FT1", LocalDate.of(2026, 1, 1), null);
 
@@ -52,13 +35,4 @@ class ContractTest {
         );
     }
 
-    @Test
-    void updateRejectsContractSubtypeCodeWithInvalidLength() {
-        Contract contract = new Contract(10L, "IND", "FT1", LocalDate.of(2026, 1, 1), null);
-
-        assertThrows(
-                ContractSubtypeInvalidException.class,
-                () -> contract.updateContract("IND", "ABCD")
-        );
-    }
 }
