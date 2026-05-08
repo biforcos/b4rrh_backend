@@ -112,6 +112,10 @@ public class Contract {
             throw new ContractInvalidException(normalized);
         }
 
+        if (normalized.length() != CONTRACT_CODE_LENGTH && "contractSubtypeCode".equals(fieldName)) {
+            throw new ContractSubtypeInvalidException(normalized);
+        }
+
         return normalized;
     }
 

@@ -19,6 +19,9 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInv
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -204,6 +209,30 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 }
                 return null;
             };
+        }
+
+        @Bean
+        RuleEntityRepository ruleEntityRepository() {
+            RuleEntity activeEntity = new RuleEntity(
+                    1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL", "Internal", null,
+                    true, LocalDate.of(1900, 1, 1), null,
+                    LocalDateTime.now(), LocalDateTime.now()
+            );
+            return new RuleEntityRepository() {
+                @Override public List<RuleEntity> findAll() { return List.of(); }
+                @Override public List<RuleEntity> findByFilters(String rs, String type, String code, Boolean active, LocalDate ref) { return List.of(); }
+                @Override public java.util.Optional<RuleEntity> findApplicableByBusinessKey(String rs, String type, String code, LocalDate ref) { return java.util.Optional.empty(); }
+                @Override public java.util.Optional<RuleEntity> findByBusinessKey(String rs, String type, String code) { return java.util.Optional.of(activeEntity); }
+                @Override public java.util.Optional<RuleEntity> findByBusinessKeyAndStartDate(String rs, String type, String code, LocalDate start) { return java.util.Optional.empty(); }
+                @Override public boolean existsOverlapExcludingStartDate(String rs, String type, String code, LocalDate pStart, LocalDate pEnd, LocalDate excluded) { return false; }
+                @Override public void deleteByBusinessKeyAndStartDate(String rs, String type, String code, LocalDate start) {}
+                @Override public RuleEntity save(RuleEntity e) { return e; }
+            };
+        }
+
+        @Bean
+        EmployeeTypeCatalogValidator employeeTypeCatalogValidator(RuleEntityRepository ruleEntityRepository) {
+            return new EmployeeTypeCatalogValidator(ruleEntityRepository);
         }
 
         @Bean
