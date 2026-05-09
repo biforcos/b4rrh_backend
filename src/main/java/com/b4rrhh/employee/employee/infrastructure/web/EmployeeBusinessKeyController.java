@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
+import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyCommand;
 import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyUseCase;
@@ -21,17 +22,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class EmployeeBusinessKeyController {
 
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
-        private final DeleteEmployeeByBusinessKeyUseCase deleteEmployeeByBusinessKeyUseCase;
+    private final DeleteEmployeeByBusinessKeyUseCase deleteEmployeeByBusinessKeyUseCase;
     private final UpdateEmployeeUseCase updateEmployeeUseCase;
+    private final DisplayNameComputationService displayNameComputationService;
 
     public EmployeeBusinessKeyController(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
-                        DeleteEmployeeByBusinessKeyUseCase deleteEmployeeByBusinessKeyUseCase,
-            UpdateEmployeeUseCase updateEmployeeUseCase
+            DeleteEmployeeByBusinessKeyUseCase deleteEmployeeByBusinessKeyUseCase,
+            UpdateEmployeeUseCase updateEmployeeUseCase,
+            DisplayNameComputationService displayNameComputationService
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
-                this.deleteEmployeeByBusinessKeyUseCase = deleteEmployeeByBusinessKeyUseCase;
+        this.deleteEmployeeByBusinessKeyUseCase = deleteEmployeeByBusinessKeyUseCase;
         this.updateEmployeeUseCase = updateEmployeeUseCase;
+        this.displayNameComputationService = displayNameComputationService;
     }
 
     @GetMapping("/employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}")
@@ -83,6 +87,13 @@ public class EmployeeBusinessKeyController {
     }
 
     private EmployeeResponse toResponse(Employee employee) {
+        String displayName = displayNameComputationService.compute(
+                employee.getRuleSystemCode(),
+                employee.getFirstName(),
+                employee.getLastName1(),
+                employee.getLastName2(),
+                employee.getPreferredName()
+        );
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getRuleSystemCode(),
@@ -92,6 +103,7 @@ public class EmployeeBusinessKeyController {
                 employee.getLastName1(),
                 employee.getLastName2(),
                 employee.getPreferredName(),
+                displayName,
                 employee.getStatus(),
                 employee.getPhotoUrl()
         );

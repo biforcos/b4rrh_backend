@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
+import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyCommand;
 import com.b4rrhh.employee.employee.application.usecase.DeleteEmployeeByBusinessKeyUseCase;
@@ -39,6 +40,9 @@ class EmployeeBusinessKeyControllerHttpTest {
     @Mock
     private UpdateEmployeeUseCase updateEmployeeUseCase;
 
+    private final DisplayNameComputationService displayNameComputationService =
+            new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty());
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -46,7 +50,8 @@ class EmployeeBusinessKeyControllerHttpTest {
         EmployeeBusinessKeyController controller = new EmployeeBusinessKeyController(
                 getEmployeeByBusinessKeyUseCase,
                 deleteEmployeeByBusinessKeyUseCase,
-                updateEmployeeUseCase
+                updateEmployeeUseCase,
+                displayNameComputationService
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
