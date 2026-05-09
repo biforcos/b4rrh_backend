@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
+import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
@@ -25,13 +26,16 @@ public class EmployeeController {
 
     private final CreateEmployeeUseCase createEmployeeUseCase;
     private final ListEmployeesUseCase listEmployeesUseCase;
+    private final DisplayNameComputationService displayNameComputationService;
 
     public EmployeeController(
             CreateEmployeeUseCase createEmployeeUseCase,
-            ListEmployeesUseCase listEmployeesUseCase
+            ListEmployeesUseCase listEmployeesUseCase,
+            DisplayNameComputationService displayNameComputationService
     ) {
         this.createEmployeeUseCase = createEmployeeUseCase;
         this.listEmployeesUseCase = listEmployeesUseCase;
+        this.displayNameComputationService = displayNameComputationService;
     }
 
     @GetMapping
@@ -70,6 +74,13 @@ public class EmployeeController {
     }
 
     private EmployeeResponse toResponse(Employee employee) {
+        String displayName = displayNameComputationService.compute(
+                employee.getRuleSystemCode(),
+                employee.getFirstName(),
+                employee.getLastName1(),
+                employee.getLastName2(),
+                employee.getPreferredName()
+        );
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getRuleSystemCode(),
@@ -79,6 +90,7 @@ public class EmployeeController {
                 employee.getLastName1(),
                 employee.getLastName2(),
                 employee.getPreferredName(),
+                displayName,
                 employee.getStatus(),
                 employee.getPhotoUrl()
         );

@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.photo.infrastructure.web;
 
+import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeResponse;
@@ -30,16 +31,19 @@ public class EmployeePhotoController {
     private final ConfirmEmployeePhotoUseCase confirmEmployeePhotoUseCase;
     private final DeleteEmployeePhotoUseCase deleteEmployeePhotoUseCase;
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
+    private final DisplayNameComputationService displayNameComputationService;
 
     public EmployeePhotoController(
             GeneratePhotoUploadUrlUseCase generatePhotoUploadUrlUseCase,
             ConfirmEmployeePhotoUseCase confirmEmployeePhotoUseCase,
             DeleteEmployeePhotoUseCase deleteEmployeePhotoUseCase,
-            GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase) {
+            GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
+            DisplayNameComputationService displayNameComputationService) {
         this.generatePhotoUploadUrlUseCase = generatePhotoUploadUrlUseCase;
         this.confirmEmployeePhotoUseCase = confirmEmployeePhotoUseCase;
         this.deleteEmployeePhotoUseCase = deleteEmployeePhotoUseCase;
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
+        this.displayNameComputationService = displayNameComputationService;
     }
 
     @PostMapping("/upload-url")
@@ -89,6 +93,13 @@ public class EmployeePhotoController {
     }
 
     private EmployeeResponse toResponse(Employee employee) {
+        String displayName = displayNameComputationService.compute(
+                employee.getRuleSystemCode(),
+                employee.getFirstName(),
+                employee.getLastName1(),
+                employee.getLastName2(),
+                employee.getPreferredName()
+        );
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getRuleSystemCode(),
@@ -98,6 +109,7 @@ public class EmployeePhotoController {
                 employee.getLastName1(),
                 employee.getLastName2(),
                 employee.getPreferredName(),
+                displayName,
                 employee.getStatus(),
                 employee.getPhotoUrl()
         );
