@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
+import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesUseCase;
@@ -35,7 +36,9 @@ class EmployeeControllerHttpTest {
 
     @BeforeEach
     void setUp() {
-        EmployeeController controller = new EmployeeController(createEmployeeUseCase, listEmployeesUseCase);
+        DisplayNameComputationService displayNameComputationService =
+                new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty());
+        EmployeeController controller = new EmployeeController(createEmployeeUseCase, listEmployeesUseCase, displayNameComputationService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EmployeeExceptionHandler())
                 .build();
