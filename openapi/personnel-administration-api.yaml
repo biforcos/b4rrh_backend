@@ -4078,6 +4078,54 @@ paths:
         "404":
           description: Rule system not found
 
+  /rule-systems/{ruleSystemCode}/employee-display-name-format:
+    get:
+      tags:
+        - Employee Display Name Format
+      summary: Get the employee display name format for a rule system
+      operationId: getEmployeeDisplayNameFormat
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current format configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDisplayNameFormatResponse'
+        '404':
+          description: No format configured for this rule system
+    put:
+      tags:
+        - Employee Display Name Format
+      summary: Set the employee display name format for a rule system
+      operationId: upsertEmployeeDisplayNameFormat
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertEmployeeDisplayNameFormatRequest'
+      responses:
+        '200':
+          description: Updated format configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDisplayNameFormatResponse'
+        '400':
+          description: Invalid formatCode or rule system not found
+
   /payrolls:
     get:
       summary: Search payrolls
@@ -6328,6 +6376,7 @@ components:
         - firstName
         - lastName1
         - status
+        - displayName
       properties:
         id:
           type: integer
@@ -6353,6 +6402,9 @@ components:
         photoUrl:
           type: string
           nullable: true
+        displayName:
+          type: string
+          description: Computed display name based on the rule system's configured format.
 
     EmployeeDirectoryItemResponse:
       type: object
@@ -8888,3 +8940,44 @@ components:
           type: boolean
         taxTerritory:
           type: string
+
+    EmployeeDisplayNameFormatResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - formatCode
+        - formatLabel
+        - example
+      properties:
+        ruleSystemCode:
+          type: string
+        formatCode:
+          type: string
+          enum:
+            - FULL_TITLE_CASE
+            - FULL_UPPER
+            - SURNAME_FIRST_UPPER
+            - SHORT_TITLE
+            - SHORT_UPPER
+            - SURNAME_ABBREV_UPPER
+        formatLabel:
+          type: string
+          description: Human-readable label for the format code (in Spanish)
+        example:
+          type: string
+          description: Example of the format applied to "Juan Antonio Biforcos Amor"
+
+    UpsertEmployeeDisplayNameFormatRequest:
+      type: object
+      required:
+        - formatCode
+      properties:
+        formatCode:
+          type: string
+          enum:
+            - FULL_TITLE_CASE
+            - FULL_UPPER
+            - SURNAME_FIRST_UPPER
+            - SHORT_TITLE
+            - SHORT_UPPER
+            - SURNAME_ABBREV_UPPER
