@@ -11,6 +11,7 @@ public record HireEmployeeResponse(
         String lastName1,
         String lastName2,
         String preferredName,
+        String displayName,
         String status,
         LocalDate hireDate,
         PresenceSummary initialPresence,

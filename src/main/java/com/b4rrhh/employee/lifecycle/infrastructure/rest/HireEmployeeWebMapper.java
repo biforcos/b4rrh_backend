@@ -132,6 +132,7 @@ public class HireEmployeeWebMapper {
                 result.employee().lastName1(),
                 result.employee().lastName2(),
                 result.employee().preferredName(),
+                result.employee().displayName(),
                 result.employee().status(),
                 result.employee().hireDate(),
                 new HireEmployeeResponse.PresenceSummary(

@@ -5684,6 +5684,7 @@ components:
         - ruleSystemCode
         - employeeTypeCode
         - employeeNumber
+        - displayName
         - status
         - hireDate
         - initialPresence
@@ -5715,6 +5716,9 @@ components:
           type: string
           maxLength: 300
           nullable: true
+        displayName:
+          type: string
+          maxLength: 300
         status:
           type: string
         hireDate:
