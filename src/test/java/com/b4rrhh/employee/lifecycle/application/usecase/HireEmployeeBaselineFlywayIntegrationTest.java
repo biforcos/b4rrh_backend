@@ -64,7 +64,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
         HireEmployeeResult result = hireEmployeeUseCase.hire(new HireEmployeeCommand(
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber(),
             scenario.firstName(),
             scenario.lastName1(),
             null,
@@ -82,9 +81,11 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(scenario.workingTimePercentage())
         ));
 
+        String generatedNumber = result.employee().employeeNumber();
+
         assertThat(result.employee().ruleSystemCode()).isEqualTo("ESP");
         assertThat(result.employee().employeeTypeCode()).isEqualTo("INTERNAL");
-        assertThat(result.employee().employeeNumber()).isEqualTo(scenario.employeeNumber());
+        assertThat(generatedNumber).isNotNull().isNotBlank();
         assertThat(result.presence().companyCode()).isEqualTo(scenario.companyCode());
         assertThat(result.workCenter().workCenterCode()).isEqualTo(scenario.workCenterCode());
         assertThat(result.contract().contractTypeCode()).isEqualTo(scenario.contractCode());
@@ -97,7 +98,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             Integer.class,
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
             "select count(*) from employee.presence where company_code = ? and employee_id = (select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?)",
@@ -105,7 +106,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             scenario.companyCode(),
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
             "select count(*) from employee.labor_classification where agreement_code = ? and agreement_category_code = ? and employee_id = (select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?)",
@@ -114,7 +115,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             scenario.agreementCategoryCode(),
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
             "select count(*) from employee.contract where contract_code = ? and contract_subtype_code = ? and employee_id = (select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?)",
@@ -123,7 +124,7 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             scenario.contractSubtypeCode(),
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
             "select count(*) from employee.work_center where work_center_code = ? and employee_id = (select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?)",
@@ -131,14 +132,14 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             scenario.workCenterCode(),
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject(
             "select count(*) from employee.working_time where employee_id = (select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?)",
             Integer.class,
             "ESP",
             "INTERNAL",
-            scenario.employeeNumber()
+            generatedNumber
         )).isEqualTo(1);
     }
 
@@ -146,7 +147,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
         return Stream.of(
             new HireScenario(
                 "Scenario Base - Office Indefinite",
-                "EMPB001",
                 "Ana",
                 "Lopez",
                 "Ani",
@@ -161,7 +161,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             ),
             new HireScenario(
                 "Scenario A - Technical Employee",
-                "EMPB002",
                 "Bruno",
                 "Martin",
                 "Bru",
@@ -176,7 +175,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             ),
             new HireScenario(
                 "Scenario B - Temporary Part Time",
-                "EMPB003",
                 "Carla",
                 "Diaz",
                 "Car",
@@ -191,7 +189,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
             ),
             new HireScenario(
                 "Scenario C - Second Company",
-                "EMPB004",
                 "Dario",
                 "Santos",
                 "Dari",
@@ -209,7 +206,6 @@ class HireEmployeeBaselineFlywayIntegrationTest {
 
         private record HireScenario(
             String name,
-            String employeeNumber,
             String firstName,
             String lastName1,
             String preferredName,
@@ -502,6 +498,28 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                     ('ESP', 'EMPLOYEE_PRESENCE_ENTRY_REASON', 'HIRING', 'Hiring', 'Initial hiring into the company', true, DATE '1900-01-01', null),
                     ('ESP', 'EMPLOYEE_PRESENCE_ENTRY_REASON', 'REHIRE', 'Rehire', 'Employee rehired after a previous termination', true, DATE '1900-01-01', null),
                     ('ESP', 'EMPLOYEE_PRESENCE_EXIT_REASON', 'TERMINATION', 'Termination', 'End of employment relationship', true, DATE '1900-01-01', null);
+
+                create table rulesystem.employee_numbering_config (
+                    id                  bigint generated always as identity primary key,
+                    rule_system_code    varchar(20) not null,
+                    prefix              varchar(14) not null default '',
+                    numeric_part_length int         not null,
+                    step                int         not null default 1,
+                    next_value          bigint      not null default 1,
+                    created_at          timestamp   not null,
+                    updated_at          timestamp   not null,
+                    constraint uk_employee_numbering_config_rs unique (rule_system_code),
+                    constraint fk_employee_numbering_config_rs foreign key (rule_system_code) references rulesystem.rule_system(code),
+                    constraint chk_employee_numbering_config_length check (length(prefix) + numeric_part_length <= 15),
+                    constraint chk_employee_numbering_config_part_min check (numeric_part_length >= 1),
+                    constraint chk_employee_numbering_config_step_min check (step >= 1),
+                    constraint chk_employee_numbering_config_next_min check (next_value >= 1)
+                );
+
+                insert into rulesystem.employee_numbering_config
+                    (rule_system_code, prefix, numeric_part_length, step, next_value, created_at, updated_at)
+                values
+                    ('ESP', 'EMP', 6, 1, 1, now(), now());
                 """, StandardCharsets.UTF_8);
     }
 }

@@ -7,7 +7,6 @@ import java.util.List;
 public record HireEmployeeCommand(
         String ruleSystemCode,
         String employeeTypeCode,
-        String employeeNumber,
         String firstName,
         String lastName1,
         String lastName2,

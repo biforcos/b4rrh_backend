@@ -26,7 +26,6 @@ public class HireEmployeeWebMapper {
         return new HireEmployeeCommand(
                 normalizeCode(request.ruleSystemCode()),
                 normalizeEmployeeTypeCode(request.employeeTypeCode()),
-                request.employeeNumber(),
                 request.firstName(),
                 request.lastName1(),
                 request.lastName2(),

@@ -18,6 +18,8 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatch
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleSystemNotFoundException;
+import com.b4rrhh.rulesystem.employeenumbering.domain.exception.EmployeeNumberingConfigNotFoundException;
+import com.b4rrhh.rulesystem.employeenumbering.domain.exception.EmployeeNumberingExhaustedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -88,6 +90,18 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new HireEmployeeErrorResponse("HIRE_DEPENDENCY_NOT_FOUND", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(EmployeeNumberingConfigNotFoundException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleNumberingConfigNotFound(EmployeeNumberingConfigNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new HireEmployeeErrorResponse("NUMBERING_CONFIG_NOT_FOUND", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(EmployeeNumberingExhaustedException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleNumberingExhausted(EmployeeNumberingExhaustedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new HireEmployeeErrorResponse("EMPLOYEE_NUMBERING_EXHAUSTED", ex.getMessage(), null));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

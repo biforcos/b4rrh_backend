@@ -7,14 +7,13 @@ import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistr
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
-import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.application.port.NextEmployeeNumberPort;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
@@ -64,7 +63,7 @@ import static org.mockito.Mockito.when;
 class HireEmployeeServiceTest {
 
     @Mock
-    private EmployeeRepository employeeRepository;
+    private NextEmployeeNumberPort nextEmployeeNumberPort;
     @Mock
     private CreateEmployeeUseCase createEmployeeUseCase;
     @Mock
@@ -98,8 +97,9 @@ class HireEmployeeServiceTest {
         );
         lenient().when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
                 .thenReturn(Optional.of(validEmployeeType));
+        lenient().when(nextEmployeeNumberPort.consumeNext("ESP")).thenReturn("EMP000001");
         service = new HireEmployeeService(
-                employeeRepository,
+                nextEmployeeNumberPort,
                 createEmployeeUseCase,
                 createPresenceUseCase,
                 createLaborClassificationUseCase,
@@ -118,11 +118,9 @@ class HireEmployeeServiceTest {
         LocalDate hireDate = command.hireDate();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", hireDate)).thenReturn(Optional.of("COMP"));
 
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
-                        100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
+                        100L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, "Ani", "ACTIVE",
                         LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
@@ -146,7 +144,7 @@ class HireEmployeeServiceTest {
 
         assertEquals("ESP", result.employee().ruleSystemCode());
         assertEquals("INTERNAL", result.employee().employeeTypeCode());
-        assertEquals("EMP001", result.employee().employeeNumber());
+        assertEquals("EMP000001", result.employee().employeeNumber());
         assertEquals(hireDate, result.presence().startDate());
         assertEquals(1, result.presence().presenceNumber());
         assertEquals("CON", result.contract().contractTypeCode());
@@ -178,7 +176,7 @@ class HireEmployeeServiceTest {
         verify(createWorkingTimeUseCase).create(workingTimeCaptor.capture());
         assertEquals("ESP", workingTimeCaptor.getValue().ruleSystemCode());
         assertEquals("INTERNAL", workingTimeCaptor.getValue().employeeTypeCode());
-        assertEquals("EMP001", workingTimeCaptor.getValue().employeeNumber());
+        assertEquals("EMP000001", workingTimeCaptor.getValue().employeeNumber());
         assertEquals(hireDate, workingTimeCaptor.getValue().startDate());
         assertEquals(new BigDecimal("75"), workingTimeCaptor.getValue().workingTimePercentage());
     }
@@ -187,8 +185,6 @@ class HireEmployeeServiceTest {
     void failsFastWhenWorkCenterDoesNotBelongToCompany() {
         HireEmployeeCommand command = validCommand();
 
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23)))
                 .thenReturn(Optional.of("OTHER"));
 
@@ -197,29 +193,12 @@ class HireEmployeeServiceTest {
     }
 
     @Test
-    void failsWhenEmployeeAlreadyExists() {
-        HireEmployeeCommand command = validCommand();
-        Employee existingEmployee = new Employee(
-                1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
-                LocalDateTime.now(), LocalDateTime.now(), null
-        );
-
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(existingEmployee));
-
-        assertThrows(HireEmployeeAlreadyExistsException.class, () -> service.hire(command));
-        verify(createEmployeeUseCase, never()).create(any(CreateEmployeeCommand.class));
-    }
-
-    @Test
     void mapsInvalidCatalogValueToLifecycleException() {
         HireEmployeeCommand command = validCommand();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23))).thenReturn(Optional.of("COMP"));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
-                        1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "ACTIVE",
+                        1L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, null, "ACTIVE",
                         LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
@@ -232,11 +211,9 @@ class HireEmployeeServiceTest {
     void mapsInvalidAgreementCategoryDependencyToLifecycleException() {
         HireEmployeeCommand command = validCommand();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", LocalDate.of(2026, 3, 23))).thenReturn(Optional.of("COMP"));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
-                        1L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "ACTIVE",
+                        1L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, null, "ACTIVE",
                         LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
@@ -254,7 +231,6 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -277,7 +253,6 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -303,7 +278,6 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -329,7 +303,6 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -352,11 +325,9 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = validCommand();
         LocalDate hireDate = command.hireDate();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", hireDate)).thenReturn(Optional.of("COMP"));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
-                        100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
+                        100L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, "Ani", "ACTIVE",
                         LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
@@ -384,11 +355,9 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = validCommand();
         LocalDate hireDate = command.hireDate();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", hireDate)).thenReturn(Optional.of("COMP"));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class)))
                 .thenReturn(new Employee(
-                        100L, "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, "Ani", "ACTIVE",
+                        100L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, "Ani", "ACTIVE",
                         LocalDateTime.now(), LocalDateTime.now(), null
                 ));
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class)))
@@ -409,7 +378,7 @@ class HireEmployeeServiceTest {
                 .thenThrow(new WorkingTimeNumberConflictException(
                         "ESP",
                         "INTERNAL",
-                        "EMP001",
+                        "EMP000001",
                         1,
                         new RuntimeException("duplicate working time number")
                 ));
@@ -421,7 +390,6 @@ class HireEmployeeServiceTest {
         return new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -442,8 +410,6 @@ class HireEmployeeServiceTest {
         HireEmployeeCommand command = validCommand();
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "WC1", command.hireDate()))
                 .thenReturn(Optional.of("COMP"));
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.empty());
         when(ruleEntityRepository.findByBusinessKey("ESP", "EMPLOYEE_TYPE", "INTERNAL"))
                 .thenReturn(Optional.empty());
 

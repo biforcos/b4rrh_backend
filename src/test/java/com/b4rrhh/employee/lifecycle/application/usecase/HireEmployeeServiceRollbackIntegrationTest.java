@@ -7,6 +7,7 @@ import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.application.port.NextEmployeeNumberPort;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
@@ -88,7 +89,6 @@ class HireEmployeeServiceRollbackIntegrationTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP001",
                 "Ana",
                 "Lopez",
                 null,
@@ -106,11 +106,10 @@ class HireEmployeeServiceRollbackIntegrationTest {
         assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
 
         Long employeeCount = jdbcTemplate.queryForObject(
-                "select count(*) from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
+                "select count(*) from employee.employee where rule_system_code = ? and employee_type_code = ?",
                 Long.class,
                 "ESP",
-                "INTERNAL",
-                "EMP001"
+                "INTERNAL"
         );
 
         assertEquals(0L, employeeCount);
@@ -121,7 +120,6 @@ class HireEmployeeServiceRollbackIntegrationTest {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
-                "EMP002",
                 "Ana",
                 "Lopez",
                 null,
@@ -139,11 +137,10 @@ class HireEmployeeServiceRollbackIntegrationTest {
         assertThrows(HireEmployeeBusinessValidationException.class, () -> service.hire(command));
 
         Long employeeCount = jdbcTemplate.queryForObject(
-                "select count(*) from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
+                "select count(*) from employee.employee where rule_system_code = ? and employee_type_code = ?",
                 Long.class,
                 "ESP",
-                "INTERNAL",
-                "EMP002"
+                "INTERNAL"
         );
 
         assertEquals(0L, employeeCount);
@@ -151,6 +148,11 @@ class HireEmployeeServiceRollbackIntegrationTest {
 
     @TestConfiguration
     static class HireEmployeeRollbackTestConfig {
+
+        @Bean
+        NextEmployeeNumberPort nextEmployeeNumberPort() {
+            return ruleSystemCode -> "EMP000001";
+        }
 
         @Bean
         CreateEmployeeUseCase createEmployeeUseCase(EmployeeRepository employeeRepository) {

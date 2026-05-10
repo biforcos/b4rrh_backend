@@ -16,7 +16,7 @@ import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
-import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
+
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
@@ -25,7 +25,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
-import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.application.port.NextEmployeeNumberPort;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
 @Service
 public class HireEmployeeService implements HireEmployeeUseCase {
 
-    private final EmployeeRepository employeeRepository;
+    private final NextEmployeeNumberPort nextEmployeeNumberPort;
     private final CreateEmployeeUseCase createEmployeeUseCase;
     private final CreatePresenceUseCase createPresenceUseCase;
     private final CreateLaborClassificationUseCase createLaborClassificationUseCase;
@@ -72,7 +72,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
 
     public HireEmployeeService(
-            EmployeeRepository employeeRepository,
+            NextEmployeeNumberPort nextEmployeeNumberPort,
             CreateEmployeeUseCase createEmployeeUseCase,
             CreatePresenceUseCase createPresenceUseCase,
             CreateLaborClassificationUseCase createLaborClassificationUseCase,
@@ -83,7 +83,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
             WorkCenterCompanyValidator workCenterCompanyValidator,
             EmployeeTypeCatalogValidator employeeTypeCatalogValidator
     ) {
-        this.employeeRepository = employeeRepository;
+        this.nextEmployeeNumberPort = nextEmployeeNumberPort;
         this.createEmployeeUseCase = createEmployeeUseCase;
         this.createPresenceUseCase = createPresenceUseCase;
         this.createLaborClassificationUseCase = createLaborClassificationUseCase;
@@ -104,7 +104,6 @@ public class HireEmployeeService implements HireEmployeeUseCase {
 
         String ruleSystemCode = normalizeRequiredCode("ruleSystemCode", command.ruleSystemCode(), false);
         String employeeTypeCode = normalizeEmployeeTypeCode(command.employeeTypeCode());
-        String employeeNumber = normalizeRequiredText("employeeNumber", command.employeeNumber());
         String firstName = normalizeRequiredText("firstName", command.firstName());
         String lastName1 = normalizeRequiredText("lastName1", command.lastName1());
         String lastName2 = normalizeOptionalText(command.lastName2());
@@ -118,11 +117,6 @@ public class HireEmployeeService implements HireEmployeeUseCase {
         HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification =
                 normalizeRequiredLaborClassification(command.laborClassification());
         HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime = normalizeRequiredWorkingTime(command.workingTime());
-
-        if (employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
-                ruleSystemCode, employeeTypeCode, employeeNumber).isPresent()) {
-            throw new HireEmployeeAlreadyExistsException(ruleSystemCode, employeeTypeCode, employeeNumber);
-        }
 
         workCenterCompanyValidator.validateBelongsToCompany(
                 ruleSystemCode,
@@ -141,6 +135,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
 
         try {
             employeeTypeCatalogValidator.validateEmployeeTypeCode(ruleSystemCode, employeeTypeCode, hireDate);
+            String employeeNumber = nextEmployeeNumberPort.consumeNext(ruleSystemCode);
 
             createdEmployee = createEmployeeUseCase.create(new CreateEmployeeCommand(
                     ruleSystemCode, employeeTypeCode, employeeNumber, firstName, lastName1, lastName2, preferredName
