@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class CostCenterParticipant implements HireParticipant {
@@ -40,7 +39,7 @@ public class CostCenterParticipant implements HireParticipant {
                 .map(item -> new CostCenterDistributionItem(
                         item.costCenterCode(),
                         BigDecimal.valueOf(item.allocationPercentage())))
-                .collect(Collectors.toList());
+                .toList();
         try {
             ctx.setCostCenter(createCostCenterDistributionUseCase.create(
                     new CreateCostCenterDistributionCommand(
