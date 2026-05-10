@@ -4126,6 +4126,56 @@ paths:
         '400':
           description: Invalid formatCode or rule system not found
 
+  /rule-systems/{ruleSystemCode}/employee-numbering-config:
+    get:
+      tags:
+        - Employee Numbering
+      summary: Get the employee numbering configuration for a rule system
+      operationId: getEmployeeNumberingConfig
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current numbering configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeNumberingConfigResponse'
+        '404':
+          description: No numbering configuration for this rule system
+    put:
+      tags:
+        - Employee Numbering
+      summary: Set the employee numbering configuration for a rule system
+      operationId: upsertEmployeeNumberingConfig
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertEmployeeNumberingConfigRequest'
+      responses:
+        '200':
+          description: Updated numbering configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeNumberingConfigResponse'
+        '404':
+          description: Rule system not found
+        '422':
+          description: Invalid configuration (prefix.length + numericPartLength > 15)
+
   /payrolls:
     get:
       summary: Search payrolls
@@ -5574,7 +5624,6 @@ components:
       type: object
       required:
         - ruleSystemCode
-        - employeeNumber
         - firstName
         - lastName1
         - hireDate
@@ -5592,9 +5641,6 @@ components:
           type: string
           maxLength: 30
           description: Optional in V1. Defaults to 'EMP' when not provided.
-        employeeNumber:
-          type: string
-          maxLength: 15
         firstName:
           type: string
           maxLength: 100
@@ -8985,3 +9031,55 @@ components:
             - SHORT_TITLE
             - SHORT_UPPER
             - SURNAME_ABBREV_UPPER
+
+    EmployeeNumberingConfigResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - prefix
+        - numericPartLength
+        - step
+        - nextValue
+        - nextNumberPreview
+      properties:
+        ruleSystemCode:
+          type: string
+        prefix:
+          type: string
+          maxLength: 14
+        numericPartLength:
+          type: integer
+          minimum: 1
+        step:
+          type: integer
+          minimum: 1
+        nextValue:
+          type: integer
+          format: int64
+          minimum: 1
+        nextNumberPreview:
+          type: string
+          maxLength: 15
+          description: Preview of the next generated employee number (prefix + zero-padded nextValue)
+
+    UpsertEmployeeNumberingConfigRequest:
+      type: object
+      required:
+        - numericPartLength
+        - step
+        - nextValue
+      properties:
+        prefix:
+          type: string
+          maxLength: 14
+          default: ''
+        numericPartLength:
+          type: integer
+          minimum: 1
+        step:
+          type: integer
+          minimum: 1
+        nextValue:
+          type: integer
+          format: int64
+          minimum: 1
