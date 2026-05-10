@@ -1,26 +1,26 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
-import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
-import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeService;
-import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.application.participant.ContractParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.CostCenterParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.EmployeeCoreParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.LaborClassificationParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.PresenceParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.WorkCenterParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.WorkingTimeParticipant;
 import com.b4rrhh.employee.lifecycle.application.port.NextEmployeeNumberPort;
+import com.b4rrhh.employee.lifecycle.application.service.HireEmployeePreConditionValidator;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
-import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
-import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
-import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
-import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
-import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
-import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -155,65 +155,6 @@ class HireEmployeeServiceRollbackIntegrationTest {
         }
 
         @Bean
-        CreateEmployeeUseCase createEmployeeUseCase(EmployeeRepository employeeRepository) {
-            return new CreateEmployeeService(employeeRepository);
-        }
-
-        @Bean
-        CreatePresenceUseCase createPresenceUseCase() {
-            return new CreatePresenceUseCase() {
-                @Override
-                public Presence create(CreatePresenceCommand command) {
-                    return new Presence(
-                            10L,
-                            1L,
-                            1,
-                            command.companyCode(),
-                            command.entryReasonCode(),
-                            command.exitReasonCode(),
-                            command.startDate(),
-                            command.endDate(),
-                            java.time.LocalDateTime.now(),
-                            java.time.LocalDateTime.now()
-                    );
-                }
-            };
-        }
-
-        @Bean
-        CreateLaborClassificationUseCase createLaborClassificationUseCase() {
-            return command -> null;
-        }
-
-        @Bean
-        CreateContractUseCase createContractUseCase() {
-            return command -> null;
-        }
-
-        @Bean
-        WorkCenterCompanyLookupPort workCenterCompanyLookupPort() {
-            return (ruleSystemCode, workCenterCode, referenceDate) ->
-                ("BAD_WC".equals(workCenterCode) || "WC1".equals(workCenterCode))
-                    ? java.util.Optional.of("COMP")
-                    : java.util.Optional.empty();
-        }
-
-        @Bean
-        WorkCenterCompanyValidator workCenterCompanyValidator(WorkCenterCompanyLookupPort workCenterCompanyLookupPort) {
-            return new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
-        }
-
-        @Bean
-        CreateWorkCenterUseCase createWorkCenterUseCase() {
-            return command -> {
-                if ("BAD_WC".equals(command.workCenterCode())) {
-                    throw new WorkCenterCatalogValueInvalidException("workCenterCode", command.workCenterCode());
-                }
-                return null;
-            };
-        }
-
-        @Bean
         RuleEntityRepository ruleEntityRepository() {
             RuleEntity activeEntity = new RuleEntity(
                     1L, "ESP", "EMPLOYEE_TYPE", "INTERNAL", "Internal", null,
@@ -238,18 +179,74 @@ class HireEmployeeServiceRollbackIntegrationTest {
         }
 
         @Bean
-        CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase() {
-            return command -> null;
+        WorkCenterCompanyLookupPort workCenterCompanyLookupPort() {
+            return (ruleSystemCode, workCenterCode, referenceDate) ->
+                ("BAD_WC".equals(workCenterCode) || "WC1".equals(workCenterCode))
+                    ? java.util.Optional.of("COMP")
+                    : java.util.Optional.empty();
         }
 
         @Bean
-        CreateWorkingTimeUseCase createWorkingTimeUseCase() {
-            return command -> {
-                if (command.workingTimePercentage().compareTo(new BigDecimal("100")) > 0) {
-                    throw new InvalidWorkingTimePercentageException("workingTimePercentage must be greater than 0 and less than or equal to 100");
+        WorkCenterCompanyValidator workCenterCompanyValidator(WorkCenterCompanyLookupPort workCenterCompanyLookupPort) {
+            return new WorkCenterCompanyValidator(workCenterCompanyLookupPort);
+        }
+
+        @Bean
+        HireEmployeePreConditionValidator hireEmployeePreConditionValidator(
+                WorkCenterCompanyValidator workCenterCompanyValidator,
+                EmployeeTypeCatalogValidator employeeTypeCatalogValidator) {
+            return new HireEmployeePreConditionValidator(workCenterCompanyValidator, employeeTypeCatalogValidator);
+        }
+
+        @Bean
+        EmployeeCoreParticipant employeeCoreParticipant(EmployeeRepository employeeRepository) {
+            return new EmployeeCoreParticipant(new CreateEmployeeService(employeeRepository));
+        }
+
+        @Bean
+        PresenceParticipant presenceParticipant() {
+            return new PresenceParticipant(command -> new Presence(
+                    10L, 1L, 1,
+                    command.companyCode(), command.entryReasonCode(), command.exitReasonCode(),
+                    command.startDate(), command.endDate(),
+                    LocalDateTime.now(), LocalDateTime.now()
+            ));
+        }
+
+        @Bean
+        WorkCenterParticipant workCenterParticipant() {
+            return new WorkCenterParticipant(command -> {
+                if ("BAD_WC".equals(command.workCenterCode())) {
+                    throw new WorkCenterCatalogValueInvalidException("workCenterCode", command.workCenterCode());
                 }
                 return null;
-            };
+            });
+        }
+
+        @Bean
+        CostCenterParticipant costCenterParticipant() {
+            return new CostCenterParticipant(command -> null);
+        }
+
+        @Bean
+        ContractParticipant contractParticipant() {
+            return new ContractParticipant(command -> null);
+        }
+
+        @Bean
+        LaborClassificationParticipant laborClassificationParticipant() {
+            return new LaborClassificationParticipant(command -> null);
+        }
+
+        @Bean
+        WorkingTimeParticipant workingTimeParticipant() {
+            return new WorkingTimeParticipant(command -> {
+                if (command.workingTimePercentage().compareTo(new BigDecimal("100")) > 0) {
+                    throw new InvalidWorkingTimePercentageException(
+                            "workingTimePercentage must be greater than 0 and less than or equal to 100");
+                }
+                return null;
+            });
         }
     }
 }
