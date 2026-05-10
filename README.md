@@ -282,7 +282,16 @@ The system models real Spanish HR and payroll law through the concept graph — 
 cd docker/postgres && docker compose up -d
 
 # 2. Run the application (Flyway migrations run automatically on startup)
-mvn spring-boot:run  -Dspring-boot.run.profiles=local
+
+# Linux / macOS / Git Bash:
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# Windows PowerShell (the -D flag must be quoted):
+mvn spring-boot:run "-Dspring-boot.run.profiles=local"
+
+# Alternatively, set the env var (works everywhere):
+# $env:SPRING_PROFILES_ACTIVE='local'; mvn spring-boot:run   (PowerShell)
+# SPRING_PROFILES_ACTIVE=local mvn spring-boot:run            (bash)
 
 # 3. Run all tests (H2 in-memory — no Docker required)
 mvn test

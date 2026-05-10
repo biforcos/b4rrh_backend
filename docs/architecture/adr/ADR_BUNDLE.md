@@ -1,7 +1,7 @@
 ﻿# ADR Bundle
 
 > Fichero generado automÃ¡ticamente. No editar a mano.
-> Fecha de generaciÃ³n: 2026-04-26 12:07:18
+> Fecha de generaciÃ³n: 2026-05-10 17:51:02
 
 ---
 
@@ -51,6 +51,7 @@
 - [ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md](#file-adr-044-primer-c-lculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-m-nimo-md)
 - [ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md](#file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md)
 - [ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md](#file-adr-046-conceptos-t-cnicos-base-de-per-odo-y-presencia-en-n-mina-md)
+- [ADR-047-lifecycle-workflow-participant-pattern.md](#file-adr-047-lifecycle-workflow-participant-pattern-md)
 - [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
 
 ---
@@ -12422,11 +12423,11 @@ El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientr
 
 <!-- BEGIN FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
 
-# ADR-045 â€” Conceptos tÃ©cnicos base de perÃ­odo y presencia en nÃ³mina
+# ADR-046 â€” Conceptos tÃ©cnicos base de perÃ­odo y presencia en nÃ³mina
 
 ## Estado
 
-Propuesto.
+Aceptado.
 
 ## Contexto
 
@@ -12463,196 +12464,432 @@ En algÃºn punto existen conceptos fundamentales que nacen directamente del con
 
 ## DecisiÃ³n
 
-Se introducen conceptos tÃ©cnicos base de nÃ³mina.
+Se introducen conceptos tÃ©cnicos base de nÃ³mina con la nomenclatura D01/D02/D03, mÃ¡s cÃ³moda para negocio.
 
 Estos conceptos:
 
-- se calculan durante la ejecuciÃ³n;
-- se persisten en los resultados de cÃ¡lculo;
-- pueden alimentar otros conceptos;
-- no se muestran en el recibo de nÃ³mina;
-- no representan devengos ni deducciones;
-- pueden ser calculados mediante clases Java especÃ­ficas.
+- se calculan durante la ejecuciÃ³n mediante clases Java especÃ­ficas (`CalculationType.JAVA_PROVIDED`);
+- tienen `FunctionalNature.TECHNICAL` para distinguirlos de conceptos econÃ³micos;
+- pueden alimentar otros conceptos como operandos del grafo;
+- no se muestran en el recibo de nÃ³mina (`payslipOrderCode = null`);
+- no representan devengos ni deducciones.
 
-## Conceptos tÃ©cnicos iniciales
+## Conceptos tÃ©cnicos
 
-### DIAS_MES_REALES
+### D01 â€” DIAS_DEVENGO
 
-Representa los dÃ­as naturales reales del mes de cÃ¡lculo.
+DÃ­as de devengo mensual del segmento. Valor que se usa como operando QUANTITY de SALARIO_BASE.
+
+Regla V1:
+
+```
+D01 = min(daysInSegment, 30)
+```
+
+Ejemplos:
+
+- empleado activo todo abril (30 dÃ­as): 30
+- empleado activo todo marzo (31 dÃ­as): 30 (topado)
+- alta el 10 de marzo (22 dÃ­as en segmento): 22
+- baja el 20 de febrero (20 dÃ­as en segmento): 20
+
+Sustituye al anterior D01 (DIRECT_AMOUNT, CONSTANT=30 fijo), que no contemplaba meses parciales.
+
+### D02 â€” DIAS_MES_NOMINA
+
+DÃ­as teÃ³ricos del mes de nÃ³mina. Denominador convencional para el cÃ¡lculo mensual.
+
+Regla V1:
+
+```
+D02 = 30 (siempre)
+```
+
+Febrero, meses de 31 dÃ­as y cualquier mes se tratan como 30 a efectos de nÃ³mina mensual.
+
+### D03 â€” DIAS_MES_REALES
+
+DÃ­as naturales reales del mes de cÃ¡lculo.
+
+Regla V1:
+
+```
+D03 = periodStart.lengthOfMonth()
+```
 
 Ejemplos:
 
 - enero: 31
-- febrero: 28 o 29
+- febrero: 28 o 29 (aÃ±o bisiesto)
 - abril: 30
 
-### DIAS_MES_NOMINA
-
-Representa los dÃ­as teÃ³ricos de nÃ³mina mensual.
-
-Regla V1:
-
-- siempre 30
-
-Incluye febrero, que a efectos de nÃ³mina mensual se considera 30.
-
-### DIAS_PRESENCIA
-
-Representa los dÃ­as naturales de presencia del empleado dentro del perÃ­odo o segmento calculado.
-
-Ejemplos:
-
-- empleado activo todo marzo: 31
-- alta el 10 de marzo: 22
-- baja el 20 de febrero: 20
-
-### DIAS_DEVENGO_MENSUAL
-
-Representa los dÃ­as que se usan para calcular conceptos mensuales topados a 30.
-
-Ejemplos:
-
-- empleado activo todo marzo: 30
-- empleado activo todo febrero: 30
-- alta el 10 de marzo: 22
-- baja el 20 de febrero: 20
-
-## Regla de visibilidad
-
-Los conceptos tÃ©cnicos base tendrÃ¡n:
-
-```text
-receiptVisible = false
-
-o nombre equivalente.
-
-Deben persistirse para trazabilidad, pero no imprimirse en el recibo.
-
-RelaciÃ³n con SALARIO_BASE
+## RelaciÃ³n con SALARIO_BASE
 
 Para salario base mensual V1:
 
-SALARIO_BASE = salarioMensual / DIAS_MES_NOMINA * DIAS_DEVENGO_MENSUAL
+```
+SALARIO_BASE = D01 Ã— P01
+```
 
-Ejemplo:
+Donde `P01` (PRECIO_DIA) se obtiene de tabla de tarifas por categorÃ­a de convenio.
 
-salarioMensual = 1850.10
-DIAS_MES_NOMINA = 30
-DIAS_DEVENGO_MENSUAL = 22
+Con D01 dinÃ¡mico por segmento, el empleado con alta el 10 de marzo cobra proporcionalmente
+(`22 Ã— P01`) en lugar del mes completo (`30 Ã— P01`).
 
-SALARIO_BASE = 1850.10 / 30 * 22
-ImplementaciÃ³n
+## ImplementaciÃ³n
 
-Se permite implementar estos conceptos mediante clases Java especÃ­ficas.
+`CalculationType.JAVA_PROVIDED` identifica estos conceptos en el grafo. El `DefaultSegmentExecutionEngine`
+y el `CalculatePayrollUnitService` despachan a la implementaciÃ³n registrada por Spring mediante
+`List<TechnicalConceptCalculator>`.
 
-Motivo:
+Calculadores registrados:
 
-no dependen de fÃ³rmulas configurables;
-nacen del contexto de ejecuciÃ³n;
-representan geometrÃ­a temporal y reglas base del perÃ­odo;
-son conceptos fuente del grafo de cÃ¡lculo.
+| Concepto | Clase                              |
+|----------|------------------------------------|
+| D01      | `AccrualDaysConceptCalculator`     |
+| D02      | `PayrollMonthDaysConceptCalculator`|
+| D03      | `CalendarDaysConceptCalculator`    |
 
-Nombre sugerido:
+La interfaz `TechnicalConceptCalculator` recibe un `TechnicalConceptSegmentData` (solo fechas y
+`daysInSegment`) para mantener el contrato estrecho y fÃ¡cilmente testeable.
 
-PeriodTechnicalConceptCalculator
-PresenceDaysTechnicalConceptCalculator
-MonthlyAccrualDaysCalculator
+## Regla de visibilidad
 
-O, si se prefiere una Ãºnica clase inicial:
+Los conceptos tÃ©cnicos base tienen `payslipOrderCode = null`. No se persisten como lÃ­neas de recibo.
+Son calculados y disponibles en el estado de ejecuciÃ³n para ser operandos de otros conceptos.
 
-TechnicalPayrollPeriodConceptCalculator
-Regla arquitectÃ³nica
+## Regla arquitectÃ³nica
 
-Estas clases no deben convertirse en un motor paralelo.
+Las clases `TechnicalConceptCalculator` no deben convertirse en un motor paralelo.
 
 Solo pueden calcular conceptos tÃ©cnicos fundamentales derivados de:
 
-perÃ­odo de nÃ³mina;
-calendario mensual;
-presencia del empleado;
-segmentos temporales efectivos.
+- perÃ­odo de nÃ³mina;
+- calendario mensual;
+- presencia del empleado;
+- segmentos temporales efectivos.
 
-No deben calcular conceptos econÃ³micos como:
+No deben calcular conceptos econÃ³micos como salario base, antigÃ¼edad, nocturnidad, IRPF, totales o neto.
 
-salario base;
-antigÃ¼edad;
-nocturnidad;
-IRPF;
-totales;
-neto.
-Persistencia
+## SegmentaciÃ³n futura
 
-Los resultados tÃ©cnicos se guardarÃ¡n igual que otros resultados de concepto, pero marcados como no visibles.
+Cuando exista cÃ¡lculo por subperÃ­odos, D01 ya estÃ¡ preparado: opera sobre `daysInSegment`
+(el segmento activo), no sobre `daysInPeriod`. D02 y D03 son invariantes del perÃ­odo y
+devuelven el mismo valor en todos los segmentos de un mismo mes.
 
-Ejemplo:
+## Consecuencias positivas
 
-conceptCode              quantity   amount   receiptVisible
-DIAS_MES_REALES          31         null     false
-DIAS_MES_NOMINA          30         null     false
-DIAS_PRESENCIA           22         null     false
-DIAS_DEVENGO_MENSUAL     22         null     false
-SALARIO_BASE             22         1356.74  true
-SegmentaciÃ³n futura
+- Mejora la trazabilidad del cÃ¡lculo de SALARIO_BASE.
+- Elimina el hardcode de `D01_FIXED_30`.
+- Prepara el motor para altas, bajas y cambios de situaciÃ³n dentro del mes.
+- Permite explicar el salario base con meses parciales.
+- Mantiene limpio el recibo.
+- Encaja con el grafo de conceptos sin forzar que todo sea configurable.
 
-Cuando exista cÃ¡lculo por subperÃ­odos, estos conceptos deberÃ¡n poder calcularse por segmento.
+## Riesgos
 
-Ejemplo:
+**1. Abusar de JAVA_PROVIDED**
 
-Segmento 1: 2026-03-01 â†’ 2026-03-14
-Segmento 2: 2026-03-15 â†’ 2026-03-31
+No todo helper interno debe convertirse en concepto tÃ©cnico. Solo deben modelarse
+valores relevantes para explicar el cÃ¡lculo.
 
-Cada segmento podrÃ¡ tener sus propios:
-
-DIAS_PRESENCIA
-DIAS_DEVENGO_MENSUAL
-
-Mientras que DIAS_MES_REALES y DIAS_MES_NOMINA podrÃ¡n ser comunes al perÃ­odo completo.
-
-Consecuencias positivas
-mejora la trazabilidad del cÃ¡lculo;
-elimina lÃ³gica oculta en duro;
-prepara el motor para altas, bajas y cambios de situaciÃ³n;
-permite explicar el salario base;
-mantiene limpio el recibo;
-encaja con el grafo de conceptos sin forzar que todo sea configurable.
-Riesgos
-1. Abusar de conceptos tÃ©cnicos
-
-No todo helper interno debe convertirse en concepto persistido.
-
-Solo deben persistirse valores relevantes para explicar cÃ¡lculo.
-
-2. Crear un segundo motor en Java
+**2. Crear un segundo motor en Java**
 
 Las clases tÃ©cnicas no deben calcular conceptos econÃ³micos.
 
-Solo deben producir inputs fundamentales.
+**3. Naming ambiguo**
 
-3. Naming ambiguo
+Se adopta la nomenclatura D01/D02/D03 por ser mÃ¡s cÃ³moda para negocio y no generar
+confusiÃ³n entre DIAS_MES_REALES (D03) y DIAS_MES_NOMINA (D02).
 
-Se evita DIAS_MES a secas.
-
-Nombre adoptado:
-
-DIAS_MES_NOMINA
-
-para distinguirlo de:
-
-DIAS_MES_REALES
-DecisiÃ³n final
-
-B4RRHH distinguirÃ¡ entre:
-
-conceptos econÃ³micos visibles;
-agregados;
-conceptos tÃ©cnicos no visibles;
-helpers internos no persistidos.
-
-Los conceptos tÃ©cnicos base podrÃ¡n ser calculados por clases Java, persistidos como resultados de cÃ¡lculo y utilizados como operandos por conceptos econÃ³micos.
-
-No aparecerÃ¡n en el recibo de nÃ³mina.
 
 <!-- END FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
+
+
+---
+
+# FILE: ADR-047-lifecycle-workflow-participant-pattern.md
+<a name="file-adr-047-lifecycle-workflow-participant-pattern-md"></a>
+
+<!-- BEGIN FILE: ADR-047-lifecycle-workflow-participant-pattern.md -->
+
+# ADR-047 â€” Lifecycle Workflow Participant Pattern (Hire / Terminate)
+
+## Estado
+
+Propuesto
+
+---
+
+## Contexto
+
+ADR-007 y ADR-018 establecieron que los workflows de ciclo de vida (Hire, Terminate, Rehire) se implementan como servicios de orquestaciÃ³n en la capa de aplicaciÃ³n: un Ãºnico `@Transactional` que coordina mÃºltiples verticales y garantiza coherencia temporal.
+
+Esa decisiÃ³n sigue siendo correcta. El problema es la **implementaciÃ³n concreta** que ha emergido de ella.
+
+`HireEmployeeService` actualmente:
+
+- Tiene **10 dependencias inyectadas** en el constructor
+- Ocupa **358 lÃ­neas**
+- Ejecuta **8 sub-operaciones** secuenciales dentro del mÃ©todo `hire()`
+- `HireEmployeeExceptionHandler` importa excepciones de **6 verticales distintos**
+
+El patrÃ³n real que ha emergido es este:
+
+```
+HireEmployeeService â†’ CreatePresenceUseCase
+                    â†’ CreateContractUseCase
+                    â†’ CreateWorkCenterUseCase
+                    â†’ CreateCostCenterDistributionUseCase
+                    â†’ CreateWorkingTimeUseCase
+                    â†’ CreateLaborClassificationUseCase
+                    â†’ NextEmployeeNumberPort
+                    â†’ WorkCenterCompanyValidator
+                    â†’ EmployeeTypeCatalogValidator
+```
+
+Cada nuevo vertical que necesita participar en el hire obliga a:
+
+1. AÃ±adir una dependencia al constructor de `HireEmployeeService`
+2. AÃ±adir la llamada dentro del mÃ©todo `hire()`
+3. AÃ±adir un `@ExceptionHandler` en `HireEmployeeExceptionHandler` para las excepciones de ese vertical
+
+Esto viola Open/Closed: el servicio mÃ¡s crÃ­tico del sistema cambia con cada feature nueva.
+
+El patrÃ³n se reproduce en `TerminateEmployeeService` y `RehireEmployeeService`.
+
+---
+
+## Problema
+
+El diseÃ±o actual acopla el servicio orquestador con cada vertical que participa en el workflow. AÃ±adir un nuevo vertical al hire no es una operaciÃ³n local â€” requiere modificar el servicio central.
+
+Esto no es un problema de complejidad (el hire ES complejo por dominio), sino un problema de **direcciÃ³n de las dependencias**.
+
+---
+
+## DecisiÃ³n
+
+Se introduce el **Lifecycle Workflow Participant Pattern**:
+
+> En vez de que el servicio de lifecycle conozca cada vertical, cada vertical se registra como participante del workflow.
+
+### 1. Puerto `HireParticipant`
+
+```java
+// employee/lifecycle/application/port/HireParticipant.java
+public interface HireParticipant {
+    int order();
+    void participate(HireContext ctx);
+}
+```
+
+`order()` garantiza la secuencia de ejecuciÃ³n. Los valores de orden son:
+
+| Orden | Participante | RazÃ³n |
+|-------|-------------|-------|
+| 10 | EmployeeCoreParticipant | El employee debe existir antes que todo |
+| 20 | PresenceParticipant | Require employee.id |
+| 30 | WorkCenterParticipant | Require employee.id |
+| 40 | CostCenterParticipant | Require employee.id (opcional) |
+| 50 | ContractParticipant | Require employee.id |
+| 60 | LaborClassificationParticipant | Require employee.id |
+| 70 | WorkingTimeParticipant | Require employee.id |
+
+### 2. Objeto de contexto `HireContext`
+
+`HireContext` viaja por todos los participantes. Cada uno lee lo que necesita del comando y escribe su resultado:
+
+```java
+// employee/lifecycle/application/model/HireContext.java
+public class HireContext {
+    private final HireEmployeeCommand command;
+    private final String employeeNumber;      // generado antes de los participantes
+    private Employee employee;
+    private Presence presence;
+    private WorkCenter workCenter;
+    private CostCenterDistribution costCenterDistribution;
+    private Contract contract;
+    private LaborClassification laborClassification;
+    private WorkingTime workingTime;
+
+    // getters y setters
+    public HireEmployeeResult toResult() { ... }
+}
+```
+
+### 3. `HireEmployeeService` tras el refactor
+
+```java
+@Service
+public class HireEmployeeService implements HireEmployeeUseCase {
+
+    private final List<HireParticipant> participants;
+    private final NextEmployeeNumberPort nextEmployeeNumberPort;
+    private final HireEmployeePreConditionValidator validator;
+
+    public HireEmployeeService(
+            List<HireParticipant> participants,
+            NextEmployeeNumberPort nextEmployeeNumberPort,
+            HireEmployeePreConditionValidator validator) {
+        this.participants = participants.stream()
+                .sorted(Comparator.comparingInt(HireParticipant::order))
+                .toList();
+        this.nextEmployeeNumberPort = nextEmployeeNumberPort;
+        this.validator = validator;
+    }
+
+    @Override
+    @Transactional
+    public HireEmployeeResult hire(HireEmployeeCommand command) {
+        validator.validate(command);
+        String employeeNumber = nextEmployeeNumberPort.consumeNext(
+                normalizeCode(command.ruleSystemCode()));
+        HireContext ctx = new HireContext(command, employeeNumber);
+        participants.forEach(p -> p.participate(ctx));
+        return ctx.toResult();
+    }
+}
+```
+
+**AÃ±adir un nuevo vertical al hire = crear un fichero `@Component` que implementa `HireParticipant`. `HireEmployeeService` nunca vuelve a cambiar.**
+
+### 4. ExtracciÃ³n de `HireEmployeePreConditionValidator`
+
+Las validaciones previas al hire (tipo de empleado, coherencia work center / company) se extraen a un servicio dedicado con sus propios tests unitarios:
+
+```java
+// employee/lifecycle/application/service/HireEmployeePreConditionValidator.java
+@Component
+public class HireEmployeePreConditionValidator {
+    private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
+    private final WorkCenterCompanyValidator workCenterCompanyValidator;
+
+    public void validate(HireEmployeeCommand command) { ... }
+}
+```
+
+### 5. Exception handlers descentralizados
+
+Con el patrÃ³n participant, cada vertical puede manejar sus propias excepciones mediante un `@RestControllerAdvice` scoped a `HireEmployeeController`:
+
+```java
+// workcenter/infrastructure/web/WorkCenterHireExceptionHandler.java
+@RestControllerAdvice(assignableTypes = HireEmployeeController.class)
+@Order(10)
+public class WorkCenterHireExceptionHandler {
+    @ExceptionHandler(WorkCenterCatalogValueInvalidException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handle(...) { ... }
+}
+```
+
+`HireEmployeeExceptionHandler` queda Ãºnicamente con las excepciones propias del lifecycle (autonumeraciÃ³n, validaciones transversales).
+
+### 6. El mismo patrÃ³n para TERMINATION
+
+```java
+// employee/lifecycle/application/port/TerminationParticipant.java
+public interface TerminationParticipant {
+    int order();
+    void participate(TerminationContext ctx);
+}
+```
+
+`TerminationContext` lleva el `Employee` existente, la fecha de terminaciÃ³n, el motivo, y acumula los resultados del cierre de cada vertical (presence.endDate, contract.endDate, etc.).
+
+El orden en termination es inverso a hire en semÃ¡ntica (cerrar desde fuera hacia dentro):
+
+| Orden | Participante |
+|-------|-------------|
+| 10 | WorkingTimeTerminationParticipant |
+| 20 | WorkCenterTerminationParticipant |
+| 30 | CostCenterTerminationParticipant |
+| 40 | ContractTerminationParticipant |
+| 50 | LaborClassificationTerminationParticipant |
+| 60 | PresenceTerminationParticipant | â† cierra presence al final |
+
+Presence es la Ãºltima en cerrarse porque es el eje del lifecycle (ADR-018): cerrarla primero implicarÃ­a que el empleado estÃ¡ "fuera" mientras aÃºn tiene contratos abiertos.
+
+---
+
+## Invariantes que NO cambian
+
+- **La transacciÃ³n sigue siendo Ãºnica.** Todos los participantes se ejecutan dentro del `@Transactional` del servicio orquestador. Si cualquier participante lanza, Spring hace rollback de todo. El comportamiento transaccional es idÃ©ntico al actual.
+- **No se introducen domain events asÃ­ncronos.** Los eventos sÃ­ncronos de Spring (`@EventListener`) son una alternativa vÃ¡lida al participant port, pero aÃ±aden indirecciÃ³n sin ventaja real en este contexto. Se descarta.
+- **No se introducen sagas ni consistencia eventual.** El hire necesita devolver el nÃºmero de matrÃ­cula generado en la misma peticiÃ³n HTTP. La atomicidad no es negociable.
+- **El orden sigue siendo explÃ­cito y auditable.** `order()` como entero en la interfaz es deliberadamente simple â€” no hay grafos de dependencias ni resoluciÃ³n dinÃ¡mica. Si el orden cambia, se ve en el diff.
+
+---
+
+## Consecuencias positivas
+
+- `HireEmployeeService` y `TerminateEmployeeService` se vuelven estables â€” no cambian al aÃ±adir nuevos verticales
+- Cada vertical es dueÃ±o de su lÃ³gica de participaciÃ³n en el workflow (cohesiÃ³n)
+- Los tests de cada participante son unitarios y pequeÃ±os
+- `HireEmployeeExceptionHandler` pierde el conocimiento de verticales externos
+- La misma base sirve para Rehire sin duplicar la orquestaciÃ³n
+
+## Consecuencias negativas / riesgos
+
+- El orden de participaciÃ³n es implÃ­cito al leer el cÃ³digo del servicio â€” hay que consultar las implementaciones para ver la secuencia completa. **MitigaciÃ³n:** documentar el orden en `HireContext` con un comment de referencia.
+- Spring inyecta `List<HireParticipant>` en el orden que descubre los beans, por lo que el `order()` explÃ­cito es crÃ­tico â€” un test de contexto debe verificar el orden en cada release.
+- La migraciÃ³n de `HireEmployeeService` al patrÃ³n debe hacerse gradualmente (un participante cada vez) para no introducir regresiones.
+
+---
+
+## Alternativas descartadas
+
+### Mantener el orquestador actual y aceptar el crecimiento
+
+Descartado:
+
+- 10 dependencias hoy, 15 en 12 meses
+- Cada feature de lifecycle toca el servicio mÃ¡s crÃ­tico del sistema
+- No hay punto de estabilizaciÃ³n natural
+
+### Domain events asÃ­ncronos (ApplicationEventPublisher + @TransactionalEventListener)
+
+Descartado:
+
+- AÃ±ade indirecciÃ³n sin ventaja en un contexto single-service
+- El orden de los handlers es menos explÃ­cito
+- El debugging es mÃ¡s complejo
+- Para lograr el mismo orden de operaciones se necesita `@Order` igualmente
+
+### Saga pattern (compensating transactions)
+
+Descartado:
+
+- Consistencia eventual no es apropiada para hire
+- El nÃºmero de matrÃ­cula debe estar disponible sincrÃ³nicamente
+- AÃ±ade infraestructura de saga que no existe ni se necesita
+
+### Employee como agregado monolÃ­tico
+
+Descartado desde ADR-002 y ADR-007. La arquitectura vertical se mantiene.
+
+---
+
+## RelaciÃ³n con ADRs anteriores
+
+| ADR | RelaciÃ³n |
+|-----|----------|
+| ADR-007 | Este ADR evoluciona la implementaciÃ³n de los workflows definidos allÃ­. Los workflows siguen siendo orquestados y transaccionales. |
+| ADR-018 | La secciÃ³n "OrquestaciÃ³n interna" de ADR-018 queda reemplazada por este patrÃ³n. El modelo de datos, la API y las validaciones no cambian. |
+
+---
+
+## Resumen
+
+El Lifecycle Workflow Participant Pattern invierte la dependencia entre el orquestador y los verticales:
+
+- Antes: el servicio conoce cada vertical
+- DespuÃ©s: cada vertical se registra en el servicio
+
+La transacciÃ³n, el orden de ejecuciÃ³n y el contrato de API permanecen inalterados. Lo que cambia es que aÃ±adir un nuevo vertical al hire o al terminate se convierte en una operaciÃ³n local (crear un fichero), no en una modificaciÃ³n del servicio central.
+
+
+<!-- END FILE: ADR-047-lifecycle-workflow-participant-pattern.md -->
 
 
 ---
