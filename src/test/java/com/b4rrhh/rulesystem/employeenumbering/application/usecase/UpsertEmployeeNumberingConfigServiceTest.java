@@ -70,4 +70,15 @@ class UpsertEmployeeNumberingConfigServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.upsert(command));
         verify(configRepository, never()).save(any());
     }
+
+    @Test
+    void normalizesRuleSystemCodeToUpperCase() {
+        when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(
+            new RuleSystem(1L, "ESP", "Spain", "ES", true, null, null)));
+        when(configRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.upsert(new UpsertEmployeeNumberingConfigCommand("esp", "EMP", 6, 1, 1L));
+
+        verify(ruleSystemRepository).findByCode("ESP");
+    }
 }
