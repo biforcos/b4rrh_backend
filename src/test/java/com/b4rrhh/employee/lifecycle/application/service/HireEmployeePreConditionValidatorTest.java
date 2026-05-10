@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.application.service;
 
 import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
+import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireContext;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
@@ -145,7 +146,7 @@ class HireEmployeePreConditionValidatorTest {
 
     @Test
     void throwsWhenEmployeeTypeIsInvalid() {
-        doThrow(new com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException("INTERNAL", "ESP"))
+        doThrow(new EmployeeTypeInvalidException("INTERNAL"))
                 .when(employeeTypeCatalogValidator)
                 .validateEmployeeTypeCode(eq("ESP"), eq("INTERNAL"), any(LocalDate.class));
 

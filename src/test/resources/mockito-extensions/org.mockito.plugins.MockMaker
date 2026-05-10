@@ -1,1 +1,3 @@
+# Use subclass-based mock maker to allow mocking concrete @Component classes
+# (WorkCenterCompanyValidator, EmployeeTypeCatalogValidator) without inline ByteBuddy issues.
 mock-maker-subclass

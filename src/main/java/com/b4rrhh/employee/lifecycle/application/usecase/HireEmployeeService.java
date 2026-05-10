@@ -96,6 +96,7 @@ public class HireEmployeeService implements HireEmployeeUseCase {
     }
 
     @Override
+    // TODO(ADR-047): replace inline normalization/validation with HireEmployeePreConditionValidator — Task 10
     @Transactional
     public HireEmployeeResult hire(HireEmployeeCommand command) {
         if (command == null) {
