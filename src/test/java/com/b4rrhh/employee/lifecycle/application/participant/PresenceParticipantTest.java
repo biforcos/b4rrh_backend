@@ -42,8 +42,9 @@ class PresenceParticipantTest {
     void createsPresenceFromContextAndStoresResult() {
         HireContext ctx = validContext();
         LocalDate hireDate = ctx.hireDate();
+        LocalDateTime fixedNow = LocalDateTime.of(2026, 3, 23, 0, 0);
         Presence presence = new Presence(10L, 100L, 1, "COMP", "HIRE", null, hireDate, null,
-                LocalDateTime.now(), LocalDateTime.now());
+                fixedNow, fixedNow);
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(presence);
 
         participant.participate(ctx);
