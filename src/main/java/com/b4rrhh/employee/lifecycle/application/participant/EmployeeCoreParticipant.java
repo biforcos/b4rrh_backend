@@ -16,7 +16,9 @@ public class EmployeeCoreParticipant implements HireParticipant {
     }
 
     @Override
-    public int order() { return 10; }
+    public int order() {
+        return 10;
+    }
 
     @Override
     public void participate(HireContext ctx) {
