@@ -10,7 +10,7 @@ import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 
 import java.time.LocalDate;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 public class HireContext {
 
@@ -83,7 +83,12 @@ public class HireContext {
     public HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime() { return workingTime; }
 
     public String employeeNumber() { return employeeNumber; }
-    public void setEmployeeNumber(String employeeNumber) { this.employeeNumber = employeeNumber; }
+    public void setEmployeeNumber(String employeeNumber) {
+        if (this.employeeNumber != null) {
+            throw new IllegalStateException("employeeNumber is already set");
+        }
+        this.employeeNumber = employeeNumber;
+    }
 
     public Employee employee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
@@ -101,6 +106,12 @@ public class HireContext {
     public void setWorkingTimeResult(WorkingTime workingTimeResult) { this.workingTimeResult = workingTimeResult; }
 
     public HireEmployeeResult toResult() {
+        Objects.requireNonNull(employee, "employee must be set by EmployeeCoreParticipant before calling toResult()");
+        Objects.requireNonNull(presence, "presence must be set by PresenceParticipant before calling toResult()");
+        Objects.requireNonNull(workCenter, "workCenter must be set by WorkCenterParticipant before calling toResult()");
+        Objects.requireNonNull(contractResult, "contractResult must be set by ContractParticipant before calling toResult()");
+        Objects.requireNonNull(laborClassificationResult, "laborClassificationResult must be set by LaborClassificationParticipant before calling toResult()");
+        Objects.requireNonNull(workingTimeResult, "workingTimeResult must be set by WorkingTimeParticipant before calling toResult()");
         return new HireEmployeeResult(
                 new HireEmployeeResult.EmployeeSummary(
                         employee.getRuleSystemCode(),
@@ -123,7 +134,7 @@ public class HireContext {
                 new HireEmployeeResult.WorkCenterSummary(
                         workCenter.getStartDate(),
                         workCenter.getWorkCenterCode(),
-                        workCenter.getWorkCenterCode()
+                        workCenter.getWorkCenterCode() // name not available in domain model, using code as fallback
                 ),
                 costCenter != null ? new HireEmployeeResult.CostCenterSummary(
                         costCenter.getStartDate(),
@@ -131,10 +142,10 @@ public class HireContext {
                         costCenter.getItems().stream()
                                 .map(item -> new HireEmployeeResult.CostCenterItemSummary(
                                         item.getCostCenterCode(),
-                                        item.getCostCenterCode(),
+                                        item.getCostCenterCode(), // name not available in domain model, using code as fallback
                                         item.getAllocationPercentage().doubleValue()
                                 ))
-                                .collect(Collectors.toList())
+                                .toList()
                 ) : null,
                 new HireEmployeeResult.ContractSummary(
                         contractResult.getStartDate(),
@@ -158,6 +169,9 @@ public class HireContext {
         );
     }
 
+    // Note: this bypasses DisplayNameComputationService (per-rule-system format). Known limitation
+    // carried forward from HireEmployeeService. Track as tech debt: compute via DisplayNameComputationService
+    // in EmployeeCoreParticipant and store displayName as a context field.
     private static String formatDisplayName(Employee employee) {
         StringBuilder sb = new StringBuilder()
                 .append(employee.getFirstName())
