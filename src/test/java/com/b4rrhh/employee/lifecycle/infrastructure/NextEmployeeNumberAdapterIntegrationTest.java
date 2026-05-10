@@ -34,13 +34,18 @@ class NextEmployeeNumberAdapterIntegrationTest {
 
     @Test
     void nextValueAdvancesByStep() {
+        Long initialValue = jdbcTemplate.queryForObject(
+                "SELECT next_value FROM rulesystem.employee_numbering_config WHERE rule_system_code = 'ESP'",
+                Long.class);
+        Long step = jdbcTemplate.queryForObject(
+                "SELECT step FROM rulesystem.employee_numbering_config WHERE rule_system_code = 'ESP'",
+                Long.class);
         adapter.consumeNext("ESP");
         entityManager.flush();
         Long nextValue = jdbcTemplate.queryForObject(
                 "SELECT next_value FROM rulesystem.employee_numbering_config WHERE rule_system_code = 'ESP'",
-                Long.class
-        );
-        assertEquals(2L, nextValue);
+                Long.class);
+        assertEquals(initialValue + step, nextValue);
     }
 
     @Test
@@ -54,6 +59,7 @@ class NextEmployeeNumberAdapterIntegrationTest {
         jdbcTemplate.update(
                 "UPDATE rulesystem.employee_numbering_config SET next_value = 1000000 WHERE rule_system_code = 'ESP'"
         );
+        entityManager.clear();
         assertThrows(EmployeeNumberingExhaustedException.class,
                 () -> adapter.consumeNext("ESP"));
     }
