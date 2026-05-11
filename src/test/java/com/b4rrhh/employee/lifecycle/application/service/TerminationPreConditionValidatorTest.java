@@ -1,11 +1,9 @@
 package com.b4rrhh.employee.lifecycle.application.service;
 
-import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
-import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.TerminateEmployeeCommand;
@@ -17,7 +15,6 @@ import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUse
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
@@ -187,6 +184,29 @@ class TerminationPreConditionValidatorTest {
         TerminationContext ctx = validator.validateAndLookup(cmd("ESP", "INTERNAL", "EMP001"));
 
         assertEquals(2, ctx.reconstructIdempotentResult().closedPresenceNumber());
+    }
+
+    @Test
+    void idempotentContextExcludesPresenceWithWrongExitReasonCode() {
+        Employee terminated = terminatedEmployee();
+        when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(terminated));
+
+        // Presence with correct terminationDate but different exitReasonCode
+        Presence wrongReason = new Presence(10L, 100L, 1, "COMP", "HIRE", "WRONG_REASON",
+                TERMINATION_DATE.minusMonths(3), TERMINATION_DATE, NOW, NOW);
+        when(listPresences.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(wrongReason));
+        when(listContracts.listByEmployeeBusinessKey(any())).thenReturn(List.of());
+        when(listLaborClassifications.listByEmployeeBusinessKey(any())).thenReturn(List.of());
+        when(listWorkCenters.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of());
+        when(listWorkingTimes.listByEmployeeBusinessKey(any())).thenReturn(List.of());
+
+        TerminationContext ctx = validator.validateAndLookup(cmd("ESP", "INTERNAL", "EMP001"));
+
+        assertTrue(ctx.isAlreadyTerminated());
+        assertNull(ctx.reconstructIdempotentResult().closedPresenceNumber());
     }
 
     // --- helpers ---
