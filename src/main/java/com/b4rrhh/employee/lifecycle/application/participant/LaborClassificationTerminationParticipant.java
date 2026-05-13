@@ -4,9 +4,12 @@ import com.b4rrhh.employee.labor_classification.application.command.CloseLaborCl
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementInvalidException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCategoryInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.model.TerminationContext;
 import com.b4rrhh.employee.lifecycle.application.port.TerminationParticipant;
+import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeConflictException;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +55,8 @@ public class LaborClassificationTerminationParticipant implements TerminationPar
                     ctx.ruleSystemCode(), ctx.employeeTypeCode(), ctx.employeeNumber(),
                     activeLc.getStartDate(), ctx.terminationDate()));
             ctx.setClosedLaborClassification(closed);
+        } catch (LaborClassificationAgreementInvalidException | LaborClassificationCategoryInvalidException e) {
+            throw new TerminateEmployeeCatalogValueInvalidException(e.getMessage(), e);
         } catch (RuntimeException e) {
             throw new TerminateEmployeeConflictException(e.getMessage(), e);
         }

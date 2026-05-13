@@ -4,9 +4,12 @@ import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
 import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
 import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
+import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
+import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.lifecycle.application.model.TerminationContext;
 import com.b4rrhh.employee.lifecycle.application.port.TerminationParticipant;
+import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeConflictException;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +55,8 @@ public class ContractTerminationParticipant implements TerminationParticipant {
                     ctx.ruleSystemCode(), ctx.employeeTypeCode(), ctx.employeeNumber(),
                     activeContract.getStartDate(), ctx.terminationDate()));
             ctx.setClosedContract(closed);
+        } catch (ContractInvalidException | ContractSubtypeInvalidException e) {
+            throw new TerminateEmployeeCatalogValueInvalidException(e.getMessage(), e);
         } catch (RuntimeException e) {
             throw new TerminateEmployeeConflictException(e.getMessage(), e);
         }

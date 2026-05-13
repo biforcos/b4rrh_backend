@@ -5,8 +5,10 @@ import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCom
 import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.domain.exception.ContractAlreadyClosedException;
+import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.lifecycle.application.model.TerminationContext;
+import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,6 +103,19 @@ class ContractTerminationParticipantTest {
 
         TerminateEmployeeConflictException ex = assertThrows(
                 TerminateEmployeeConflictException.class,
+                () -> participant().participate(context()));
+        assertNotNull(ex.getCause());
+    }
+
+    @Test
+    void translatesCatalogExceptionToCatalogValueInvalidException() {
+        Contract active = contract(START_DATE, null);
+        when(listContracts.listByEmployeeBusinessKey(any())).thenReturn(List.of(active));
+        when(closeContract.close(any()))
+                .thenThrow(new ContractInvalidException("invalid-contract-type"));
+
+        TerminateEmployeeCatalogValueInvalidException ex = assertThrows(
+                TerminateEmployeeCatalogValueInvalidException.class,
                 () -> participant().participate(context()));
         assertNotNull(ex.getCause());
     }
