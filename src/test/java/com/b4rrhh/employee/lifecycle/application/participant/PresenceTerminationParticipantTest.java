@@ -69,6 +69,28 @@ class PresenceTerminationParticipantTest {
     }
 
     @Test
+    void deduplicatesByPresenceNumberPreferringLatestEndDateWhenBothClosed() {
+        // Two records with same presenceNumber=1, both closed — the later endDate wins
+        Presence olderClosed = presence(1, START_DATE, LocalDate.of(2026, 2, 28), "FIN");
+        Presence newerClosed = presence(1, START_DATE, LocalDate.of(2026, 3, 15), "FIN");
+        // presenceNumber=2 is the active one
+        Presence active2 = presence(2, LocalDate.of(2026, 1, 1), null, null);
+        Presence closed2 = presence(2, LocalDate.of(2026, 1, 1), TERMINATION_DATE, "VOL");
+
+        when(listPresences.listByEmployeeBusinessKey(any(), any(), any()))
+                .thenReturn(List.of(olderClosed, newerClosed, active2));
+        when(closePresence.close(any())).thenReturn(closed2);
+
+        participant().participate(context());
+
+        // Only presenceNumber=2 should be closed (presenceNumber=1 deduplicated to newerClosed which is not active)
+        ArgumentCaptor<ClosePresenceCommand> captor =
+                ArgumentCaptor.forClass(ClosePresenceCommand.class);
+        verify(closePresence).close(captor.capture());
+        assertEquals(2, captor.getValue().presenceNumber());
+    }
+
+    @Test
     void throwsWhenNoActivePresenceFound() {
         Presence closedOne = presence(1, START_DATE, LocalDate.of(2026, 2, 28), "EXIT");
 
