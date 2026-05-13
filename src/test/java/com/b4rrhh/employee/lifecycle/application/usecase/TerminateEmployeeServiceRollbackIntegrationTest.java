@@ -1,33 +1,24 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
-import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
-import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
-import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
-import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersistenceAdapter;
-import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
-import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
-import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
-import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.TerminateEmployeeCommand;
+import com.b4rrhh.employee.lifecycle.application.model.TerminationContext;
+import com.b4rrhh.employee.lifecycle.application.participant.CostCenterTerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.ContractTerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.LaborClassificationTerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.PresenceTerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.participant.WorkCenterTerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.port.TerminationParticipant;
+import com.b4rrhh.employee.lifecycle.application.service.TerminationPreConditionValidator;
 import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeConflictException;
-import com.b4rrhh.employee.presence.application.usecase.ClosePresenceCommand;
-import com.b4rrhh.employee.presence.application.usecase.ClosePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
-import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
-import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
-import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
-import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
-import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,11 +30,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -91,34 +80,19 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
 
         jdbcTemplate.update(
                 "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)",
-                "ESP",
-                "INTERNAL",
-                "EMP001",
-                "Ana",
-                "Lopez",
-                "ACTIVE"
-        );
+                "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", "ACTIVE");
     }
 
     @Test
-    void rollsBackEmployeeStatusWhenPostConditionFailsAfterTermination() {
+    void rollsBackWhenParticipantThrowsBeforeEmployeeStatusSave() {
         TerminateEmployeeCommand command = new TerminateEmployeeCommand(
-                "ESP",
-                "INTERNAL",
-                "EMP001",
-                LocalDate.of(2026, 3, 31),
-                "VOL"
-        );
+                "ESP", "INTERNAL", "EMP001", LocalDate.of(2026, 3, 31), "VOL");
 
         assertThrows(TerminateEmployeeConflictException.class, () -> service.terminate(command));
 
         String persistedStatus = jdbcTemplate.queryForObject(
                 "select status from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
-                String.class,
-                "ESP",
-                "INTERNAL",
-                "EMP001"
-        );
+                String.class, "ESP", "INTERNAL", "EMP001");
 
         assertEquals("ACTIVE", persistedStatus);
     }
@@ -130,177 +104,100 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
         GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase(EmployeeRepository employeeRepository) {
             return (ruleSystemCode, employeeTypeCode, employeeNumber) -> employeeRepository
                     .findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(
-                            ruleSystemCode,
-                            employeeTypeCode,
-                            employeeNumber
-                    );
+                            ruleSystemCode, employeeTypeCode, employeeNumber);
         }
 
         @Bean
         ListEmployeePresencesUseCase listEmployeePresencesUseCase() {
-            return new ListEmployeePresencesUseCase() {
-                private final AtomicInteger calls = new AtomicInteger(0);
+            return (rs, et, en) -> List.of(new Presence(
+                    10L, 100L, 1, "COMP", "HIRE", null,
+                    LocalDate.of(2026, 1, 1), null,
+                    LocalDateTime.now(), LocalDateTime.now()));
+        }
 
-                @Override
-                public List<Presence> listByEmployeeBusinessKey(
-                        String ruleSystemCode,
-                        String employeeTypeCode,
-                        String employeeNumber
-                ) {
-                    if (calls.incrementAndGet() == 1) {
-                        return List.of(activePresence());
-                    }
+        @Bean
+        ListEmployeeContractsUseCase listEmployeeContractsUseCase() {
+            return command -> List.of();
+        }
 
-                    // Simulates pre-existing inconsistency that remains after attempted close.
-                    return List.of(activePresence());
-                }
+        @Bean
+        ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase() {
+            return command -> List.of();
+        }
 
-                private Presence activePresence() {
-                    return new Presence(
-                            10L,
-                            100L,
-                            1,
-                            "COMP",
-                            "HIRE",
-                            null,
-                            LocalDate.of(2026, 1, 1),
-                            null,
-                            LocalDateTime.now(),
-                            LocalDateTime.now()
-                    );
+        @Bean
+        ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase() {
+            return (rs, et, en) -> List.of();
+        }
+
+        @Bean
+        ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase() {
+            return command -> List.of();
+        }
+
+        @Bean
+        TerminationPreConditionValidator terminationPreConditionValidator(
+                GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKey,
+                ListEmployeePresencesUseCase listPresences,
+                ListEmployeeContractsUseCase listContracts,
+                ListEmployeeLaborClassificationsUseCase listLaborClassifications,
+                ListEmployeeWorkCentersUseCase listWorkCenters,
+                ListEmployeeWorkingTimesUseCase listWorkingTimes) {
+            return new TerminationPreConditionValidator(
+                    getEmployeeByBusinessKey, listPresences, listContracts,
+                    listLaborClassifications, listWorkCenters, listWorkingTimes);
+        }
+
+        @Bean
+        TerminationParticipant workingTimeTerminationParticipant() {
+            return new TerminationParticipant() {
+                @Override public int order() { return 10; }
+                @Override public void participate(TerminationContext ctx) {
+                    throw new TerminateEmployeeConflictException(
+                            "Simulated working time conflict for rollback test");
                 }
             };
         }
 
         @Bean
-        ListEmployeeContractsUseCase listEmployeeContractsUseCase() {
-            return command -> List.of(new Contract(
-                    100L,
-                    "IND",
-                    "FT1",
-                    LocalDate.of(2026, 1, 1),
-                    null
-            ));
+        WorkCenterTerminationParticipant workCenterTerminationParticipant() {
+            return new WorkCenterTerminationParticipant(
+                    (rs, et, en) -> List.of(),
+                    command -> null);
         }
 
         @Bean
-        ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase() {
-            return command -> List.of(new LaborClassification(
-                    100L,
-                    "AGR",
-                    "CAT",
-                    LocalDate.of(2026, 1, 1),
-                    null
-            ));
+        CostCenterTerminationParticipant costCenterTerminationParticipant() {
+            return new CostCenterTerminationParticipant(
+                    (rs, et, en, date) -> {});
         }
 
         @Bean
-        ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase() {
-            return (ruleSystemCode, employeeTypeCode, employeeNumber) -> List.of(new WorkCenter(
-                    20L,
-                    100L,
-                    1,
-                    "WC1",
-                    LocalDate.of(2026, 1, 1),
-                    null,
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
-            ));
-        }
-
-                @Bean
-                ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase() {
-                    return command -> List.of(WorkingTime.rehydrate(
-                        30L,
-                        100L,
-                        1,
-                        LocalDate.of(2026, 1, 1),
-                        null,
-                        new BigDecimal("75"),
-                        new WorkingTimeDerivedHours(
-                            new BigDecimal("30"),
-                            new BigDecimal("6"),
-                            new BigDecimal("130")
-                        ),
-                        LocalDateTime.now(),
-                        LocalDateTime.now()
-                    ));
-                }
-
-        @Bean
-        CloseWorkCenterUseCase closeWorkCenterUseCase() {
-            return command -> new WorkCenter(
-                    20L,
-                    100L,
-                    command.workCenterAssignmentNumber(),
-                    "WC1",
-                    LocalDate.of(2026, 1, 1),
-                    command.endDate(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
-            );
+        ContractTerminationParticipant contractTerminationParticipant(
+                ListEmployeeContractsUseCase listContracts) {
+            return new ContractTerminationParticipant(
+                    listContracts,
+                    command -> null);
         }
 
         @Bean
-        CloseLaborClassificationUseCase closeLaborClassificationUseCase() {
-            return command -> new LaborClassification(
-                    100L,
-                    "AGR",
-                    "CAT",
-                    command.startDate(),
-                    command.endDate()
-            );
+        LaborClassificationTerminationParticipant laborClassificationTerminationParticipant(
+                ListEmployeeLaborClassificationsUseCase listLaborClassifications) {
+            return new LaborClassificationTerminationParticipant(
+                    listLaborClassifications,
+                    command -> null);
         }
 
         @Bean
-        CloseContractUseCase closeContractUseCase() {
-            return command -> new Contract(
-                    100L,
-                    "IND",
-                    "FT1",
-                    command.startDate(),
-                    command.endDate()
-            );
-        }
-
-        @Bean
-        ClosePresenceUseCase closePresenceUseCase() {
-            return command -> new Presence(
-                    10L,
-                    100L,
-                    command.presenceNumber(),
-                    "COMP",
-                    "HIRE",
-                    command.exitReasonCode(),
-                    LocalDate.of(2026, 1, 1),
-                    command.endDate(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
-            );
-        }
-
-                @Bean
-                CloseWorkingTimeUseCase closeWorkingTimeUseCase() {
-                    return command -> WorkingTime.rehydrate(
-                        30L,
-                        100L,
-                        command.workingTimeNumber(),
-                        LocalDate.of(2026, 1, 1),
-                        command.endDate(),
-                        new BigDecimal("75"),
-                        new WorkingTimeDerivedHours(
-                            new BigDecimal("30"),
-                            new BigDecimal("6"),
-                            new BigDecimal("130")
-                        ),
-                        LocalDateTime.now(),
-                        LocalDateTime.now()
-                    );
-                }
-
-        @Bean
-        CloseActiveCostCenterDistributionAtTerminationUseCase closeActiveCostCenterDistributionAtTerminationUseCase() {
-            return (ruleSystemCode, employeeTypeCode, employeeNumber, terminationDate) -> {};
+        PresenceTerminationParticipant presenceTerminationParticipant(
+                ListEmployeePresencesUseCase listPresences) {
+            return new PresenceTerminationParticipant(
+                    listPresences,
+                    command -> new Presence(
+                            10L, 100L, command.presenceNumber(), "COMP", "HIRE",
+                            command.exitReasonCode(),
+                            LocalDate.of(2026, 1, 1), command.endDate(),
+                            LocalDateTime.now(), LocalDateTime.now()));
         }
     }
 }
